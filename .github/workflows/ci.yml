@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Compile source
+        run: |
+          PYTHONPATH=src python -m compileall src
+
+      - name: CLI help smoke
+        run: |
+          PYTHONPATH=src python -m divesensei.cli --help
+          PYTHONPATH=src python -m divesensei.cli detect --help
+          PYTHONPATH=src python -m divesensei.cli validate --help || true

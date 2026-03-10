@@ -1,0 +1,724 @@
+{
+  "dataset": "Eindhoven 2026 reviewed set",
+  "notes": [
+    "Expanded reviewed manifest built from visual inspection of Quick Look thumbnails on March 9, 2026.",
+    "Only clearly positive pool-dive clips and clearly negative non-dive clips are included.",
+    "Ambiguous pool-context clips were intentionally left out of this benchmark."
+  ],
+  "cases": [
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_2478.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 2,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: diver visible above water near platform.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_2496.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 2,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: diver inverted above pool.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8148.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: pool dive clip.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8150.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: pool dive clip.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8151.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: pool dive clip.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8152.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: pool dive clip.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8154.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: athlete on springboard/platform over pool.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8155.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: splash/pool dive clip.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8156.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: athlete on board above pool.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8162.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: airborne diver over pool.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8164.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: athletes on board over pool.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8166.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: airborne diver.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8170.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: pool dive clip.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8175.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: diver above platform.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8181.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: diver in motion over pool.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8182.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: airborne diver over pool.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8183.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: pool dive clip.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8184.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: airborne diver over pool.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8185.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: athlete on board above pool.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8186.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: diving platform/pool clip.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8187.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: platform dive clip.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8190.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: diver hanging above pool.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8201.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: diver on platform above pool.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8206.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: diver on platform above pool.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8208.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: water-entry frame with divers descending into pool.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8209.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: diver poised on springboard over pool.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8210.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: athletes poised on springboard over pool.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8221.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: diver in takeoff position above pool.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8222.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: diver in takeoff position above pool.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8231.MOV",
+      "label": "positive",
+      "min_events": 1,
+      "max_events": 3,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed positive: diver airborne above pool.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8088.MOV",
+      "label": "negative",
+      "min_events": 0,
+      "max_events": 0,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed negative: indoor social clip.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8089.MOV",
+      "label": "negative",
+      "min_events": 0,
+      "max_events": 0,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed negative: indoor selfie/retail clip.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8090.MOV",
+      "label": "negative",
+      "min_events": 0,
+      "max_events": 0,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed negative: hotel/interior clip.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8098.MOV",
+      "label": "negative",
+      "min_events": 0,
+      "max_events": 0,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed negative: bathroom/interior clip.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8099.MOV",
+      "label": "negative",
+      "min_events": 0,
+      "max_events": 0,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed negative: hotel/interior clip.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8105.MOV",
+      "label": "negative",
+      "min_events": 0,
+      "max_events": 0,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed negative: dryland training hall, no splash event.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8212.MOV",
+      "label": "negative",
+      "min_events": 0,
+      "max_events": 0,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed negative: indoor selfie clip.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8214.MOV",
+      "label": "negative",
+      "min_events": 0,
+      "max_events": 0,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed negative: abstract close-up, no pool or dive.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8215.MOV",
+      "label": "negative",
+      "min_events": 0,
+      "max_events": 0,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed negative: elevator/interior clip.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8216.MOV",
+      "label": "negative",
+      "min_events": 0,
+      "max_events": 0,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed negative: koi pond/outdoor water clip, not diving.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8217.MOV",
+      "label": "negative",
+      "min_events": 0,
+      "max_events": 0,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed negative: phone/selfie clip.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8227.MOV",
+      "label": "negative",
+      "min_events": 0,
+      "max_events": 0,
+      "bbox": [
+        0.72,
+        0.95,
+        0.0,
+        1.0
+      ],
+      "notes": "Reviewed negative: selfie/ground close-up clip.",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 20.0,
+      "audio_only_pre_seconds": 3.0,
+      "audio_only_post_seconds": 1.0
+    }
+  ]
+}

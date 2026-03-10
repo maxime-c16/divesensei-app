@@ -1,0 +1,14 @@
+{
+  "cases": [
+    {
+      "path": "/srv/nas/videos/Eindhoven 2026/IMG_8281.MOV",
+      "label": "session",
+      "profile": "long-session",
+      "audio_visual_skip_video_verification": true,
+      "audio_decode_timeout_seconds": 180.0,
+      "min_events": 40,
+      "max_events": 55,
+      "notes": "Real long session gate. Expected roughly 40 to 50 splash-driven dive events."
+    }
+  ]
+}

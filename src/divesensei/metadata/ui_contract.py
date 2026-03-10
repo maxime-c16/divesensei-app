@@ -1,0 +1,126 @@
+from __future__ import annotations
+
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Sequence
+
+
+UI_SCHEMA_VERSION = "1.0.0"
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def build_ui_session_manifest(
+    *,
+    video_path: Path,
+    output_dir: Path,
+    profile: str,
+    report: dict[str, Any],
+    candidates: Sequence[Any],
+    extracted_paths: Sequence[str],
+) -> dict[str, Any]:
+    debug_summary = report.get("debug_summary", {})
+    detections = []
+    for idx, candidate in enumerate(candidates, start=1):
+        clip_path = extracted_paths[idx - 1] if idx - 1 < len(extracted_paths) else None
+        details = dict(getattr(candidate, "details", {}) or {})
+        detections.append(
+            {
+                "id": f"det-{idx:04d}",
+                "index": idx,
+                "timestamp_seconds": float(candidate.timestamp),
+                "start_time_seconds": float(candidate.start_time),
+                "end_time_seconds": float(candidate.end_time),
+                "duration_seconds": float(candidate.end_time - candidate.start_time),
+                "confidence": candidate.confidence,
+                "scores": {
+                    "audio": float(candidate.audio_score),
+                    "video": float(candidate.video_score),
+                    "combined": float(candidate.combined_score),
+                    "audio_model_probability": float(details.get("audio_model_probability", 0.0) or 0.0),
+                },
+                "features": {
+                    "spectral_flux": details.get("spectral_flux"),
+                    "rms": details.get("rms"),
+                    "hf_ratio": details.get("hf_ratio"),
+                    "spectral_centroid_hz": details.get("spectral_centroid_hz"),
+                    "spectral_flatness": details.get("spectral_flatness"),
+                    "post_flux_ratio": details.get("post_flux_ratio"),
+                    "post_rms_ratio": details.get("post_rms_ratio"),
+                    "local_prominence": details.get("local_prominence"),
+                    "nearby_peaks_8s": details.get("nearby_peaks_8s"),
+                },
+                "clip": {
+                    "path": clip_path,
+                    "filename": Path(clip_path).name if clip_path else None,
+                },
+            }
+        )
+
+    return {
+        "schema_version": UI_SCHEMA_VERSION,
+        "kind": "divesensei.ui-session",
+        "generated_at": _utc_now(),
+        "session": {
+            "id": output_dir.name,
+            "title": video_path.stem,
+            "profile": profile,
+            "source_video_path": str(video_path),
+            "output_dir": str(output_dir),
+            "status": "complete" if report.get("extraction_error_count", 0) == 0 else "complete_with_errors",
+            "candidate_count": report.get("candidate_count", 0),
+            "extracted_count": len(extracted_paths),
+            "timestamp_range": debug_summary.get("timestamp_range", {}),
+            "telemetry": {
+                "detector_seconds": report.get("detector_seconds"),
+                "extract_seconds": report.get("extract_seconds"),
+                "total_runtime_seconds": report.get("total_runtime_seconds"),
+                "peak_rss_kb": report.get("peak_rss_kb"),
+            },
+        },
+        "artifacts": {
+            "session_pipeline_report": str(output_dir / "session_pipeline_report.json"),
+            "session_debug_summary": str(output_dir / "session_debug_summary.json"),
+            "session_pipeline_log": str(output_dir / "session_pipeline.log.jsonl"),
+            "detections_csv": report.get("detections_csv"),
+        },
+        "detections": detections,
+    }
+
+
+def write_ui_session_manifest(path: str | Path, manifest: dict[str, Any]) -> Path:
+    output_path = Path(path)
+    output_path.write_text(json.dumps(manifest, indent=2))
+    return output_path
+
+
+def build_ui_library_index(session_manifests: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    sessions = []
+    for manifest in session_manifests:
+        session = manifest["session"]
+        sessions.append(
+            {
+                "id": session["id"],
+                "title": session["title"],
+                "profile": session["profile"],
+                "source_video_path": session["source_video_path"],
+                "output_dir": session["output_dir"],
+                "status": session["status"],
+                "candidate_count": session["candidate_count"],
+                "extracted_count": session["extracted_count"],
+                "timestamp_range": session.get("timestamp_range", {}),
+                "telemetry": session.get("telemetry", {}),
+                "manifest_path": manifest["artifacts"]["session_pipeline_report"].replace("session_pipeline_report.json", "ui_session_manifest.json"),
+            }
+        )
+    sessions.sort(key=lambda item: item["title"])
+    return {
+        "schema_version": UI_SCHEMA_VERSION,
+        "kind": "divesensei.ui-library",
+        "generated_at": _utc_now(),
+        "session_count": len(sessions),
+        "sessions": sessions,
+    }
