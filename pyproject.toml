@@ -26,9 +26,10 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/your-org/divesensei"
-Documentation = "https://github.com/your-org/divesensei/tree/main/docs"
-Issues = "https://github.com/your-org/divesensei/issues"
+Homepage = "https://maxime-c16.github.io/divesensei-app/"
+Documentation = "https://maxime-c16.github.io/divesensei-app/"
+Issues = "https://github.com/maxime-c16/divesensei-app/issues"
+Repository = "https://github.com/maxime-c16/divesensei-app"
 
 [project.scripts]
 divesensei = "divesensei.cli:main"
@@ -39,4 +40,3 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
-

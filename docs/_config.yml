@@ -1,3 +1,5 @@
 title: DiveSensei
 description: Production-ready audio-first dive detection and UI metadata pipeline
+url: https://maxime-c16.github.io
+baseurl: /divesensei-app
 theme: minima
