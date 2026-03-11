@@ -24,6 +24,11 @@ def build_parser() -> argparse.ArgumentParser:
     review_template.add_argument("report_path")
     review_template.add_argument("output_csv")
 
+    subparsers.add_parser("label-audio", help="Save a labeled audio clip for future classifier training")
+    train_audio_clip = subparsers.add_parser("train-audio-clip-model", help="Train the short-window audio clip classifier")
+    train_audio_clip.add_argument("labels_path", nargs="?")
+    train_audio_clip.add_argument("output_model", nargs="?")
+
     regress = subparsers.add_parser("regress", help="Run the non-regression suite")
     regress.add_argument("args", nargs=argparse.REMAINDER)
 
@@ -71,6 +76,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     if argv[0] == "detect":
+        if any(flag in argv[1:] for flag in ("-h", "--help")):
+            from divesensei.app.session_pipeline import build_parser as detect_build_parser
+
+            detect_build_parser().print_help()
+            return 0
+
         from divesensei.app.session_pipeline import main as session_main
         from divesensei.preflight import format_missing_dependencies_message, missing_runtime_dependencies
 
@@ -95,6 +106,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         from divesensei.workflows.create_review_template import main as review_main
 
         return review_main(argv[1:])
+
+    if argv[0] == "label-audio":
+        from divesensei.workflows.save_audio_label import main as label_audio_main
+
+        return label_audio_main(argv[1:])
+
+    if argv[0] == "train-audio-clip-model":
+        from divesensei.workflows.train_audio_clip_model import main as train_audio_clip_main
+
+        forwarded = argv[1:]
+        if not forwarded:
+            forwarded = [".divesensei-runtime/audio-labels/labels.jsonl", ".divesensei-runtime/models/audio_clip_model.json"]
+        return train_audio_clip_main(forwarded)
 
     if argv[0] == "regress":
         from divesensei.app.regression import main as regression_main

@@ -12,27 +12,42 @@ import os
 import resource
 import time
 from dataclasses import asdict
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
 
-from divesensei.detection.audio_detector import AudioVisualDiveDetector
-from divesensei.detection.config import DetectionConfig, SplashEvent, extract_dive_around_splash
 from divesensei.io.logging_utils import StructuredLogger, build_candidate_debug_summary
-from divesensei.io.media_io import extract_clip_ffmpeg
+from divesensei.io.media_io import extract_clip_ffmpeg, generate_review_proxy_ffmpeg, probe_media_duration_seconds
 from divesensei.metadata.ui_contract import build_ui_session_manifest, write_ui_session_manifest
 from divesensei.profiles import apply_named_profile
 
 
-def apply_profile_overrides(args: argparse.Namespace) -> argparse.Namespace:
+def apply_profile_overrides(args: argparse.Namespace, explicit_flags: set[str] | None = None) -> argparse.Namespace:
+    explicit_flags = explicit_flags or set()
     defaults = {
+        "audio_peak_threshold": args.audio_peak_threshold,
         "audio_min_score": args.audio_min_score,
         "audio_pattern_min_score": args.audio_pattern_min_score,
+        "audio_peak_separation": args.audio_peak_separation,
+        "audio_visual_merge_seconds": args.audio_visual_merge_seconds,
+        "audio_clip_model_min_probability": args.audio_clip_model_min_probability,
         "audio_decode_timeout_seconds": args.audio_decode_timeout_seconds,
     }
-    merged = apply_named_profile(defaults, args.profile)
-    args.audio_min_score = float(merged["audio_min_score"])
-    args.audio_pattern_min_score = float(merged["audio_pattern_min_score"])
-    args.audio_decode_timeout_seconds = float(merged["audio_decode_timeout_seconds"])
+    merged = apply_named_profile(defaults, args.profile, args.detector_id)
+    if "--audio-peak-threshold" not in explicit_flags:
+        args.audio_peak_threshold = float(merged["audio_peak_threshold"])
+    if "--audio-min-score" not in explicit_flags:
+        args.audio_min_score = float(merged["audio_min_score"])
+    if "--audio-pattern-min-score" not in explicit_flags:
+        args.audio_pattern_min_score = float(merged["audio_pattern_min_score"])
+    if "--audio-peak-separation" not in explicit_flags:
+        args.audio_peak_separation = float(merged["audio_peak_separation"])
+    if "--audio-visual-merge-seconds" not in explicit_flags:
+        args.audio_visual_merge_seconds = float(merged["audio_visual_merge_seconds"])
+    if "--audio-clip-model-min-probability" not in explicit_flags:
+        args.audio_clip_model_min_probability = float(merged["audio_clip_model_min_probability"])
+    if "--audio-decode-timeout-seconds" not in explicit_flags:
+        args.audio_decode_timeout_seconds = float(merged["audio_decode_timeout_seconds"])
     if args.quality == "balanced" and args.ffmpeg_preset == "ultrafast":
         args.ffmpeg_preset = "medium"
     if args.quality == "fast" and args.ffmpeg_preset == "ultrafast":
@@ -40,8 +55,11 @@ def apply_profile_overrides(args: argparse.Namespace) -> argparse.Namespace:
     return args
 
 
-def build_config(args: argparse.Namespace) -> DetectionConfig:
+def build_config(args: argparse.Namespace):
+    from divesensei.detection.config import DetectionConfig
+
     return DetectionConfig(
+        detector_id=args.detector_id,
         method="audio_visual",
         splash_zone_top_norm=args.bbox[0],
         splash_zone_bottom_norm=args.bbox[1],
@@ -66,6 +84,13 @@ def build_config(args: argparse.Namespace) -> DetectionConfig:
         audio_long_session_max_candidates=args.audio_long_session_max_candidates,
         audio_model_path=args.audio_model_path,
         audio_model_min_probability=args.audio_model_min_probability,
+        audio_clip_model_path=args.audio_clip_model_path,
+        audio_clip_model_min_probability=args.audio_clip_model_min_probability,
+        audio_clip_classifier_window_seconds=args.audio_clip_classifier_window_seconds,
+        audio_clip_classifier_ambiguity_low=args.audio_clip_classifier_ambiguity_low,
+        audio_clip_classifier_ambiguity_high=args.audio_clip_classifier_ambiguity_high,
+        audio_pcen_threshold=args.audio_pcen_threshold,
+        audio_pcen_merge_weight=args.audio_pcen_merge_weight,
         audio_decode_timeout_seconds=args.audio_decode_timeout_seconds,
         ffmpeg_threads=args.ffmpeg_threads,
         opencv_threads=args.opencv_threads,
@@ -87,7 +112,9 @@ def build_config(args: argparse.Namespace) -> DetectionConfig:
     )
 
 
-def candidate_to_event(config: DetectionConfig, candidate) -> SplashEvent:
+def candidate_to_event(config, candidate):
+    from divesensei.detection.config import SplashEvent
+
     return SplashEvent(
         frame_idx=candidate.frame_idx,
         timestamp=candidate.timestamp,
@@ -146,19 +173,28 @@ def build_parser() -> argparse.ArgumentParser:
         help="Detection profile. Use 'long-session' for multi-minute training sessions.",
     )
     parser.add_argument(
+        "--detector-id",
+        choices=["audio_v1_heuristic", "audio_v2_pcen_classifier", "audio_v2_hybrid_video"],
+        default="audio_v1_heuristic",
+        help="Detector strategy. Use the v2 options for PCEN-driven proposals and classifier filtering.",
+    )
+    parser.add_argument(
         "--quality",
         choices=["fast", "balanced"],
         default="fast",
         help="Clip export quality preset. 'fast' is recommended for bulk extraction.",
     )
+    parser.add_argument("--session-name", default="", help="Optional human-readable name for this session run")
     parser.add_argument("--pre-duration", type=float, default=6.0, help="Seconds to keep before the detected splash")
-    parser.add_argument("--post-duration", type=float, default=2.0, help="Seconds to keep after the detected splash")
+    parser.add_argument("--post-duration", type=float, default=3.0, help="Seconds to keep after the detected splash")
     parser.add_argument("--detect-only", action="store_true", help="Run detection only and skip clip extraction")
+    parser.add_argument("--review-only", action="store_true", help="Prepare the review queue and session proxy without extracting per-dive clips")
     parser.add_argument("--json", action="store_true", help="Print the final summary as JSON")
     parser.add_argument("--debug", action="store_true", help="Keep structured logs and debug summary files")
 
     internal = parser.add_argument_group("advanced")
     internal.add_argument("--no-extract", action="store_true", help=argparse.SUPPRESS)
+    internal.add_argument("--skip-review-proxy", action="store_true", help=argparse.SUPPRESS)
     internal.add_argument("--use-opencv-extraction", action="store_true", help=argparse.SUPPRESS)
     internal.add_argument("--ffmpeg-preset", default="ultrafast", help=argparse.SUPPRESS)
     internal.add_argument("--ffmpeg-threads", type=int, default=1, help="Bound FFmpeg worker threads")
@@ -183,9 +219,16 @@ def build_parser() -> argparse.ArgumentParser:
     internal.add_argument("--audio-long-session-max-candidates", type=int, default=120, help=argparse.SUPPRESS)
     internal.add_argument("--audio-model-path", default="", help=argparse.SUPPRESS)
     internal.add_argument("--audio-model-min-probability", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--audio-clip-model-path", default="", help=argparse.SUPPRESS)
+    internal.add_argument("--audio-clip-model-min-probability", type=float, default=0.5, help=argparse.SUPPRESS)
+    internal.add_argument("--audio-clip-classifier-window-seconds", type=float, default=3.0, help=argparse.SUPPRESS)
+    internal.add_argument("--audio-clip-classifier-ambiguity-low", type=float, default=0.35, help=argparse.SUPPRESS)
+    internal.add_argument("--audio-clip-classifier-ambiguity-high", type=float, default=0.65, help=argparse.SUPPRESS)
+    internal.add_argument("--audio-pcen-threshold", type=float, default=2.4, help=argparse.SUPPRESS)
+    internal.add_argument("--audio-pcen-merge-weight", type=float, default=0.65, help=argparse.SUPPRESS)
     internal.add_argument("--audio-decode-timeout-seconds", type=float, default=180.0, help=argparse.SUPPRESS)
-    internal.add_argument("--audio-only-pre-seconds", type=float, default=3.0, help=argparse.SUPPRESS)
-    internal.add_argument("--audio-only-post-seconds", type=float, default=1.0, help=argparse.SUPPRESS)
+    internal.add_argument("--audio-only-pre-seconds", type=float, default=6.0, help=argparse.SUPPRESS)
+    internal.add_argument("--audio-only-post-seconds", type=float, default=3.0, help=argparse.SUPPRESS)
     internal.add_argument("--audio-verify-pre", type=float, default=3.0, help=argparse.SUPPRESS)
     internal.add_argument("--audio-verify-post", type=float, default=1.0, help=argparse.SUPPRESS)
     internal.add_argument("--audio-visual-verify-target-fps", type=float, default=12.0, help=argparse.SUPPRESS)
@@ -202,14 +245,21 @@ def build_parser() -> argparse.ArgumentParser:
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = build_parser()
-    args = parser.parse_args(argv)
+    raw_argv = list(argv or [])
+    args = parser.parse_args(raw_argv)
     if not args.output_dir:
         args.output_dir = str(default_output_dir(args.video_path))
     if args.detect_only:
         args.no_extract = True
+        args.skip_review_proxy = True
+    if args.review_only:
+        args.no_extract = True
     if args.with_video_verification:
         args.skip_video_verification = False
-    return apply_profile_overrides(args)
+    if args.detector_id == "audio_v2_hybrid_video" and "--skip-video-verification" not in raw_argv:
+        args.skip_video_verification = False
+    explicit_flags = {item for item in raw_argv if item.startswith("--")}
+    return apply_profile_overrides(args, explicit_flags)
 
 
 def print_human_summary(summary: dict) -> None:
@@ -256,6 +306,57 @@ def write_candidates_csv(output_dir: Path, candidates: Sequence[Any]) -> Path:
     return csv_path
 
 
+def write_session_outputs(
+    *,
+    video_path: Path,
+    output_dir: Path,
+    profile: str,
+    report: dict[str, Any],
+    candidates: Sequence[Any],
+    extracted_paths: Sequence[str],
+    status_override: str | None = None,
+) -> tuple[Path, Path]:
+    report_path = output_dir / "session_pipeline_report.json"
+    report_path.write_text(json.dumps(report, indent=2))
+    (output_dir / "session_debug_summary.json").write_text(json.dumps(build_candidate_debug_summary(candidates), indent=2))
+    ui_manifest = build_ui_session_manifest(
+        video_path=video_path,
+        output_dir=output_dir,
+        profile=profile,
+        report=report,
+        candidates=candidates,
+        extracted_paths=extracted_paths,
+        status_override=status_override,
+    )
+    ui_manifest_path = write_ui_session_manifest(output_dir / "ui_session_manifest.json", ui_manifest)
+    return report_path, ui_manifest_path
+
+
+def write_incremental_session_outputs(
+    *,
+    video_path: Path,
+    output_dir: Path,
+    profile: str,
+    report: dict[str, Any],
+    candidates: Sequence[Any],
+    extracted_paths: Sequence[str],
+    extraction_errors: Sequence[dict[str, Any]],
+    status_override: str,
+) -> tuple[Path, Path]:
+    report["extracted_paths"] = list(extracted_paths)
+    report["extraction_error_count"] = len(extraction_errors)
+    report["extraction_errors"] = list(extraction_errors)
+    return write_session_outputs(
+        video_path=video_path,
+        output_dir=output_dir,
+        profile=profile,
+        report=report,
+        candidates=candidates,
+        extracted_paths=extracted_paths,
+        status_override=status_override,
+    )
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     video_path = Path(args.video_path).resolve()
@@ -268,11 +369,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     logger = StructuredLogger(output_dir / "session_pipeline.log.jsonl")
 
     config = build_config(args)
+    from divesensei.detection.audio_detector import AudioVisualDiveDetector
+
     detector = AudioVisualDiveDetector(config)
     logger.log("session_start", video_path=video_path, output_dir=output_dir, profile=args.profile, config=config.__dict__)
 
     run_start = time.time()
     start = run_start
+    logger.log("detection_start", video_path=video_path, profile=args.profile)
     candidates = detector.detect(str(video_path))
     detect_seconds = time.time() - start
     logger.log(
@@ -286,10 +390,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         "video_path": str(video_path),
         "output_dir": str(output_dir),
         "profile": args.profile,
+        "detector_id": args.detector_id,
+        "session_created_at": datetime.now(timezone.utc).isoformat(),
+        "session_name": (args.session_name.strip() if getattr(args, "session_name", "") else "") or f"{video_path.stem} · {output_dir.name.replace('.tmp_ui_run_', '').replace('_', ' ')}",
         "detector_seconds": detect_seconds,
         "config": config.__dict__,
         "candidate_count": len(candidates),
-        "session_estimated_duration_seconds": max((candidate.end_time for candidate in candidates), default=0.0),
+        "session_estimated_duration_seconds": probe_media_duration_seconds(video_path) or max((candidate.end_time for candidate in candidates), default=0.0),
         "debug_summary": build_candidate_debug_summary(candidates),
         "candidates": [asdict(candidate) for candidate in candidates],
     }
@@ -297,8 +404,43 @@ def main(argv: Sequence[str] | None = None) -> int:
     extracted = []
     extraction_errors = []
     extract_seconds = 0.0
+    review_proxy_error = None
+    csv_path = write_candidates_csv(output_dir, candidates)
+    peak_rss_kb = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+    report["detections_csv"] = str(csv_path)
+    report["extract_seconds"] = extract_seconds
+    report["peak_rss_kb"] = peak_rss_kb
+    report["manifest_ready_seconds"] = time.time() - run_start
+    report["total_runtime_seconds"] = report["manifest_ready_seconds"]
+    report["review_proxy_status"] = "skipped" if args.skip_review_proxy else "pending"
+    report["review_proxy_path"] = str(output_dir / "web" / "session_source_review.mp4")
+    report_path, ui_manifest_path = write_incremental_session_outputs(
+        video_path=video_path,
+        output_dir=output_dir,
+        profile=args.profile,
+        report=report,
+        candidates=candidates,
+        extracted_paths=extracted,
+        extraction_errors=extraction_errors,
+        status_override="ready_proxy_pending" if not args.skip_review_proxy else "complete",
+    )
+    logger.log(
+        "review_ready",
+        report_path=report_path,
+        ui_manifest_path=ui_manifest_path,
+        detections_csv=csv_path,
+        candidate_count=len(candidates),
+        extracted_count=len(extracted),
+        extraction_error_count=len(extraction_errors),
+        manifest_ready_seconds=report["manifest_ready_seconds"],
+        peak_rss_kb=peak_rss_kb,
+    )
+
     if not args.no_extract:
+        from divesensei.detection.config import extract_dive_around_splash
+
         extract_start = time.time()
+        logger.log("clip_extraction_start", candidate_count=len(candidates))
         for idx, candidate in enumerate(candidates):
             try:
                 if args.use_opencv_extraction:
@@ -314,7 +456,26 @@ def main(argv: Sequence[str] | None = None) -> int:
                         args.ffmpeg_threads,
                     )
                 extracted.append(output_path)
-                logger.log("clip_extracted", index=idx, timestamp=candidate.timestamp, output_path=output_path)
+                report["extract_seconds"] = time.time() - extract_start
+                report_path, ui_manifest_path = write_incremental_session_outputs(
+                    video_path=video_path,
+                    output_dir=output_dir,
+                    profile=args.profile,
+                    report=report,
+                    candidates=candidates,
+                    extracted_paths=extracted,
+                    extraction_errors=extraction_errors,
+                    status_override="ready_proxy_pending",
+                )
+                logger.log(
+                    "clip_extracted",
+                    index=idx,
+                    completed_clips=len(extracted),
+                    total_clips=len(candidates),
+                    timestamp=candidate.timestamp,
+                    output_path=output_path,
+                    ui_manifest_path=ui_manifest_path,
+                )
             except Exception as exc:
                 extraction_errors.append(
                     {
@@ -323,34 +484,57 @@ def main(argv: Sequence[str] | None = None) -> int:
                         "error": str(exc),
                     }
                 )
+                report["extract_seconds"] = time.time() - extract_start
+                write_incremental_session_outputs(
+                    video_path=video_path,
+                    output_dir=output_dir,
+                    profile=args.profile,
+                    report=report,
+                    candidates=candidates,
+                    extracted_paths=extracted,
+                    extraction_errors=extraction_errors,
+                    status_override="ready_proxy_pending",
+                )
                 logger.log("clip_extract_error", index=idx, timestamp=candidate.timestamp, error=str(exc))
         extract_seconds = time.time() - extract_start
-        report["extracted_paths"] = extracted
-        report["extraction_error_count"] = len(extraction_errors)
-        report["extraction_errors"] = extraction_errors
     else:
         report["extraction_error_count"] = 0
         report["extraction_errors"] = []
 
-    csv_path = write_candidates_csv(output_dir, candidates)
-    peak_rss_kb = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+    review_proxy_path = output_dir / "web" / "session_source_review.mp4"
+    if not args.skip_review_proxy:
+        logger.log("review_proxy_start", output_path=review_proxy_path)
+        try:
+            generate_review_proxy_ffmpeg(
+                video_path=video_path,
+                output_path=review_proxy_path,
+                preset="ultrafast" if args.quality == "fast" else "veryfast",
+                ffmpeg_threads=args.ffmpeg_threads,
+            )
+            report["review_proxy_path"] = str(review_proxy_path)
+            report["review_proxy_status"] = "ready"
+        except Exception as exc:
+            review_proxy_error = str(exc)
+            report["review_proxy_error"] = review_proxy_error
+            report["review_proxy_status"] = "failed"
+            logger.log("review_proxy_error", output_path=review_proxy_path, error=review_proxy_error)
+
     total_runtime_seconds = time.time() - run_start
-    report["detections_csv"] = str(csv_path)
-    report["extract_seconds"] = extract_seconds
     report["total_runtime_seconds"] = total_runtime_seconds
-    report["peak_rss_kb"] = peak_rss_kb
-    report_path = output_dir / "session_pipeline_report.json"
-    report_path.write_text(json.dumps(report, indent=2))
-    (output_dir / "session_debug_summary.json").write_text(json.dumps(build_candidate_debug_summary(candidates), indent=2))
-    ui_manifest = build_ui_session_manifest(
+    report["manifest_ready_seconds"] = report.get("manifest_ready_seconds", total_runtime_seconds)
+    report_path, ui_manifest_path = write_session_outputs(
         video_path=video_path,
         output_dir=output_dir,
         profile=args.profile,
         report=report,
         candidates=candidates,
         extracted_paths=extracted,
+        status_override=(
+            "complete"
+            if args.skip_review_proxy or review_proxy_error is None
+            else "complete_proxy_error"
+        ),
     )
-    ui_manifest_path = write_ui_session_manifest(output_dir / "ui_session_manifest.json", ui_manifest)
     logger.log(
         "session_complete",
         report_path=report_path,
@@ -359,6 +543,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         candidate_count=len(candidates),
         extracted_count=len(extracted),
         extraction_error_count=len(extraction_errors),
+        review_proxy_path=str(review_proxy_path) if review_proxy_path.exists() else None,
+        review_proxy_error=review_proxy_error,
+        review_proxy_status=report.get("review_proxy_status"),
+        manifest_ready_seconds=report.get("manifest_ready_seconds"),
         extract_seconds=extract_seconds,
         total_runtime_seconds=total_runtime_seconds,
         peak_rss_kb=peak_rss_kb,
@@ -370,6 +558,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "detector_seconds": detect_seconds,
         "extract_seconds": extract_seconds,
         "total_runtime_seconds": total_runtime_seconds,
+        "manifest_ready_seconds": report.get("manifest_ready_seconds"),
         "peak_rss_kb": peak_rss_kb,
         "report_path": str(report_path),
         "ui_manifest_path": str(ui_manifest_path),

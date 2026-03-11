@@ -1,0 +1,1275 @@
+---
+import path from "node:path";
+import {
+  formatSeconds,
+  getUiData,
+  mediaUrl,
+  resolveClipMediaPath,
+  resolveSourceMediaPath,
+  sessionIsReviewReady,
+  sessionStatusLabel,
+} from "@/lib/ui-data";
+
+interface ThemeConfig {
+  id: string;
+  name: string;
+  route: string;
+  tagline: string;
+  subtitle: string;
+  tabs: [string, string, string, string];
+}
+
+const { theme } = Astro.props as { theme: ThemeConfig };
+const requestedSession = Astro.url.searchParams.get("session") ?? undefined;
+const requestedTab = Astro.url.searchParams.get("tab");
+const requestedJob = Astro.url.searchParams.get("job");
+const activeTabIndex = Number.parseInt(requestedTab ?? "0", 10);
+const initialTabIndex = Number.isNaN(activeTabIndex) ? 0 : Math.max(0, Math.min(theme.tabs.length - 1, activeTabIndex));
+const { library, manifest, selectedSessionId, artifactsPreview } = getUiData(requestedSession);
+const session = manifest.session;
+const detections = manifest.detections.map((item) => ({
+  ...item,
+  reviewClipPath: resolveClipMediaPath(item.clip.browser_path ?? item.clip.path),
+}));
+const selected = detections[0];
+const highest = [...detections].sort((a, b) => b.scores.combined - a.scores.combined)[0] ?? selected;
+const benchmarkVideoPath = "/srv/nas/videos/Eindhoven 2026/IMG_8281.MOV";
+const sessionReadyNow = sessionIsReviewReady(session.status);
+const sourceModeNote = session.status === "ready_proxy_pending"
+  ? "Attempts are ready. The review video is still being prepared."
+  : "Review each attempt, then export only the clips you keep.";
+const primaryVideoUrl = mediaUrl(resolveSourceMediaPath(session.source_video_path, session.output_dir));
+const sourceVideoUrl = mediaUrl(session.source_video_path);
+const sourceVideoBrowserFriendly = [".mp4", ".webm", ".m4v"].includes(path.extname(session.source_video_path).toLowerCase());
+const initialReviewVideoUrl = session.status === "ready_proxy_pending" && !sourceVideoBrowserFriendly ? "" : primaryVideoUrl;
+const initialReviewPlaceholderVisible = session.status === "ready_proxy_pending" && !sourceVideoBrowserFriendly;
+const timelineStart = 0;
+const timelineEnd = Math.max(
+  Number(session.session_duration_seconds ?? 0),
+  Number(session.timestamp_range.last ?? 0),
+  1,
+);
+const rangeStart = timelineStart;
+const rangeSpan = Math.max(timelineEnd - timelineStart, 1);
+const niceTimelineStep = (span: number) => {
+  const targetTicks = 7;
+  const rough = Math.max(span / targetTicks, 0.5);
+  const steps = [0.5, 1, 2, 5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 300, 600];
+  return steps.find((step) => rough <= step) ?? steps[steps.length - 1];
+};
+const timelineStep = niceTimelineStep(rangeSpan);
+const timelineTicks = (() => {
+  const ticks: Array<{ value: number; left: number; label: string }> = [];
+  const firstTick = Math.ceil(rangeStart / timelineStep) * timelineStep;
+  for (let value = firstTick; value < timelineEnd; value += timelineStep) {
+    if (value <= rangeStart + 0.01 || value >= timelineEnd - 0.01) continue;
+    const left = Math.min(99.2, Math.max(0.8, ((value - rangeStart) / rangeSpan) * 100));
+    ticks.push({ value, left, label: formatSeconds(value) });
+  }
+  return ticks;
+})();
+const timelineScaleLabels = [
+  { left: 0.8, label: formatSeconds(timelineStart), edge: "start" },
+  ...timelineTicks.map((tick) => ({ left: tick.left, label: tick.label, edge: "mid" })),
+  { left: 99.2, label: formatSeconds(timelineEnd), edge: "end" },
+];
+const sessionSwitcherHref = (sessionId: string) => `${theme.route}?session=${encodeURIComponent(sessionId)}&tab=1`;
+const markerPosition = (timestamp: number) => {
+  const normalized = ((timestamp - rangeStart) / rangeSpan) * 100;
+  return Math.min(99.2, Math.max(0.8, normalized));
+};
+const reviewStartFor = (item: typeof detections[number]) => item.review_start_seconds ?? item.start_time_seconds;
+const reviewEndFor = (item: typeof detections[number]) => item.review_end_seconds ?? item.end_time_seconds;
+const signalLabelFor = (confidence: string) => {
+  if (confidence === "high") return "Strong";
+  if (confidence === "medium") return "Review";
+  return "Weak";
+};
+const formatSessionStamp = (value: string | undefined) => {
+  if (!value) return "Unknown";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return new Intl.DateTimeFormat("en-GB", {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(parsed);
+};
+const sessionDisplayName = session.session_name ?? session.title;
+const clientBundle = JSON.stringify({
+  session,
+  detections,
+  primaryVideoUrl,
+  sourceVideoUrl,
+  initialReviewPending: initialReviewPlaceholderVisible,
+  requestedTab,
+  requestedSession,
+  requestedJob,
+});
+---
+
+<main class={`screen theme-${theme.id}`} data-design-root>
+  <header class="workspace-header shell">
+    <div class="workspace-header__title">
+      <a class="brand" href="/">DiveSensei</a>
+      <h1>Review workspace</h1>
+      <p>{theme.subtitle}</p>
+    </div>
+    <div class="workspace-header__meta">
+      <article class="header-status-card">
+        <span>Session</span>
+        <strong>{sessionDisplayName}</strong>
+        <small>{sessionStatusLabel(session.status)}</small>
+      </article>
+      <article class="header-status-card">
+        <span>Source</span>
+        <strong>{path.basename(session.source_video_path)}</strong>
+        <small>{session.profile} · {session.detector_id ?? "audio_v1_heuristic"}</small>
+      </article>
+      <article class="header-status-card header-status-card--metrics">
+        <span>Review</span>
+        <strong>{session.candidate_count} attempts</strong>
+        <small>{session.extracted_count} exports · updated {formatSessionStamp(session.updated_at)}</small>
+      </article>
+    </div>
+  </header>
+
+  <nav class="tabbar shell" aria-label="Workspace tabs">
+    {theme.tabs.map((tab, index) => (
+      <button
+        class={`tab ${index === initialTabIndex ? "is-active" : ""}`}
+        type="button"
+        data-tab-trigger
+        data-tab-target={`panel-${index}`}
+      >
+        {tab}
+      </button>
+    ))}
+  </nav>
+
+  <section class={`panel shell ${initialTabIndex === 0 ? "is-active" : ""}`} id="panel-0" data-tab-panel>
+    <div class="grid library-grid">
+      <article class="section-card">
+        <div class="section-card__header">
+          <div>
+            <h2>Local sessions</h2>
+            <p class="section-note">Analyze a video or reopen an existing session.</p>
+          </div>
+          <div class="section-meta" data-session-total>{library.session_count} total</div>
+        </div>
+        {sessionReadyNow && session.status === "ready_proxy_pending" && (
+          <div class="library-inline-note">
+            <strong>Ready for review.</strong> The review video is still being prepared.
+          </div>
+        )}
+        <form class="analysis-launcher" data-analysis-form>
+          <div class="section-card__header">
+            <div>
+              <h3>Analyze video</h3>
+              <p class="section-note">Find attempts, review them right away, then export only the clips you keep.</p>
+            </div>
+          </div>
+          <div class="analysis-launcher__grid">
+            <label class="field">
+              <span>Session name</span>
+              <input type="text" name="sessionName" value="" data-analysis-session-name autocomplete="off" placeholder="Optional session label" />
+            </label>
+            <label class="field">
+              <span>Video file</span>
+              <input type="text" name="videoPath" value={benchmarkVideoPath} data-analysis-path autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>Session type</span>
+              <select name="profile" data-analysis-profile>
+                <option value="long-session" selected>Training session</option>
+                <option value="reviewed">Reviewed session</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Detection method</span>
+              <select name="detectorId" data-analysis-detector>
+                <option value="audio_v2_pcen_classifier" selected>Standard</option>
+                <option value="audio_v1_heuristic">Legacy</option>
+                <option value="audio_v2_hybrid_video">Audio + video</option>
+              </select>
+            </label>
+          </div>
+          <div class="analysis-launcher__actions">
+            <button type="submit" class="action-link">Analyze video</button>
+          </div>
+          <p class="analysis-launcher__status" data-analysis-status>Ready to analyze a video.</p>
+        </form>
+        <div class="session-list">
+          {library.sessions.map((item) => (
+            <article class={`session-listing ${item.id === selectedSessionId ? "is-current" : ""}`} data-session-row={item.id}>
+              <a class="session-listing__main" href={sessionSwitcherHref(item.id)} data-session-open={item.id}>
+                <div class="session-listing__summary">
+                  <strong>{item.session_name ?? item.title}</strong>
+                  <small>{path.basename(item.source_video_path)}</small>
+                  <small>Updated {formatSessionStamp(item.updated_at ?? item.created_at)}</small>
+                  <div class="session-listing__meta">
+                    <span class="pill">{item.profile}</span>
+                    <span class="pill">{sessionStatusLabel(item.status)}</span>
+                  </div>
+                </div>
+                <div class="session-listing__stats">
+                  <span>{item.candidate_count} attempts</span>
+                  <span>{item.extracted_count} exports</span>
+                  <span>{formatSeconds(item.timestamp_range.last)}</span>
+                </div>
+              </a>
+              <div class="session-listing__actions">
+                <button type="button" class="action-link" data-session-open={item.id}>Open</button>
+                <button type="button" class="action-link" data-session-rename={item.id} data-session-current-name={item.session_name ?? item.title}>Rename</button>
+                <button type="button" class="action-link session-delete" data-session-delete={item.id}>Delete</button>
+              </div>
+            </article>
+          ))}
+        </div>
+      </article>
+
+      <article class="section-card">
+        <div class="section-card__header">
+          <div>
+            <h2>Session details</h2>
+            <p class="section-note">{sessionDisplayName}</p>
+          </div>
+        </div>
+        <dl class="data-list">
+          <div><dt>Session name</dt><dd>{sessionDisplayName}</dd></div>
+          <div><dt>Video</dt><dd>{path.basename(session.source_video_path)}</dd></div>
+          <div><dt>Created</dt><dd>{formatSessionStamp(session.created_at)}</dd></div>
+          <div><dt>Updated</dt><dd>{formatSessionStamp(session.updated_at)}</dd></div>
+          <div><dt>State</dt><dd>{sessionStatusLabel(session.status)}</dd></div>
+          <div><dt>Run time</dt><dd>{session.telemetry.total_runtime_seconds.toFixed(2)}s</dd></div>
+          <div><dt>Top attempt</dt><dd>{highest ? `${highest.id} · ${highest.scores.combined.toFixed(2)}` : "n/a"}</dd></div>
+          <div><dt>Review</dt><dd>{detections.length} attempts, {session.extracted_count} exports</dd></div>
+          <div><dt>Storage</dt><dd>Uses the original video path. Source files are not duplicated by default.</dd></div>
+        </dl>
+        <div class="action-list">
+          <button class="action-link" type="button" data-open-tab="1">Open review</button>
+          <button class="action-link" type="button" data-open-tab="3">Open diagnostics</button>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class={`panel shell ${initialTabIndex === 1 ? "is-active" : ""}`} id="panel-1" data-tab-panel>
+    <div class="grid workspace-grid">
+      <article class="section-card">
+        <div class="section-card__header">
+          <div>
+            <h2>Review</h2>
+            <p class="section-note">{sourceModeNote}</p>
+          </div>
+          <div class="section-meta">State {sessionStatusLabel(session.status)}</div>
+        </div>
+        <div class="review-meta" style="margin-bottom: 12px;">
+          <div class="section-meta" data-review-counts>{detections.length} pending review</div>
+          <div class="section-meta" data-review-position>{selected ? `Attempt 1 of ${detections.length}` : "Attempt 0 of 0"}</div>
+        </div>
+        <div class="player-stage">
+          <div class="player-stage__hud">
+            <span data-review-current>Attempt {selected?.index ?? 0}</span>
+            <span data-review-time>{selected ? formatSeconds(selected.timestamp_seconds) : "0:00.000"}</span>
+          </div>
+          <div class="player-stage__frame">
+            <video
+              class="review-video"
+              controls
+              preload="metadata"
+              playsinline
+              src={initialReviewVideoUrl || undefined}
+              data-review-video
+              data-source-src={primaryVideoUrl}
+            ></video>
+            <div class="library-inline-note" data-review-placeholder hidden={!initialReviewPlaceholderVisible}>
+              The review video is still being prepared for this source format. Playback will become available automatically.
+            </div>
+            <p data-review-label>{selected ? `${formatSeconds(reviewStartFor(selected))} to ${formatSeconds(reviewEndFor(selected))} · ${path.basename(session.source_video_path)}` : path.basename(session.source_video_path)}</p>
+          </div>
+        </div>
+        <div class="analysis-launcher__actions" style="margin-top: 12px;" data-virtual-controls hidden>
+          <button type="button" class="action-link" data-review-prev>Previous</button>
+          <button type="button" class="action-link" data-virtual-play>Play</button>
+          <button type="button" class="action-link" data-review-next>Next</button>
+          <span class="section-meta" data-virtual-time>0:00.000 / 0:00.000</span>
+          <button type="button" class="action-link" data-toggle-loop>Loop on</button>
+          <button type="button" class="action-link" data-toggle-autoplay>Autoplay on</button>
+          <button type="button" class="action-link" data-toggle-autoadvance>Auto-next on</button>
+        </div>
+        <input type="range" min="0" max="1" step="0.01" value="0" style="width: 100%; margin-top: 10px;" data-virtual-scrub hidden />
+        <div class="analysis-launcher__actions" style="margin-top: 12px;">
+          <button class="action-link" type="button" data-decision="keep">Keep</button>
+          <button class="action-link" type="button" data-decision="unsure">Unsure</button>
+          <button class="action-link" type="button" data-decision="reject">Reject</button>
+        </div>
+        <label class="field" style="margin-top: 12px;">
+          <span>Note</span>
+          <input type="text" data-decision-notes placeholder="Optional note" />
+        </label>
+        <p class="analysis-launcher__status" data-decision-status>No decision recorded for this attempt.</p>
+        <div class="library-inline-note" style="margin-top: 12px;" data-review-progress>
+          Review is available now. Export only the clips you keep.
+        </div>
+        <div class="timeline">
+          <div class="timeline__viewport" data-timeline-viewport>
+            <div class="timeline__track" data-timeline-track>
+              {timelineTicks.map((tick) => (
+                <span
+                  class="timeline__tick"
+                  style={`left:${tick.left}%;`}
+                  aria-hidden="true"
+                ></span>
+              ))}
+              {detections.map((item) => (
+                <button
+                  type="button"
+                  class={`timeline__marker confidence-${item.confidence} ${item.id === selected?.id ? "is-current" : ""}`}
+                  style={`left:${markerPosition(item.timestamp_seconds)}%;`}
+                  data-focus-detection={item.id}
+                  data-timeline-marker={item.id}
+                  aria-label={`${item.id} at ${formatSeconds(item.timestamp_seconds)}`}
+                >
+                  <span>{item.index}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div class="timeline__legend">
+            {timelineScaleLabels.map((tick) => (
+              <span
+                class={`timeline__legend-label timeline__legend-label--${tick.edge}`}
+                style={`left:${tick.left}%;`}
+              >
+                {tick.label}
+              </span>
+            ))}
+          </div>
+        </div>
+      </article>
+
+      <article class="section-card table-card">
+        <div class="section-card__header">
+          <div>
+            <h2 data-review-list-title>Attempts</h2>
+            <p class="section-note" data-review-list-note>Select an attempt and record a decision.</p>
+          </div>
+          <div class="analysis-launcher__grid" style="grid-template-columns: 180px; justify-content: end;">
+            <select data-review-filter>
+              <option value="all" selected>All attempts</option>
+              <option value="pending">Pending</option>
+              <option value="keep">Kept</option>
+              <option value="reject">Rejected</option>
+              <option value="unsure">Unsure</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap queue-table-wrap">
+          <table class="queue-table">
+            <thead>
+              <tr>
+                <th>Attempt</th>
+                <th>Splash</th>
+                <th>Decision</th>
+                <th>Signal</th>
+              </tr>
+            </thead>
+            <tbody data-detection-table>
+              {detections.map((item) => (
+                <tr class={item.id === selected?.id ? "is-current" : ""} data-focus-detection={item.id}>
+                  <td>{item.id}</td>
+                  <td>{formatSeconds(item.timestamp_seconds)}</td>
+                  <td>Pending</td>
+                  <td>{signalLabelFor(item.confidence)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div class="review-meta" style="margin-top: 14px;">
+          <div class="section-meta" data-detail-audio>Audio {selected ? selected.scores.audio.toFixed(2) : "0.00"}</div>
+          <div class="section-meta" data-detail-window>Window {selected ? `${formatSeconds(reviewStartFor(selected))} to ${formatSeconds(reviewEndFor(selected))}` : "0:00.000 to 0:00.000"}</div>
+          <div class="section-meta" data-detail-decision>Decision pending</div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class={`panel shell ${initialTabIndex === 2 ? "is-active" : ""}`} id="panel-2" data-tab-panel>
+    <div class="grid library-grid exports-grid">
+      <article class="section-card">
+        <div class="section-card__header">
+          <div>
+            <h2>Exports</h2>
+            <p class="section-note">Create clip files only for attempts marked Keep.</p>
+          </div>
+          <div class="section-meta">{session.extracted_count} exports</div>
+        </div>
+        <div class="analysis-launcher__actions">
+          <button class="action-link" type="button" data-export-kept>Export kept clips</button>
+        </div>
+        <p class="analysis-launcher__status" data-export-status>Mark attempts as Keep, then export only those clips.</p>
+        <div class="artifact-grid" data-export-list></div>
+      </article>
+      <article class="section-card">
+        <div class="section-card__header">
+          <div>
+            <h2>Review summary</h2>
+            <p class="section-note">Use Review to classify attempts, then export the ones you keep.</p>
+          </div>
+        </div>
+        <div class="artifact-grid" data-export-summary>
+          <article>
+            <strong>Review status</strong>
+            <span data-export-summary-counts>Review not started.</span>
+          </article>
+          <article>
+            <strong>Export source</strong>
+            <span>Exports are created from the review video when available.</span>
+          </article>
+        </div>
+        <div class="log-list" data-decision-list></div>
+      </article>
+    </div>
+  </section>
+
+  <section class={`panel shell ${initialTabIndex === 3 ? "is-active" : ""}`} id="panel-3" data-tab-panel>
+    <div class="grid library-grid">
+      <article class="section-card">
+        <div class="section-card__header">
+          <div>
+            <h2>Diagnostics</h2>
+            <p class="section-note">Technical files saved for this session.</p>
+          </div>
+        </div>
+        <div class="artifact-grid">
+          {Object.entries(manifest.artifacts).map(([key, value]) => (
+            <a href={mediaUrl(value)} target="_blank">
+              <strong>{key}</strong>
+              <span>{value}</span>
+            </a>
+          ))}
+        </div>
+      </article>
+      <article class="section-card">
+        <div class="section-card__header">
+          <div>
+            <h2>Artifact preview</h2>
+            <p class="section-note">Quick previews of saved diagnostic files.</p>
+          </div>
+        </div>
+        <div class="artifact-grid">
+          {Object.entries(artifactsPreview).map(([key, value]) => (
+            <article>
+              <strong>{key}</strong>
+              <pre>{value}</pre>
+            </article>
+          ))}
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <script is:inline type="application/json" id="workspace-data" set:html={clientBundle}></script>
+  <script is:inline>
+    // @ts-nocheck
+    const parsed = JSON.parse(document.getElementById("workspace-data")?.textContent ?? "{}");
+    let detections = parsed.detections ?? [];
+    let current = detections[0] ?? null;
+    let decisions = [];
+    let reviewFilter = "all";
+    let loopEnabled = true;
+    let autoPlayEnabled = true;
+    let autoAdvanceEnabled = true;
+    let sourceLoopHandler = null;
+    let exportJobId = null;
+    let exportedPaths = [];
+
+    const tabButtons = Array.from(document.querySelectorAll("[data-tab-trigger]"));
+    const panels = Array.from(document.querySelectorAll("[data-tab-panel]"));
+    const currentLabel = document.querySelector("[data-review-current]");
+    const timeLabel = document.querySelector("[data-review-time]");
+    const reviewLabel = document.querySelector("[data-review-label]");
+    const reviewVideo = document.querySelector("[data-review-video]");
+    const reviewPlaceholder = document.querySelector("[data-review-placeholder]");
+    const tableBody = document.querySelector("[data-detection-table]");
+    let rows = Array.from(document.querySelectorAll("[data-detection-table] tr"));
+    const audioLabel = document.querySelector("[data-detail-audio]");
+    const windowLabel = document.querySelector("[data-detail-window]");
+    const decisionDetailLabel = document.querySelector("[data-detail-decision]");
+    const reviewProgress = document.querySelector("[data-review-progress]");
+    const reviewListTitle = document.querySelector("[data-review-list-title]");
+    const reviewListNote = document.querySelector("[data-review-list-note]");
+    const reviewCounts = document.querySelector("[data-review-counts]");
+    const reviewPosition = document.querySelector("[data-review-position]");
+    const virtualControls = document.querySelector("[data-virtual-controls]");
+    const virtualPlayButton = document.querySelector("[data-virtual-play]");
+    const virtualTime = document.querySelector("[data-virtual-time]");
+    const virtualScrub = document.querySelector("[data-virtual-scrub]");
+    const previousButton = document.querySelector("[data-review-prev]");
+    const nextButton = document.querySelector("[data-review-next]");
+    const loopButton = document.querySelector("[data-toggle-loop]");
+    const autoplayButton = document.querySelector("[data-toggle-autoplay]");
+    const autoAdvanceButton = document.querySelector("[data-toggle-autoadvance]");
+    const reviewFilterSelect = document.querySelector("[data-review-filter]");
+    const decisionStatus = document.querySelector("[data-decision-status]");
+    const decisionNotes = document.querySelector("[data-decision-notes]");
+    const timelineViewport = document.querySelector("[data-timeline-viewport]");
+    const timelineTrack = document.querySelector("[data-timeline-track]");
+    const decisionList = document.querySelector("[data-decision-list]");
+    const exportButton = document.querySelector("[data-export-kept]");
+    const exportStatus = document.querySelector("[data-export-status]");
+    const exportList = document.querySelector("[data-export-list]");
+    const exportSummaryCounts = document.querySelector("[data-export-summary-counts]");
+    const sessionTotal = document.querySelector("[data-session-total]");
+    const sessionList = document.querySelector(".session-list");
+    const sessionDeleteButtons = Array.from(document.querySelectorAll("[data-session-delete]"));
+    const sessionRenameButtons = Array.from(document.querySelectorAll("[data-session-rename]"));
+    const sessionOpenNodes = Array.from(document.querySelectorAll("[data-session-open]"));
+    let sourceScrubHandler = null;
+    let timelineLayoutFrame = null;
+
+    function setTab(index) {
+      tabButtons.forEach((button, buttonIndex) => button.classList.toggle("is-active", buttonIndex === index));
+      panels.forEach((panel, panelIndex) => panel.classList.toggle("is-active", panelIndex === index));
+    }
+
+    function formatSeconds(value) {
+      const minutes = Math.floor(value / 60);
+      const seconds = value - minutes * 60;
+      return `${minutes}:${seconds.toFixed(3).padStart(6, "0")}`;
+    }
+
+    function reviewStartFor(item) {
+      return Number(item?.review_start_seconds ?? item?.start_time_seconds ?? 0);
+    }
+
+    function reviewEndFor(item) {
+      const fallbackStart = reviewStartFor(item);
+      return Number(item?.review_end_seconds ?? item?.end_time_seconds ?? fallbackStart + 0.5);
+    }
+
+    function signalLabelFor(item) {
+      if (!item) return "Check";
+      if (item.confidence === "high") return "Strong";
+      if (item.confidence === "medium") return "Check";
+      return "Low";
+    }
+
+    function decisionFor(detectionId) {
+      return decisions.find((entry) => entry.detectionId === detectionId) ?? null;
+    }
+
+    function decisionLabelFor(detectionId) {
+      return decisionFor(detectionId)?.label ?? "pending";
+    }
+
+    function updateReviewCounts() {
+      const keepCount = decisions.filter((entry) => entry.label === "keep").length;
+      const rejectCount = decisions.filter((entry) => entry.label === "reject").length;
+      const unsureCount = decisions.filter((entry) => entry.label === "unsure").length;
+      const pendingCount = Math.max(0, detections.length - decisions.length);
+      if (reviewCounts) {
+        reviewCounts.textContent = `${pendingCount} pending • ${keepCount} kept • ${rejectCount} rejected • ${unsureCount} unsure`;
+      }
+      if (exportSummaryCounts) {
+        exportSummaryCounts.textContent = `${keepCount} kept • ${rejectCount} rejected • ${unsureCount} unsure • ${pendingCount} pending`;
+      }
+      const currentIndex = current ? detections.findIndex((item) => item.id === current.id) + 1 : 0;
+      if (reviewPosition) {
+        reviewPosition.textContent = `Attempt ${currentIndex} of ${detections.length}`;
+      }
+      if (exportButton) {
+        exportButton.disabled = keepCount === 0;
+      }
+    }
+
+    function updateToggleButtons() {
+      if (loopButton) loopButton.textContent = loopEnabled ? "Loop on" : "Loop off";
+      if (autoplayButton) autoplayButton.textContent = autoPlayEnabled ? "Autoplay on" : "Autoplay off";
+      if (autoAdvanceButton) autoAdvanceButton.textContent = autoAdvanceEnabled ? "Auto-next on" : "Auto-next off";
+    }
+
+    function browserFriendlySource(url) {
+      return /\.(mp4|webm|m4v)(\?|$)/i.test(url || "");
+    }
+
+    function bindDetectionNodes() {
+      document.querySelectorAll("[data-focus-detection]").forEach((node) => {
+        if (node.dataset.focusBound === "true") return;
+        node.dataset.focusBound = "true";
+        node.addEventListener("click", () => selectDetection(node.getAttribute("data-focus-detection")));
+      });
+      rows = Array.from(document.querySelectorAll("[data-detection-table] tr"));
+    }
+
+    function scheduleTimelineLayout() {
+      if (!timelineTrack) return;
+      if (timelineLayoutFrame != null) {
+        window.cancelAnimationFrame(timelineLayoutFrame);
+      }
+      timelineLayoutFrame = window.requestAnimationFrame(() => {
+        timelineLayoutFrame = null;
+        layoutTimelineMarkers();
+      });
+    }
+
+    function setTimelineNodePosition(node, left, top) {
+      node.style.setProperty("--timeline-left", `${left}px`);
+      node.style.setProperty("--timeline-top", `${top}px`);
+    }
+
+    function layoutTimelineMarkers() {
+      if (!timelineTrack || !timelineViewport) return;
+      const markerNodes = Array.from(timelineTrack.querySelectorAll("[data-timeline-marker]"));
+      if (!markerNodes.length) return;
+
+      const viewportWidth = timelineViewport.clientWidth;
+      if (!viewportWidth) return;
+
+      const laneTops = [18, 36, 54];
+      const markers = markerNodes.map((node) => {
+        const id = node.getAttribute("data-timeline-marker") ?? "";
+        const item = detections.find((entry) => entry.id === id);
+        const styleLeft = Number.parseFloat(node.style.left || "0");
+        const baseLeft = Number.isFinite(styleLeft) ? (styleLeft / 100) * viewportWidth : 0;
+        return {
+          id,
+          item,
+          node,
+          width: Math.max(node.offsetWidth || 34, 34),
+          baseLeft,
+          targetLeft: baseLeft,
+          targetTop: laneTops[1],
+        };
+      }).filter((entry) => entry.item);
+
+      const lanes = laneTops.map(() => -Infinity);
+      markers
+        .sort((a, b) => a.targetLeft - b.targetLeft)
+        .forEach((entry) => {
+          const gap = entry.width / 2 + 12;
+          let laneIndex = lanes.findIndex((laneEnd) => entry.targetLeft - gap >= laneEnd);
+          if (laneIndex === -1) {
+            laneIndex = lanes.indexOf(Math.min(...lanes));
+          }
+          lanes[laneIndex] = entry.targetLeft + gap;
+          entry.targetTop = laneTops[laneIndex];
+          setTimelineNodePosition(entry.node, entry.targetLeft, entry.targetTop);
+        });
+
+      markers.forEach((entry) => {
+        entry.node.hidden = false;
+        entry.node.classList.remove("is-hidden", "is-expanded", "is-clustered");
+        setTimelineNodePosition(entry.node, entry.targetLeft, entry.targetTop);
+      });
+      timelineTrack.style.width = "100%";
+      if (timelineViewport.scrollLeft > 0) {
+        timelineViewport.scrollLeft = 0;
+      }
+    }
+
+    function renderDetectionTable() {
+      if (!tableBody) return;
+      tableBody.innerHTML = detections.map((item) => `
+        <tr class="${item.id === current?.id ? "is-current" : ""}" data-focus-detection="${item.id}">
+          <td>${item.id}</td>
+          <td>${formatSeconds(item.timestamp_seconds)}</td>
+          <td>${decisionLabelFor(item.id)}</td>
+          <td>${signalLabelFor(item)}</td>
+        </tr>
+      `).join("");
+      bindDetectionNodes();
+      applyQueueFilter();
+      scheduleTimelineLayout();
+    }
+
+    function updateReviewModeCopy() {
+      if (reviewListTitle) reviewListTitle.textContent = "Attempts";
+      if (reviewListNote) {
+        reviewListNote.textContent = "Select an attempt and record a decision.";
+      }
+    }
+
+    function updateVirtualTime() {
+      if (!virtualTime || !reviewVideo || !current) return;
+      const start = reviewStartFor(current);
+      const end = reviewEndFor(current);
+      const relative = Math.max(0, reviewVideo.currentTime - start);
+      const duration = Math.max(0.01, end - start);
+      virtualTime.textContent = `${formatSeconds(relative)} / ${formatSeconds(duration)}`;
+      if (virtualScrub) {
+        virtualScrub.max = String(duration);
+        virtualScrub.value = String(Math.min(duration, relative));
+      }
+      if (virtualPlayButton) virtualPlayButton.textContent = reviewVideo.paused ? "Play" : "Pause";
+    }
+
+    function playCurrentSegment() {
+      if (!reviewVideo || !current) return;
+      const start = reviewStartFor(current);
+      const end = reviewEndFor(current);
+      if (reviewVideo.currentTime < start || reviewVideo.currentTime >= end) {
+        reviewVideo.currentTime = start;
+      }
+      return reviewVideo.play().catch(() => {});
+    }
+
+    function nextDetection(direction = 1, preferPending = false) {
+      if (!current || detections.length === 0) return null;
+      const startIndex = Math.max(0, detections.findIndex((item) => item.id === current.id));
+      for (let step = 1; step <= detections.length; step += 1) {
+        const candidate = detections[(startIndex + step * direction + detections.length) % detections.length];
+        if (!preferPending || decisionLabelFor(candidate.id) === "pending") {
+          return candidate;
+        }
+      }
+      return null;
+    }
+
+    function applyQueueFilter() {
+      rows.forEach((row) => {
+        const id = row.getAttribute("data-focus-detection") ?? "";
+        const detection = detections.find((item) => item.id === id);
+        const decision = decisionLabelFor(id);
+        const haystack = `${id} ${decision} ${detection?.confidence ?? ""}`.toLowerCase();
+        const matchesFilter = reviewFilter === "all" || (reviewFilter === "pending" ? decision === "pending" : decision === reviewFilter);
+        row.hidden = !matchesFilter;
+      });
+    }
+
+    function syncVideoSource() {
+      if (!reviewVideo || !current) return;
+      const proxySrc = parsed.primaryVideoUrl ?? "";
+      const directSrc = parsed.sourceVideoUrl ?? "";
+      if (sourceLoopHandler) {
+        reviewVideo.removeEventListener("timeupdate", sourceLoopHandler);
+        sourceLoopHandler = null;
+      }
+      const start = reviewStartFor(current);
+      const end = reviewEndFor(current);
+      reviewVideo.controls = false;
+      virtualControls && (virtualControls.hidden = false);
+      virtualScrub && (virtualScrub.hidden = false);
+      let sourceSrc = proxySrc;
+      let waitingForProxy = false;
+      if (parsed.session?.status === "ready_proxy_pending") {
+        if (browserFriendlySource(directSrc)) {
+          sourceSrc = directSrc;
+        } else {
+          waitingForProxy = true;
+          sourceSrc = "";
+        }
+      }
+
+      if (waitingForProxy) {
+        reviewVideo.pause();
+        reviewVideo.removeAttribute("src");
+        reviewVideo.load();
+        if (reviewPlaceholder) {
+          reviewPlaceholder.hidden = false;
+          reviewPlaceholder.textContent = "The review video is still being prepared for this source format. Playback will become available automatically.";
+        }
+        if (virtualPlayButton) virtualPlayButton.textContent = "Preparing video";
+        if (virtualScrub) virtualScrub.value = "0";
+        updateVirtualTime();
+        return;
+      }
+
+      reviewPlaceholder && (reviewPlaceholder.hidden = true);
+      if (reviewVideo.dataset.sourceSrc !== sourceSrc || !reviewVideo.getAttribute("src")) {
+        reviewVideo.src = sourceSrc;
+        reviewVideo.dataset.sourceSrc = sourceSrc;
+        reviewVideo.addEventListener("loadedmetadata", () => {
+          reviewVideo.currentTime = start;
+          updateVirtualTime();
+          if (autoPlayEnabled) void playCurrentSegment();
+        }, { once: true });
+      } else {
+        reviewVideo.currentTime = start;
+      }
+      sourceLoopHandler = () => {
+        if (reviewVideo.currentTime >= end) {
+          if (loopEnabled) {
+            reviewVideo.currentTime = start;
+          } else if (autoAdvanceEnabled) {
+            reviewVideo.pause();
+            const next = nextDetection(1, true) ?? nextDetection(1, false);
+            if (next && next.id !== current?.id) {
+              selectDetection(next.id, { autoplay: autoPlayEnabled });
+              return;
+            }
+            reviewVideo.currentTime = start;
+          } else {
+            reviewVideo.pause();
+            reviewVideo.currentTime = start;
+          }
+        }
+        updateVirtualTime();
+      };
+      reviewVideo.addEventListener("timeupdate", sourceLoopHandler);
+      updateReviewModeCopy();
+      updateVirtualTime();
+    }
+
+    function selectDetection(id, options = {}) {
+      current = detections.find((item) => item.id === id) ?? current;
+      if (!current) return;
+      currentLabel && (currentLabel.textContent = `Attempt ${current.index}`);
+      timeLabel && (timeLabel.textContent = formatSeconds(current.timestamp_seconds));
+      reviewLabel && (reviewLabel.textContent = `${formatSeconds(reviewStartFor(current))} to ${formatSeconds(reviewEndFor(current))} · ${parsed.session?.source_video_path ?? ""}`);
+      audioLabel && (audioLabel.textContent = `Audio ${current.scores.audio.toFixed(2)}`);
+      windowLabel && (windowLabel.textContent = `Window ${formatSeconds(reviewStartFor(current))} to ${formatSeconds(reviewEndFor(current))}`);
+      decisionDetailLabel && (decisionDetailLabel.textContent = `Decision ${decisionFor(current.id)?.label ?? "pending"}`);
+      document.querySelectorAll("[data-focus-detection]").forEach((node) => {
+        node.classList.toggle("is-current", node.getAttribute("data-focus-detection") === id);
+      });
+      rows.forEach((row) => row.classList.toggle("is-current", row.getAttribute("data-focus-detection") === id));
+      scheduleTimelineLayout();
+      syncVideoSource();
+      updateReviewCounts();
+      const currentDecision = decisionFor(current.id);
+      if (currentDecision) {
+        decisionStatus && (decisionStatus.textContent = `Saved ${currentDecision.label} for ${currentDecision.detectionId}.`);
+        decisionDetailLabel && (decisionDetailLabel.textContent = `Decision ${currentDecision.label}`);
+        if (decisionNotes) decisionNotes.value = currentDecision.notes ?? "";
+      } else {
+        decisionStatus && (decisionStatus.textContent = "No decision recorded for this attempt.");
+        decisionDetailLabel && (decisionDetailLabel.textContent = "Decision pending");
+        if (decisionNotes) decisionNotes.value = "";
+      }
+      if (options.autoplay && autoPlayEnabled) {
+        window.setTimeout(() => { void playCurrentSegment(); }, 40);
+      }
+    }
+
+    tabButtons.forEach((button, index) => button.addEventListener("click", () => setTab(index)));
+    document.querySelectorAll("[data-open-tab]").forEach((button) => {
+      button.addEventListener("click", () => setTab(Number(button.getAttribute("data-open-tab"))));
+    });
+    bindDetectionNodes();
+    scheduleTimelineLayout();
+    window.addEventListener("resize", scheduleTimelineLayout);
+
+    reviewFilterSelect?.addEventListener("change", (event) => {
+      reviewFilter = String(event.target?.value ?? "all");
+      applyQueueFilter();
+    });
+
+    const form = document.querySelector("[data-analysis-form]");
+    const input = document.querySelector("[data-analysis-path]");
+    const status = document.querySelector("[data-analysis-status]");
+    const profile = document.querySelector("[data-analysis-profile]");
+    const detector = document.querySelector("[data-analysis-detector]");
+    const sessionNameInput = document.querySelector("[data-analysis-session-name]");
+
+    function deriveSessionNameFromPath(filePath) {
+      const raw = String(filePath ?? "").trim();
+      if (!raw) return "";
+      const leaf = raw.split(/[\\\\/]/).pop() ?? raw;
+      return leaf.replace(/\.[^.]+$/, "");
+    }
+
+    function reconcileSessionList(sessions) {
+      if (!sessionList || !Array.isArray(sessions)) return;
+      const liveIds = new Set(sessions.map((item) => item.sessionId));
+      sessionList.querySelectorAll("[data-session-row]").forEach((row) => {
+        const rowId = row.getAttribute("data-session-row");
+        if (rowId && !liveIds.has(rowId)) {
+          row.remove();
+        }
+      });
+      if (sessionTotal) {
+        sessionTotal.textContent = `${sessions.length} total`;
+      }
+    }
+
+    function renderDecisions(decisions) {
+      if (!decisionList) return;
+      if (!decisions.length) {
+        decisionList.innerHTML = "<article><strong>No saved decisions</strong><p>Use Review to mark attempts as Keep, Reject, or Unsure.</p></article>";
+        return;
+      }
+      decisionList.innerHTML = decisions.slice(0, 8).map((entry) => `
+        <article>
+          <strong>${entry.detectionId} · ${entry.label}</strong>
+          <div class="session-listing__meta">
+            <span>${entry.updatedAt}</span>
+          </div>
+          <p>${entry.notes || "No note"}</p>
+        </article>
+      `).join("");
+    }
+
+    async function refreshDecisions() {
+      if (!parsed.session?.id) return;
+      const response = await fetch(`/api/review?analysisRunId=${encodeURIComponent(parsed.session.id)}`);
+      const payload = await response.json();
+      decisions = payload.decisions ?? [];
+      renderDecisions(decisions);
+      updateReviewCounts();
+      renderDetectionTable();
+      if (current) selectDetection(current.id);
+    }
+
+    input?.addEventListener("change", () => {
+      if (!sessionNameInput) return;
+      if (String(sessionNameInput.value ?? "").trim()) return;
+      sessionNameInput.value = deriveSessionNameFromPath(input?.value ?? "");
+    });
+
+    virtualPlayButton?.addEventListener("click", async () => {
+      if (reviewVideo.paused) {
+        await playCurrentSegment();
+      } else {
+        reviewVideo.pause();
+      }
+      updateVirtualTime();
+    });
+    previousButton?.addEventListener("click", () => {
+      const previous = nextDetection(-1, false);
+      if (previous) selectDetection(previous.id, { autoplay: autoPlayEnabled });
+    });
+    nextButton?.addEventListener("click", () => {
+      const next = nextDetection(1, false);
+      if (next) selectDetection(next.id, { autoplay: autoPlayEnabled });
+    });
+    loopButton?.addEventListener("click", () => {
+      loopEnabled = !loopEnabled;
+      updateToggleButtons();
+    });
+    autoplayButton?.addEventListener("click", () => {
+      autoPlayEnabled = !autoPlayEnabled;
+      updateToggleButtons();
+    });
+    autoAdvanceButton?.addEventListener("click", () => {
+      autoAdvanceEnabled = !autoAdvanceEnabled;
+      updateToggleButtons();
+    });
+
+    sourceScrubHandler = (event) => {
+      if (!reviewVideo || !current) return;
+      const start = reviewStartFor(current);
+      reviewVideo.currentTime = start + Number(event.target?.value ?? 0);
+      updateVirtualTime();
+    };
+    virtualScrub?.addEventListener("input", sourceScrubHandler);
+
+    const initialTab = Number(parsed.requestedTab ?? "0");
+    if (!Number.isNaN(initialTab) && initialTab >= 0) {
+      setTab(initialTab);
+    }
+
+    async function refreshManifest() {
+      if (!parsed.session?.output_dir) return;
+      const manifestPath = `${parsed.session.output_dir}/ui_session_manifest.json`;
+      const response = await fetch(`/api/media?path=${encodeURIComponent(manifestPath)}`, { cache: "no-store" });
+      if (!response.ok) return;
+      const manifest = await response.json();
+      parsed.session = manifest.session;
+      parsed.primaryVideoUrl = `/api/media?path=${encodeURIComponent(`${manifest.session.output_dir}/web/session_source_review.mp4`)}`;
+      parsed.sourceVideoUrl = `/api/media?path=${encodeURIComponent(manifest.session.source_video_path)}`;
+      detections = (manifest.detections ?? []).map((item) => ({
+        ...item,
+        reviewClipPath: item.clip?.browser_path ?? item.clip?.path,
+      }));
+      const currentId = current?.id;
+      current = detections.find((item) => item.id === currentId) ?? detections[0] ?? null;
+      parsed.requestedSession = manifest.session.id;
+      renderDetectionTable();
+      scheduleTimelineLayout();
+      if (current) {
+        selectDetection(current.id);
+      }
+    }
+
+    async function pollJob(jobId) {
+      let redirectedToReview = false;
+      while (true) {
+        const response = await fetch(`/api/analysis?job=${encodeURIComponent(jobId)}`);
+        const payload = await response.json();
+        const headline = payload.phaseLabel ?? payload.phase ?? payload.status;
+        const detail = payload.progressDetail ? ` - ${payload.progressDetail}` : "";
+        status && (status.textContent = `${headline}${detail}`);
+        reviewProgress && (reviewProgress.textContent = `${headline}${detail}`);
+        if (!redirectedToReview && (payload.phase === "review-ready" || payload.phase === "building-review-proxy" || payload.phase === "finalizing" || payload.status === "completed")) {
+          const alreadyOnTargetReview = parsed.requestedSession === payload.sessionId && String(parsed.requestedTab ?? "0") === "1";
+          redirectedToReview = true;
+          if (!alreadyOnTargetReview) {
+            const nextUrl = new URL(window.location.href);
+            nextUrl.searchParams.set("session", payload.sessionId);
+            nextUrl.searchParams.set("tab", "1");
+            nextUrl.searchParams.set("job", payload.id);
+            window.location.replace(nextUrl.toString());
+            return;
+          }
+        }
+        if (parsed.requestedJob) {
+          await refreshManifest();
+        }
+        if (payload.status === "completed" || payload.status === "failed") {
+          if (payload.status === "completed") {
+            await refreshManifest();
+            reviewProgress && (reviewProgress.textContent = "Review video is ready. Export clips after review if needed.");
+          }
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+    }
+
+    if (parsed.requestedJob && parsed.session?.status === "ready_proxy_pending") {
+      pollJob(parsed.requestedJob);
+    }
+
+    if (!parsed.requestedJob && parsed.session?.status === "ready_proxy_pending") {
+      const passivePoll = async () => {
+        while (parsed.session?.status === "ready_proxy_pending") {
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+          await refreshManifest();
+          reviewProgress && (reviewProgress.textContent = "The review video is still being prepared. Playback will become available automatically.");
+        }
+        reviewProgress && (reviewProgress.textContent = "Review video is ready. Export clips after review if needed.");
+      };
+      void passivePoll();
+    }
+
+    form?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      status && (status.textContent = "Starting analysis...");
+      const response = await fetch("/api/analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          videoPath: input?.value ?? "",
+          sessionName: sessionNameInput?.value ?? "",
+          profile: profile?.value ?? "long-session",
+          detectorId: detector?.value ?? "audio_v2_pcen_classifier",
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        status && (status.textContent = payload.error ?? "Could not start analysis.");
+        return;
+      }
+      await pollJob(payload.id);
+    });
+
+    async function openSession(sessionId) {
+      await fetch("/api/catalog", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "open", analysisRunId: sessionId }),
+      }).catch(() => {});
+      const nextUrl = new URL(window.location.href);
+      nextUrl.searchParams.set("session", sessionId);
+      nextUrl.searchParams.set("tab", "1");
+      nextUrl.searchParams.delete("job");
+      window.location.assign(nextUrl.toString());
+    }
+
+    sessionOpenNodes.forEach((node) => {
+      node.addEventListener("click", (event) => {
+        event.preventDefault();
+        const sessionId = node.getAttribute("data-session-open");
+        if (sessionId) {
+          void openSession(sessionId);
+        }
+      });
+    });
+
+    sessionDeleteButtons.forEach((button) => {
+      button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const sessionId = button.getAttribute("data-session-delete");
+        if (!sessionId) return;
+        const confirmed = window.confirm("Delete this session and remove its generated files? The original video will not be deleted.");
+        if (!confirmed) return;
+        const row = button.closest(".session-listing");
+        const rowButtons = Array.from(row?.querySelectorAll("button") ?? []);
+        rowButtons.forEach((node) => { node.disabled = true; });
+        const originalLabel = button.textContent;
+        button.textContent = "Deleting...";
+        status && (status.textContent = "Deleting session...");
+        const response = await fetch("/api/catalog", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "delete", analysisRunId: sessionId }),
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+          rowButtons.forEach((node) => { node.disabled = false; });
+          button.textContent = originalLabel;
+          status && (status.textContent = payload.error ?? "Could not delete the session.");
+          return;
+        }
+        const deletingCurrentSession = parsed.session?.id === sessionId || parsed.requestedSession === sessionId;
+        reconcileSessionList(payload.sessions);
+        if (row?.isConnected) {
+          row.remove();
+        }
+        status && (status.textContent = payload.deleted === false ? "Session was already removed." : "Session deleted.");
+        if (!deletingCurrentSession) {
+          return;
+        }
+        const nextUrl = new URL(window.location.href);
+        nextUrl.searchParams.delete("session");
+        nextUrl.searchParams.set("tab", "0");
+        nextUrl.searchParams.delete("job");
+        nextUrl.searchParams.set("refresh", String(Date.now()));
+        window.location.replace(nextUrl.toString());
+      });
+    });
+
+    sessionRenameButtons.forEach((button) => {
+      button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const sessionId = button.getAttribute("data-session-rename");
+        const currentName = button.getAttribute("data-session-current-name") ?? "";
+        if (!sessionId) return;
+        const nextName = window.prompt("Session name", currentName);
+        if (nextName == null) return;
+        const trimmed = nextName.trim();
+        if (!trimmed || trimmed === currentName.trim()) return;
+        const response = await fetch("/api/catalog", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "rename", analysisRunId: sessionId, sessionName: trimmed }),
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+          status && (status.textContent = payload.error ?? "Could not rename the session.");
+          return;
+        }
+        const nextUrl = new URL(window.location.href);
+        if (parsed.session?.id === sessionId) {
+          window.location.assign(nextUrl.toString());
+          return;
+        }
+        nextUrl.searchParams.delete("session");
+        nextUrl.searchParams.set("tab", "0");
+        nextUrl.searchParams.delete("job");
+        window.location.assign(nextUrl.toString());
+      });
+    });
+
+    async function saveDecision(label) {
+      if (!parsed.session?.id || !current) return;
+      const response = await fetch("/api/review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          analysisRunId: parsed.session.id,
+          detectionId: current.id,
+          label,
+          notes: decisionNotes?.value ?? "",
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        decisionStatus && (decisionStatus.textContent = payload.error ?? "Could not save the decision.");
+        return;
+      }
+      decisionStatus && (decisionStatus.textContent = `Saved ${payload.decision.label} for ${payload.decision.detectionId}.`);
+      await refreshDecisions();
+      if (autoAdvanceEnabled) {
+        const next = nextDetection(1, true) ?? nextDetection(1, false);
+        if (next && next.id !== current?.id) {
+          selectDetection(next.id, { autoplay: autoPlayEnabled });
+        }
+      }
+    }
+
+    document.querySelectorAll("[data-decision]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        await saveDecision(button.getAttribute("data-decision"));
+      });
+    });
+
+    function renderExportList(paths) {
+      exportedPaths = paths ?? [];
+      if (!exportList) return;
+      if (!exportedPaths.length) {
+        exportList.innerHTML = "<article><strong>No exports yet.</strong><span>Use Export kept clips after review.</span></article>";
+        return;
+      }
+      exportList.innerHTML = exportedPaths.map((item) => `
+        <a href="/api/media?path=${encodeURIComponent(item)}" target="_blank">
+          <strong>${item.split("/").pop()}</strong>
+          <span>${item}</span>
+        </a>
+      `).join("");
+    }
+
+    async function pollExportJob(jobId) {
+      exportJobId = jobId;
+      while (true) {
+        const response = await fetch(`/api/export?job=${encodeURIComponent(jobId)}`);
+        const payload = await response.json();
+        const detail = payload.progressDetail ? ` - ${payload.progressDetail}` : "";
+        exportStatus && (exportStatus.textContent = `Export ${payload.id}: ${payload.phaseLabel}${detail}`);
+        if (payload.status === "completed") {
+          renderExportList(payload.exportedPaths ?? []);
+          return;
+        }
+        if (payload.status === "failed") {
+          exportStatus && (exportStatus.textContent = payload.error ?? "Export failed.");
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1200));
+      }
+    }
+
+    exportButton?.addEventListener("click", async () => {
+      if (!parsed.session?.id) return;
+      exportStatus && (exportStatus.textContent = "Starting export...");
+      const response = await fetch("/api/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ analysisRunId: parsed.session.id }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        exportStatus && (exportStatus.textContent = payload.error ?? "Could not start export.");
+        return;
+      }
+      setTab(2);
+      await pollExportJob(payload.id);
+    });
+
+    document.addEventListener("keydown", (event) => {
+      const tagName = event.target?.tagName?.toLowerCase();
+      if (tagName === "input" || tagName === "textarea" || tagName === "select") return;
+      if (event.key === " ") {
+        event.preventDefault();
+        virtualPlayButton?.click();
+      } else if (event.key === "ArrowRight") {
+        nextButton?.click();
+      } else if (event.key === "ArrowLeft") {
+        previousButton?.click();
+      } else if (event.key.toLowerCase() === "k") {
+        void saveDecision("keep");
+      } else if (event.key.toLowerCase() === "r") {
+        void saveDecision("reject");
+      } else if (event.key.toLowerCase() === "u") {
+        void saveDecision("unsure");
+      }
+    });
+
+    updateReviewModeCopy();
+    updateToggleButtons();
+    renderExportList([]);
+    if (sessionNameInput && !String(sessionNameInput.value ?? "").trim()) {
+      sessionNameInput.value = deriveSessionNameFromPath(input?.value ?? "");
+    }
+    syncVideoSource();
+    renderDetectionTable();
+    if (current) selectDetection(current.id, { autoplay: autoPlayEnabled });
+    refreshDecisions();
+  </script>
+</main>

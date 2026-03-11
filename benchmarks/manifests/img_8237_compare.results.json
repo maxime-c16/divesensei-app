@@ -1,0 +1,663 @@
+{
+  "manifest": "/home/mcauchy/divesensei-app/benchmarks/manifests/img_8237_compare.json",
+  "detectors": [
+    {
+      "id": "audio_v1_heuristic",
+      "label": "Baseline heuristic",
+      "config": {
+        "profile": "long-session",
+        "audio_visual_skip_video_verification": true
+      }
+    },
+    {
+      "id": "audio_v2_pcen_classifier",
+      "label": "PCEN plus clip classifier",
+      "config": {
+        "profile": "long-session",
+        "audio_visual_skip_video_verification": true,
+        "audio_clip_model_path": ".divesensei-runtime/models/audio_clip_model.json"
+      }
+    },
+    {
+      "id": "audio_v2_hybrid_video",
+      "label": "PCEN plus classifier plus ambiguous video",
+      "config": {
+        "profile": "long-session",
+        "audio_visual_skip_video_verification": false,
+        "audio_clip_model_path": ".divesensei-runtime/models/audio_clip_model.json"
+      }
+    }
+  ],
+  "summaries": {
+    "audio_v1_heuristic": {
+      "case_count": 1,
+      "existing_cases": 1,
+      "pass_rate": 0.0,
+      "timestamp_case_count": 1,
+      "true_positive_count": 1,
+      "false_positive_count": 0,
+      "false_negative_count": 3,
+      "precision": 1.0,
+      "recall": 0.25,
+      "mean_detected_events": 1,
+      "mean_runtime_seconds": 0.7424604892730713
+    },
+    "audio_v2_pcen_classifier": {
+      "case_count": 1,
+      "existing_cases": 1,
+      "pass_rate": 1.0,
+      "timestamp_case_count": 1,
+      "true_positive_count": 4,
+      "false_positive_count": 0,
+      "false_negative_count": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "mean_detected_events": 4,
+      "mean_runtime_seconds": 0.5089535713195801
+    },
+    "audio_v2_hybrid_video": {
+      "case_count": 1,
+      "existing_cases": 1,
+      "pass_rate": 1.0,
+      "timestamp_case_count": 1,
+      "true_positive_count": 4,
+      "false_positive_count": 0,
+      "false_negative_count": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "mean_detected_events": 4,
+      "mean_runtime_seconds": 0.47844552993774414
+    }
+  },
+  "results": [
+    {
+      "path": "/srv/nas/videos/Eindhoven 2026/IMG_8237.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8237.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Pool-session hard case with close late dives and horn/clapping negative.",
+      "exists": true,
+      "runtime_seconds": 0.7424604892730713,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        5.088
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 5.088,
+          "audio_score": 9.557887077331543,
+          "video_score": 0.0,
+          "combined_score": 9.557887077331543,
+          "start_time": 0.0,
+          "end_time": 8.088000000000001,
+          "confidence": "high",
+          "details": {
+            "audio_score": 9.557887077331543,
+            "spectral_flux": 309.183837890625,
+            "rms": 0.0941275879740715,
+            "hf_ratio": 0.41756129264831543,
+            "spectral_centroid_hz": 2077.6142578125,
+            "spectral_flatness": 0.5175719857215881,
+            "post_flux_ratio": 0.9525226950645447,
+            "post_rms_ratio": 1.3998388051986694,
+            "local_prominence": 8.672369956970215,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": false,
+      "expected_events": [
+        3.0,
+        5.0,
+        19.0,
+        20.0
+      ],
+      "forbidden_events": [
+        10.272
+      ],
+      "tolerance_seconds": 0.95,
+      "matching": {
+        "matches": [
+          {
+            "expected_timestamp": 5.0,
+            "predicted_timestamp": 5.088,
+            "delta_seconds": 0.08800000000000008
+          }
+        ],
+        "matched_count": 1,
+        "unmatched_expected": [
+          3.0,
+          19.0,
+          20.0
+        ],
+        "unmatched_predicted": []
+      },
+      "forbidden_hits": [],
+      "true_positive_count": 1,
+      "false_positive_count": 0,
+      "false_negative_count": 3,
+      "precision": 1.0,
+      "recall": 0.25
+    },
+    {
+      "path": "/srv/nas/videos/Eindhoven 2026/IMG_8237.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8237.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Pool-session hard case with close late dives and horn/clapping negative.",
+      "exists": true,
+      "runtime_seconds": 0.5089535713195801,
+      "actual_event_count": 4,
+      "confidence_counts": {
+        "high": 3,
+        "medium": 0,
+        "low": 1
+      },
+      "predicted_timestamps": [
+        2.16,
+        4.8,
+        19.248,
+        19.712
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 2.16,
+          "audio_score": 10.592904090881348,
+          "video_score": 0.0,
+          "combined_score": 10.592904090881348,
+          "start_time": 0.0,
+          "end_time": 5.16,
+          "confidence": "high",
+          "details": {
+            "audio_score": 10.592904090881348,
+            "spectral_flux": 225.945068359375,
+            "rms": 0.052408087998628616,
+            "hf_ratio": 0.30387192964553833,
+            "spectral_centroid_hz": 1652.3533935546875,
+            "spectral_flatness": 0.3837418854236603,
+            "post_flux_ratio": 2.471858263015747,
+            "post_rms_ratio": 3.6003105640411377,
+            "local_prominence": 10.345731735229492,
+            "nearby_peaks_8s": 9,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "pcen_multiband",
+            "pcen_onset_mean": 0.15338610112667084,
+            "pcen_onset_peak": 0.2627192735671997,
+            "clip_rms_mean": 0.045105721801519394,
+            "clip_rms_std": 0.024188626557588577,
+            "clip_rms_peak": 0.14098694920539856,
+            "clip_flux_mean": 64.83413696289062,
+            "clip_flux_peak": 224.0906524658203,
+            "clip_flux_std": 32.69086837768555,
+            "clip_hf_ratio_mean": 0.25455018877983093,
+            "clip_hf_ratio_peak": 0.4040764570236206,
+            "clip_centroid_mean": 1374.0030517578125,
+            "clip_flatness_mean": 0.3430687487125397,
+            "clip_pcen_onset_mean": 0.014569156803190708,
+            "clip_pcen_onset_peak": 0.11777877807617188,
+            "clip_pcen_onset_std": 0.014517686329782009,
+            "clip_pcen_band_spread": 0.2857142857142857,
+            "clip_pcen_peak_band": 0.3333333333333333,
+            "clip_pcen_high_band_ratio": 0.34136107563972473,
+            "clip_pcen_low_band_ratio": 0.10777445137500763,
+            "audio_clip_probability": 0.9946082669273136,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 4.8,
+          "audio_score": 11.6897611618042,
+          "video_score": 0.0,
+          "combined_score": 11.6897611618042,
+          "start_time": 0.0,
+          "end_time": 7.8,
+          "confidence": "high",
+          "details": {
+            "audio_score": 11.6897611618042,
+            "spectral_flux": 247.84861755371094,
+            "rms": 0.07361853867769241,
+            "hf_ratio": 0.2026808261871338,
+            "spectral_centroid_hz": 1085.2645263671875,
+            "spectral_flatness": 0.25333547592163086,
+            "post_flux_ratio": 3.0761663913726807,
+            "post_rms_ratio": 4.080201625823975,
+            "local_prominence": 11.535713195800781,
+            "nearby_peaks_8s": 14,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "pcen_multiband",
+            "pcen_onset_mean": 0.14890141785144806,
+            "pcen_onset_peak": 0.37357306480407715,
+            "clip_rms_mean": 0.04687117412686348,
+            "clip_rms_std": 0.02409718744456768,
+            "clip_rms_peak": 0.13086029887199402,
+            "clip_flux_mean": 76.67697143554688,
+            "clip_flux_peak": 298.70758056640625,
+            "clip_flux_std": 47.69160842895508,
+            "clip_hf_ratio_mean": 0.3056613802909851,
+            "clip_hf_ratio_peak": 0.5059341192245483,
+            "clip_centroid_mean": 1577.578125,
+            "clip_flatness_mean": 0.40501412749290466,
+            "clip_pcen_onset_mean": 0.014855579473078251,
+            "clip_pcen_onset_peak": 0.15043924748897552,
+            "clip_pcen_onset_std": 0.01780816540122032,
+            "clip_pcen_band_spread": 0.5714285714285714,
+            "clip_pcen_peak_band": 0.6666666666666666,
+            "clip_pcen_high_band_ratio": 0.40474191308021545,
+            "clip_pcen_low_band_ratio": 0.028993509709835052,
+            "audio_clip_probability": 0.981270561363218,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 19.248,
+          "audio_score": 10.168914794921875,
+          "video_score": 0.0,
+          "combined_score": 10.168914794921875,
+          "start_time": 13.248000000000001,
+          "end_time": 22.248,
+          "confidence": "high",
+          "details": {
+            "audio_score": 10.168914794921875,
+            "spectral_flux": 145.01808166503906,
+            "rms": 0.02311883121728897,
+            "hf_ratio": 0.6269201636314392,
+            "spectral_centroid_hz": 2680.003173828125,
+            "spectral_flatness": 0.6128392815589905,
+            "post_flux_ratio": 1.5332244634628296,
+            "post_rms_ratio": 1.4538214206695557,
+            "local_prominence": 10.127250671386719,
+            "nearby_peaks_8s": 12,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "pcen_multiband",
+            "pcen_onset_mean": 0.15139110386371613,
+            "pcen_onset_peak": 0.29469501972198486,
+            "clip_rms_mean": 0.028607016429305077,
+            "clip_rms_std": 0.013055377639830112,
+            "clip_rms_peak": 0.09473149478435516,
+            "clip_flux_mean": 48.68171310424805,
+            "clip_flux_peak": 150.54788208007812,
+            "clip_flux_std": 21.812114715576172,
+            "clip_hf_ratio_mean": 0.3065674304962158,
+            "clip_hf_ratio_peak": 0.6377476453781128,
+            "clip_centroid_mean": 1614.61279296875,
+            "clip_flatness_mean": 0.4122205376625061,
+            "clip_pcen_onset_mean": 0.01417590957134962,
+            "clip_pcen_onset_peak": 0.12835761904716492,
+            "clip_pcen_onset_std": 0.012854017317295074,
+            "clip_pcen_band_spread": 0.5714285714285714,
+            "clip_pcen_peak_band": 0.6666666666666666,
+            "clip_pcen_high_band_ratio": 0.3917945325374603,
+            "clip_pcen_low_band_ratio": 0.04377129301428795,
+            "audio_clip_probability": 0.9994220008165736,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 19.712,
+          "audio_score": 2.936586856842041,
+          "video_score": 0.0,
+          "combined_score": 2.936586856842041,
+          "start_time": 13.712,
+          "end_time": 22.712,
+          "confidence": "low",
+          "details": {
+            "audio_score": 2.936586856842041,
+            "spectral_flux": 136.99771118164062,
+            "rms": 0.0941062718629837,
+            "hf_ratio": 0.14964532852172852,
+            "spectral_centroid_hz": 955.0648803710938,
+            "spectral_flatness": 0.22654874622821808,
+            "post_flux_ratio": 0.8263433575630188,
+            "post_rms_ratio": 1.1649715900421143,
+            "local_prominence": 2.842651605606079,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "clip_rms_mean": 0.0297263003885746,
+            "clip_rms_std": 0.013009525835514069,
+            "clip_rms_peak": 0.09473149478435516,
+            "clip_flux_mean": 50.652278900146484,
+            "clip_flux_peak": 150.54788208007812,
+            "clip_flux_std": 21.73676872253418,
+            "clip_hf_ratio_mean": 0.3097505271434784,
+            "clip_hf_ratio_peak": 0.6377476453781128,
+            "clip_centroid_mean": 1614.89501953125,
+            "clip_flatness_mean": 0.41155052185058594,
+            "clip_pcen_onset_mean": 0.014394665136933327,
+            "clip_pcen_onset_peak": 0.12835761904716492,
+            "clip_pcen_onset_std": 0.013155960477888584,
+            "clip_pcen_band_spread": 0.5714285714285714,
+            "clip_pcen_peak_band": 0.6666666666666666,
+            "clip_pcen_high_band_ratio": 0.3917945325374603,
+            "clip_pcen_low_band_ratio": 0.04377129301428795,
+            "audio_clip_probability": 0.9985042813082015,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        }
+      ],
+      "passed": true,
+      "expected_events": [
+        3.0,
+        5.0,
+        19.0,
+        20.0
+      ],
+      "forbidden_events": [
+        10.272
+      ],
+      "tolerance_seconds": 0.95,
+      "matching": {
+        "matches": [
+          {
+            "expected_timestamp": 5.0,
+            "predicted_timestamp": 4.8,
+            "delta_seconds": 0.20000000000000018
+          },
+          {
+            "expected_timestamp": 19.0,
+            "predicted_timestamp": 19.248,
+            "delta_seconds": 0.2480000000000011
+          },
+          {
+            "expected_timestamp": 20.0,
+            "predicted_timestamp": 19.712,
+            "delta_seconds": 0.28800000000000026
+          },
+          {
+            "expected_timestamp": 3.0,
+            "predicted_timestamp": 2.16,
+            "delta_seconds": 0.8399999999999999
+          }
+        ],
+        "matched_count": 4,
+        "unmatched_expected": [],
+        "unmatched_predicted": []
+      },
+      "forbidden_hits": [],
+      "true_positive_count": 4,
+      "false_positive_count": 0,
+      "false_negative_count": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    {
+      "path": "/srv/nas/videos/Eindhoven 2026/IMG_8237.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8237.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_hybrid_video",
+      "detector_label": "PCEN plus classifier plus ambiguous video",
+      "notes": "Pool-session hard case with close late dives and horn/clapping negative.",
+      "exists": true,
+      "runtime_seconds": 0.47844552993774414,
+      "actual_event_count": 4,
+      "confidence_counts": {
+        "high": 3,
+        "medium": 0,
+        "low": 1
+      },
+      "predicted_timestamps": [
+        2.16,
+        4.8,
+        19.248,
+        19.712
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 2.16,
+          "audio_score": 10.592904090881348,
+          "video_score": 0.0,
+          "combined_score": 10.592904090881348,
+          "start_time": 0.0,
+          "end_time": 5.16,
+          "confidence": "high",
+          "details": {
+            "audio_score": 10.592904090881348,
+            "spectral_flux": 225.945068359375,
+            "rms": 0.052408087998628616,
+            "hf_ratio": 0.30387192964553833,
+            "spectral_centroid_hz": 1652.3533935546875,
+            "spectral_flatness": 0.3837418854236603,
+            "post_flux_ratio": 2.471858263015747,
+            "post_rms_ratio": 3.6003105640411377,
+            "local_prominence": 10.345731735229492,
+            "nearby_peaks_8s": 9,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "pcen_multiband",
+            "pcen_onset_mean": 0.15338610112667084,
+            "pcen_onset_peak": 0.2627192735671997,
+            "clip_rms_mean": 0.045105721801519394,
+            "clip_rms_std": 0.024188626557588577,
+            "clip_rms_peak": 0.14098694920539856,
+            "clip_flux_mean": 64.83413696289062,
+            "clip_flux_peak": 224.0906524658203,
+            "clip_flux_std": 32.69086837768555,
+            "clip_hf_ratio_mean": 0.25455018877983093,
+            "clip_hf_ratio_peak": 0.4040764570236206,
+            "clip_centroid_mean": 1374.0030517578125,
+            "clip_flatness_mean": 0.3430687487125397,
+            "clip_pcen_onset_mean": 0.014569156803190708,
+            "clip_pcen_onset_peak": 0.11777877807617188,
+            "clip_pcen_onset_std": 0.014517686329782009,
+            "clip_pcen_band_spread": 0.2857142857142857,
+            "clip_pcen_peak_band": 0.3333333333333333,
+            "clip_pcen_high_band_ratio": 0.34136107563972473,
+            "clip_pcen_low_band_ratio": 0.10777445137500763,
+            "audio_clip_probability": 0.9946082669273136,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_hybrid_video"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 4.8,
+          "audio_score": 11.6897611618042,
+          "video_score": 0.0,
+          "combined_score": 11.6897611618042,
+          "start_time": 0.0,
+          "end_time": 7.8,
+          "confidence": "high",
+          "details": {
+            "audio_score": 11.6897611618042,
+            "spectral_flux": 247.84861755371094,
+            "rms": 0.07361853867769241,
+            "hf_ratio": 0.2026808261871338,
+            "spectral_centroid_hz": 1085.2645263671875,
+            "spectral_flatness": 0.25333547592163086,
+            "post_flux_ratio": 3.0761663913726807,
+            "post_rms_ratio": 4.080201625823975,
+            "local_prominence": 11.535713195800781,
+            "nearby_peaks_8s": 14,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "pcen_multiband",
+            "pcen_onset_mean": 0.14890141785144806,
+            "pcen_onset_peak": 0.37357306480407715,
+            "clip_rms_mean": 0.04687117412686348,
+            "clip_rms_std": 0.02409718744456768,
+            "clip_rms_peak": 0.13086029887199402,
+            "clip_flux_mean": 76.67697143554688,
+            "clip_flux_peak": 298.70758056640625,
+            "clip_flux_std": 47.69160842895508,
+            "clip_hf_ratio_mean": 0.3056613802909851,
+            "clip_hf_ratio_peak": 0.5059341192245483,
+            "clip_centroid_mean": 1577.578125,
+            "clip_flatness_mean": 0.40501412749290466,
+            "clip_pcen_onset_mean": 0.014855579473078251,
+            "clip_pcen_onset_peak": 0.15043924748897552,
+            "clip_pcen_onset_std": 0.01780816540122032,
+            "clip_pcen_band_spread": 0.5714285714285714,
+            "clip_pcen_peak_band": 0.6666666666666666,
+            "clip_pcen_high_band_ratio": 0.40474191308021545,
+            "clip_pcen_low_band_ratio": 0.028993509709835052,
+            "audio_clip_probability": 0.981270561363218,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_hybrid_video"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 19.248,
+          "audio_score": 10.168914794921875,
+          "video_score": 0.0,
+          "combined_score": 10.168914794921875,
+          "start_time": 13.248000000000001,
+          "end_time": 22.248,
+          "confidence": "high",
+          "details": {
+            "audio_score": 10.168914794921875,
+            "spectral_flux": 145.01808166503906,
+            "rms": 0.02311883121728897,
+            "hf_ratio": 0.6269201636314392,
+            "spectral_centroid_hz": 2680.003173828125,
+            "spectral_flatness": 0.6128392815589905,
+            "post_flux_ratio": 1.5332244634628296,
+            "post_rms_ratio": 1.4538214206695557,
+            "local_prominence": 10.127250671386719,
+            "nearby_peaks_8s": 12,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "pcen_multiband",
+            "pcen_onset_mean": 0.15139110386371613,
+            "pcen_onset_peak": 0.29469501972198486,
+            "clip_rms_mean": 0.028607016429305077,
+            "clip_rms_std": 0.013055377639830112,
+            "clip_rms_peak": 0.09473149478435516,
+            "clip_flux_mean": 48.68171310424805,
+            "clip_flux_peak": 150.54788208007812,
+            "clip_flux_std": 21.812114715576172,
+            "clip_hf_ratio_mean": 0.3065674304962158,
+            "clip_hf_ratio_peak": 0.6377476453781128,
+            "clip_centroid_mean": 1614.61279296875,
+            "clip_flatness_mean": 0.4122205376625061,
+            "clip_pcen_onset_mean": 0.01417590957134962,
+            "clip_pcen_onset_peak": 0.12835761904716492,
+            "clip_pcen_onset_std": 0.012854017317295074,
+            "clip_pcen_band_spread": 0.5714285714285714,
+            "clip_pcen_peak_band": 0.6666666666666666,
+            "clip_pcen_high_band_ratio": 0.3917945325374603,
+            "clip_pcen_low_band_ratio": 0.04377129301428795,
+            "audio_clip_probability": 0.9994220008165736,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_hybrid_video"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 19.712,
+          "audio_score": 2.936586856842041,
+          "video_score": 0.0,
+          "combined_score": 2.936586856842041,
+          "start_time": 13.712,
+          "end_time": 22.712,
+          "confidence": "low",
+          "details": {
+            "audio_score": 2.936586856842041,
+            "spectral_flux": 136.99771118164062,
+            "rms": 0.0941062718629837,
+            "hf_ratio": 0.14964532852172852,
+            "spectral_centroid_hz": 955.0648803710938,
+            "spectral_flatness": 0.22654874622821808,
+            "post_flux_ratio": 0.8263433575630188,
+            "post_rms_ratio": 1.1649715900421143,
+            "local_prominence": 2.842651605606079,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "clip_rms_mean": 0.0297263003885746,
+            "clip_rms_std": 0.013009525835514069,
+            "clip_rms_peak": 0.09473149478435516,
+            "clip_flux_mean": 50.652278900146484,
+            "clip_flux_peak": 150.54788208007812,
+            "clip_flux_std": 21.73676872253418,
+            "clip_hf_ratio_mean": 0.3097505271434784,
+            "clip_hf_ratio_peak": 0.6377476453781128,
+            "clip_centroid_mean": 1614.89501953125,
+            "clip_flatness_mean": 0.41155052185058594,
+            "clip_pcen_onset_mean": 0.014394665136933327,
+            "clip_pcen_onset_peak": 0.12835761904716492,
+            "clip_pcen_onset_std": 0.013155960477888584,
+            "clip_pcen_band_spread": 0.5714285714285714,
+            "clip_pcen_peak_band": 0.6666666666666666,
+            "clip_pcen_high_band_ratio": 0.3917945325374603,
+            "clip_pcen_low_band_ratio": 0.04377129301428795,
+            "audio_clip_probability": 0.9985042813082015,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_hybrid_video"
+          }
+        }
+      ],
+      "passed": true,
+      "expected_events": [
+        3.0,
+        5.0,
+        19.0,
+        20.0
+      ],
+      "forbidden_events": [
+        10.272
+      ],
+      "tolerance_seconds": 0.95,
+      "matching": {
+        "matches": [
+          {
+            "expected_timestamp": 5.0,
+            "predicted_timestamp": 4.8,
+            "delta_seconds": 0.20000000000000018
+          },
+          {
+            "expected_timestamp": 19.0,
+            "predicted_timestamp": 19.248,
+            "delta_seconds": 0.2480000000000011
+          },
+          {
+            "expected_timestamp": 20.0,
+            "predicted_timestamp": 19.712,
+            "delta_seconds": 0.28800000000000026
+          },
+          {
+            "expected_timestamp": 3.0,
+            "predicted_timestamp": 2.16,
+            "delta_seconds": 0.8399999999999999
+          }
+        ],
+        "matched_count": 4,
+        "unmatched_expected": [],
+        "unmatched_predicted": []
+      },
+      "forbidden_hits": [],
+      "true_positive_count": 4,
+      "false_positive_count": 0,
+      "false_negative_count": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    }
+  ]
+}

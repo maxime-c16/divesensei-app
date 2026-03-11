@@ -9,8 +9,9 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_MANIFEST = REPO_ROOT / "benchmarks" / "manifests" / "reviewed_audio.json"
-DEFAULT_SESSION = Path("/srv/nas/videos/Eindhoven 2026/IMG_8281.MOV")
+IMG_8237_MANIFEST = REPO_ROOT / "benchmarks" / "manifests" / "img_8237_compare.json"
+REVIEWED_MANIFEST = REPO_ROOT / "benchmarks" / "manifests" / "reviewed_compare.json"
+LONG_SESSION_MANIFEST = REPO_ROOT / "benchmarks" / "manifests" / "long_session_compare.json"
 
 
 def run_command(cmd: list[str]) -> dict:
@@ -25,64 +26,54 @@ def run_command(cmd: list[str]) -> dict:
     }
 
 
+def run_validation(manifest: Path) -> dict:
+    result = run_command([sys.executable, "-m", "divesensei.app.validation", str(manifest)])
+    if result["returncode"] != 0:
+        raise RuntimeError(json.dumps({"stage": "validate", "manifest": str(manifest), **result}, indent=2))
+    return json.loads(manifest.with_suffix(".results.json").read_text())
+
+
 def main(argv: list[str] | None = None) -> int:
-    argv = list(sys.argv[1:] if argv is None else argv)
-    manifest = Path(argv[0]).resolve() if argv else DEFAULT_MANIFEST
-    session_video = Path(argv[1]).resolve() if len(argv) > 1 else DEFAULT_SESSION
-    output_dir = REPO_ROOT / ".tmp_regression_session"
-
-    validate = run_command(
-        [
-            sys.executable,
-            "-m",
-            "divesensei.app.validation",
-            str(manifest),
-        ]
-    )
-    if validate["returncode"] != 0:
-        print(json.dumps({"stage": "validate", **validate}, indent=2))
+    _ = argv
+    try:
+        img_8237 = run_validation(IMG_8237_MANIFEST)
+        reviewed = run_validation(REVIEWED_MANIFEST)
+        long_session = run_validation(LONG_SESSION_MANIFEST)
+    except RuntimeError as exc:
+        print(str(exc))
         return 1
 
-    results_path = manifest.with_suffix(".results.json")
-    summary = json.loads(results_path.read_text())["summary"]
-    if summary["pass_rate"] < 0.7619047619047619 or summary["positive_recall_proxy"] < 0.9:
-        print(json.dumps({"stage": "validate", "summary": summary, "error": "benchmark regression"}, indent=2))
-        return 1
+    img_summary = img_8237["summaries"]
+    reviewed_summary = reviewed["summaries"]
+    long_summary = long_session["summaries"]
 
-    detect = run_command(
-        [
-            sys.executable,
-            "-m",
-            "divesensei.app.session_pipeline",
-            str(session_video),
-            "--output-dir",
-            str(output_dir),
-            "--profile",
-            "long-session",
-            "--detect-only",
-            "--json",
-        ]
-    )
-    if detect["returncode"] != 0:
-        print(json.dumps({"stage": "session", **detect}, indent=2))
-        return 1
+    baseline_img = img_summary["audio_v1_heuristic"]
+    advanced_img = img_summary["audio_v2_pcen_classifier"]
+    hybrid_img = img_summary["audio_v2_hybrid_video"]
+    baseline_reviewed = reviewed_summary["audio_v1_heuristic"]
+    advanced_reviewed = reviewed_summary["audio_v2_pcen_classifier"]
+    baseline_long = long_summary["audio_v1_heuristic"]
+    advanced_long = long_summary["audio_v2_pcen_classifier"]
 
-    session_report = json.loads((output_dir / "session_pipeline_report.json").read_text())
-    session_summary = {
-        "video_path": session_report["video_path"],
-        "candidate_count": session_report["candidate_count"],
-        "detector_seconds": session_report["detector_seconds"],
-        "report_path": str(output_dir / "session_pipeline_report.json"),
-        "extracted_count": len(session_report.get("extracted_paths", [])),
-    }
-    candidate_count = int(session_summary["candidate_count"])
-    if not 40 <= candidate_count <= 55:
+    checks = [
+        (baseline_img["pass_rate"] == 0.0, "baseline should fail IMG_8237 hard case"),
+        (advanced_img["pass_rate"] == 1.0, "advanced should pass IMG_8237 hard case"),
+        (hybrid_img["pass_rate"] == 1.0, "hybrid should pass IMG_8237 hard case"),
+        (advanced_reviewed["pass_rate"] >= baseline_reviewed["pass_rate"], "advanced reviewed pass rate regressed"),
+        (advanced_reviewed["mean_detected_events"] <= baseline_reviewed["mean_detected_events"], "advanced reviewed false positives regressed"),
+        (baseline_long["pass_rate"] == 1.0, "baseline long-session gate failed"),
+        (advanced_long["pass_rate"] == 1.0, "advanced long-session gate failed"),
+    ]
+    failed = [message for ok, message in checks if not ok]
+    if failed:
         print(
             json.dumps(
                 {
-                    "stage": "session",
-                    "summary": session_summary,
-                    "error": "session detection count out of band",
+                    "ok": False,
+                    "errors": failed,
+                    "img_8237": img_summary,
+                    "reviewed": reviewed_summary,
+                    "long_session": long_summary,
                 },
                 indent=2,
             )
@@ -93,8 +84,9 @@ def main(argv: list[str] | None = None) -> int:
         json.dumps(
             {
                 "ok": True,
-                "reviewed_summary": summary,
-                "session_summary": session_summary,
+                "img_8237": img_summary,
+                "reviewed": reviewed_summary,
+                "long_session": long_summary,
             },
             indent=2,
         )

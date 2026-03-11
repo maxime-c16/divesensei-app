@@ -1,0 +1,21 @@
+---
+import DesignWorkspace from "@/components/DesignWorkspace.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+
+const theme = {
+  id: "meet",
+  name: "DiveSensei",
+  route: "/",
+  tagline: "Dive review",
+  subtitle: "Review attempts quickly from the review video, then export only the clips you keep.",
+  tabs: ["Sessions", "Review", "Exports", "Diagnostics"],
+} as const;
+
+Astro.response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
+Astro.response.headers.set("Pragma", "no-cache");
+Astro.response.headers.set("Expires", "0");
+---
+
+<BaseLayout title="DiveSensei">
+  <DesignWorkspace theme={theme} />
+</BaseLayout>

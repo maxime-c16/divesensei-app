@@ -1,0 +1,35 @@
+{
+  "dataset": "Long-session detector comparison",
+  "detectors": [
+    {
+      "id": "audio_v1_heuristic",
+      "label": "Baseline heuristic",
+      "config": {
+        "profile": "long-session",
+        "audio_visual_skip_video_verification": true,
+        "audio_decode_timeout_seconds": 180.0
+      }
+    },
+    {
+      "id": "audio_v2_pcen_classifier",
+      "label": "PCEN plus clip classifier",
+      "config": {
+        "profile": "long-session",
+        "audio_visual_skip_video_verification": true,
+        "audio_decode_timeout_seconds": 180.0,
+        "audio_clip_model_path": ".divesensei-runtime/models/audio_clip_model.json"
+      }
+    }
+  ],
+  "cases": [
+    {
+      "path": "/srv/nas/videos/Eindhoven 2026/IMG_8281.MOV",
+      "label": "session",
+      "profile": "long-session",
+      "audio_decode_timeout_seconds": 180.0,
+      "min_events": 40,
+      "max_events": 55,
+      "notes": "Real long session gate. Expected roughly 40 to 50 splash-driven dive events."
+    }
+  ]
+}

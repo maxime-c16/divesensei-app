@@ -1,0 +1,49 @@
+{
+  "dataset": "IMG_8237 hard timestamp regression",
+  "notes": [
+    "Expected dives were user-confirmed at about 3s, 5s, 19s, and 20s.",
+    "A horn and clapping transient near 10.272s is a labeled non-dive hard negative."
+  ],
+  "detectors": [
+    {
+      "id": "audio_v1_heuristic",
+      "label": "Baseline heuristic",
+      "config": {
+        "profile": "long-session",
+        "audio_visual_skip_video_verification": true
+      }
+    },
+    {
+      "id": "audio_v2_pcen_classifier",
+      "label": "PCEN plus clip classifier",
+      "config": {
+        "profile": "long-session",
+        "audio_visual_skip_video_verification": true,
+        "audio_clip_model_path": ".divesensei-runtime/models/audio_clip_model.json"
+      }
+    },
+    {
+      "id": "audio_v2_hybrid_video",
+      "label": "PCEN plus classifier plus ambiguous video",
+      "config": {
+        "profile": "long-session",
+        "audio_visual_skip_video_verification": false,
+        "audio_clip_model_path": ".divesensei-runtime/models/audio_clip_model.json"
+      }
+    }
+  ],
+  "cases": [
+    {
+      "path": "/srv/nas/videos/Eindhoven 2026/IMG_8237.MOV",
+      "label": "positive",
+      "expected_events": [3.0, 5.0, 19.0, 20.0],
+      "forbidden_events": [10.272],
+      "tolerance_seconds": 0.95,
+      "max_false_positives": 1,
+      "audio_decode_timeout_seconds": 180.0,
+      "audio_only_pre_seconds": 6.0,
+      "audio_only_post_seconds": 3.0,
+      "notes": "Pool-session hard case with close late dives and horn/clapping negative."
+    }
+  ]
+}

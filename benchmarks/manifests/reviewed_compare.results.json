@@ -1,0 +1,5292 @@
+{
+  "manifest": "/home/mcauchy/divesensei-app/benchmarks/manifests/reviewed_compare.json",
+  "detectors": [
+    {
+      "id": "audio_v1_heuristic",
+      "label": "Baseline heuristic",
+      "config": {
+        "audio_visual_skip_video_verification": true
+      }
+    },
+    {
+      "id": "audio_v2_pcen_classifier",
+      "label": "PCEN plus clip classifier",
+      "config": {
+        "audio_visual_skip_video_verification": true,
+        "audio_clip_model_path": ".divesensei-runtime/models/audio_clip_model.json"
+      }
+    }
+  ],
+  "summaries": {
+    "audio_v1_heuristic": {
+      "case_count": 42,
+      "existing_cases": 42,
+      "pass_rate": 0.7619047619047619,
+      "timestamp_case_count": 0,
+      "true_positive_count": 0,
+      "false_positive_count": 0,
+      "false_negative_count": 0,
+      "precision": null,
+      "recall": null,
+      "mean_detected_events": 1.4047619047619047,
+      "mean_runtime_seconds": 0.275560356321789
+    },
+    "audio_v2_pcen_classifier": {
+      "case_count": 42,
+      "existing_cases": 42,
+      "pass_rate": 0.7857142857142857,
+      "timestamp_case_count": 0,
+      "true_positive_count": 0,
+      "false_positive_count": 0,
+      "false_negative_count": 0,
+      "precision": null,
+      "recall": null,
+      "mean_detected_events": 0.7857142857142857,
+      "mean_runtime_seconds": 0.36102444784981863
+    }
+  },
+  "results": [
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_2478.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_2478.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: diver visible above water near platform.",
+      "exists": true,
+      "runtime_seconds": 0.29775285720825195,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        6.416
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 6.416,
+          "audio_score": 23.195817947387695,
+          "video_score": 0.0,
+          "combined_score": 23.195817947387695,
+          "start_time": 3.4160000000000004,
+          "end_time": 7.416,
+          "confidence": "high",
+          "details": {
+            "audio_score": 23.195817947387695,
+            "spectral_flux": 246.76339721679688,
+            "rms": 0.07493864744901657,
+            "hf_ratio": 0.3388289213180542,
+            "spectral_centroid_hz": 1717.9398193359375,
+            "spectral_flatness": 0.42163142561912537,
+            "post_flux_ratio": 0.8303795456886292,
+            "post_rms_ratio": 0.9532470107078552,
+            "local_prominence": 16.499671936035156,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 2
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_2496.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_2496.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: diver inverted above pool.",
+      "exists": true,
+      "runtime_seconds": 0.1970067024230957,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 1,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        2.544
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 2.544,
+          "audio_score": 5.1907806396484375,
+          "video_score": 0.0,
+          "combined_score": 5.1907806396484375,
+          "start_time": 0.0,
+          "end_time": 3.544,
+          "confidence": "medium",
+          "details": {
+            "audio_score": 5.1907806396484375,
+            "spectral_flux": 381.4762268066406,
+            "rms": 0.08016496896743774,
+            "hf_ratio": 0.17032821476459503,
+            "spectral_centroid_hz": 1197.6650390625,
+            "spectral_flatness": 0.2211061269044876,
+            "post_flux_ratio": 5.965210914611816,
+            "post_rms_ratio": 12.011907577514648,
+            "local_prominence": 5.354021072387695,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 2
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8148.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8148.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: pool dive clip.",
+      "exists": true,
+      "runtime_seconds": 0.27088212966918945,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        15.408
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 15.408,
+          "audio_score": 26.061363220214844,
+          "video_score": 0.0,
+          "combined_score": 26.061363220214844,
+          "start_time": 12.408,
+          "end_time": 16.408,
+          "confidence": "high",
+          "details": {
+            "audio_score": 26.061363220214844,
+            "spectral_flux": 363.0461120605469,
+            "rms": 0.11059288680553436,
+            "hf_ratio": 0.49155768752098083,
+            "spectral_centroid_hz": 2238.098388671875,
+            "spectral_flatness": 0.3531210124492645,
+            "post_flux_ratio": 0.739754319190979,
+            "post_rms_ratio": 1.3810806274414062,
+            "local_prominence": 17.21755599975586,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8150.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8150.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: pool dive clip.",
+      "exists": true,
+      "runtime_seconds": 0.28513240814208984,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        19.456
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 19.456,
+          "audio_score": 59.32957077026367,
+          "video_score": 0.0,
+          "combined_score": 59.32957077026367,
+          "start_time": 16.456,
+          "end_time": 20.456,
+          "confidence": "high",
+          "details": {
+            "audio_score": 59.32957077026367,
+            "spectral_flux": 554.863525390625,
+            "rms": 0.15797099471092224,
+            "hf_ratio": 0.5600277185440063,
+            "spectral_centroid_hz": 2626.54296875,
+            "spectral_flatness": 0.5203830599784851,
+            "post_flux_ratio": 0.6179434657096863,
+            "post_rms_ratio": 1.2114665508270264,
+            "local_prominence": 53.05595397949219,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8151.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8151.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: pool dive clip.",
+      "exists": true,
+      "runtime_seconds": 0.3690018653869629,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        23.792
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 23.792,
+          "audio_score": 37.95323181152344,
+          "video_score": 0.0,
+          "combined_score": 37.95323181152344,
+          "start_time": 20.792,
+          "end_time": 24.792,
+          "confidence": "high",
+          "details": {
+            "audio_score": 37.95323181152344,
+            "spectral_flux": 205.26242065429688,
+            "rms": 0.04772398620843887,
+            "hf_ratio": 0.3517354428768158,
+            "spectral_centroid_hz": 1691.9542236328125,
+            "spectral_flatness": 0.23125390708446503,
+            "post_flux_ratio": 0.32813191413879395,
+            "post_rms_ratio": 0.7152703404426575,
+            "local_prominence": 33.50642013549805,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8152.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8152.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: pool dive clip.",
+      "exists": true,
+      "runtime_seconds": 0.5712239742279053,
+      "actual_event_count": 4,
+      "confidence_counts": {
+        "high": 4,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        0.0,
+        5.136,
+        23.824,
+        30.16
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 0.0,
+          "audio_score": 10.06067943572998,
+          "video_score": 0.0,
+          "combined_score": 10.06067943572998,
+          "start_time": 0.0,
+          "end_time": 1.0,
+          "confidence": "high",
+          "details": {
+            "audio_score": 10.06067943572998,
+            "spectral_flux": 111.80049896240234,
+            "rms": 0.09064292162656784,
+            "hf_ratio": 0.18806402385234833,
+            "spectral_centroid_hz": 1034.0308837890625,
+            "spectral_flatness": 0.2517717480659485,
+            "post_flux_ratio": 1.0262337923049927,
+            "post_rms_ratio": 1.6574558019638062,
+            "local_prominence": 7.464909076690674,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 5.136,
+          "audio_score": 8.35267162322998,
+          "video_score": 0.0,
+          "combined_score": 8.35267162322998,
+          "start_time": 2.136,
+          "end_time": 6.136,
+          "confidence": "high",
+          "details": {
+            "audio_score": 8.35267162322998,
+            "spectral_flux": 107.1635971069336,
+            "rms": 0.043774474412202835,
+            "hf_ratio": 0.26411008834838867,
+            "spectral_centroid_hz": 1457.1566162109375,
+            "spectral_flatness": 0.32870543003082275,
+            "post_flux_ratio": 1.5935981273651123,
+            "post_rms_ratio": 3.0670948028564453,
+            "local_prominence": 8.239720344543457,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 23.824,
+          "audio_score": 55.3596076965332,
+          "video_score": 0.0,
+          "combined_score": 55.3596076965332,
+          "start_time": 20.824,
+          "end_time": 24.824,
+          "confidence": "high",
+          "details": {
+            "audio_score": 55.3596076965332,
+            "spectral_flux": 558.47802734375,
+            "rms": 0.11493324488401413,
+            "hf_ratio": 0.20554476976394653,
+            "spectral_centroid_hz": 1313.5477294921875,
+            "spectral_flatness": 0.25578030943870544,
+            "post_flux_ratio": 4.560917377471924,
+            "post_rms_ratio": 7.930113792419434,
+            "local_prominence": 53.31767654418945,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 30.16,
+          "audio_score": 47.22506332397461,
+          "video_score": 0.0,
+          "combined_score": 47.22506332397461,
+          "start_time": 27.16,
+          "end_time": 31.16,
+          "confidence": "high",
+          "details": {
+            "audio_score": 47.22506332397461,
+            "spectral_flux": 472.67633056640625,
+            "rms": 0.07318379729986191,
+            "hf_ratio": 0.6935585141181946,
+            "spectral_centroid_hz": 2774.197021484375,
+            "spectral_flatness": 0.6112063527107239,
+            "post_flux_ratio": 1.2797449827194214,
+            "post_rms_ratio": 1.9114325046539307,
+            "local_prominence": 43.01753616333008,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": false,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8154.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8154.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: athlete on springboard/platform over pool.",
+      "exists": true,
+      "runtime_seconds": 0.3275129795074463,
+      "actual_event_count": 3,
+      "confidence_counts": {
+        "high": 3,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        0.848,
+        18.96,
+        23.312
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 0.848,
+          "audio_score": 19.579252243041992,
+          "video_score": 0.0,
+          "combined_score": 19.579252243041992,
+          "start_time": 0.0,
+          "end_time": 1.8479999999999999,
+          "confidence": "high",
+          "details": {
+            "audio_score": 19.579252243041992,
+            "spectral_flux": 172.5502471923828,
+            "rms": 0.08795150369405746,
+            "hf_ratio": 0.21158914268016815,
+            "spectral_centroid_hz": 1569.79541015625,
+            "spectral_flatness": 0.1816003918647766,
+            "post_flux_ratio": 1.4391674995422363,
+            "post_rms_ratio": 1.9740574359893799,
+            "local_prominence": 17.71869659423828,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 18.96,
+          "audio_score": 64.16407012939453,
+          "video_score": 0.0,
+          "combined_score": 64.16407012939453,
+          "start_time": 15.96,
+          "end_time": 19.96,
+          "confidence": "high",
+          "details": {
+            "audio_score": 64.16407012939453,
+            "spectral_flux": 556.4088134765625,
+            "rms": 0.15043900907039642,
+            "hf_ratio": 0.19430309534072876,
+            "spectral_centroid_hz": 1195.8548583984375,
+            "spectral_flatness": 0.20145931839942932,
+            "post_flux_ratio": 3.0727710723876953,
+            "post_rms_ratio": 8.463943481445312,
+            "local_prominence": 61.687591552734375,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 23.312,
+          "audio_score": 34.12855529785156,
+          "video_score": 0.0,
+          "combined_score": 34.12855529785156,
+          "start_time": 20.312,
+          "end_time": 24.312,
+          "confidence": "high",
+          "details": {
+            "audio_score": 34.12855529785156,
+            "spectral_flux": 315.118408203125,
+            "rms": 0.05464724078774452,
+            "hf_ratio": 0.5689525008201599,
+            "spectral_centroid_hz": 2218.371337890625,
+            "spectral_flatness": 0.411364883184433,
+            "post_flux_ratio": 0.5582178235054016,
+            "post_rms_ratio": 1.1639842987060547,
+            "local_prominence": 32.034934997558594,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8155.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8155.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: splash/pool dive clip.",
+      "exists": true,
+      "runtime_seconds": 0.26792407035827637,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 1,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        3.808
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 3.808,
+          "audio_score": 5.497299671173096,
+          "video_score": 0.0,
+          "combined_score": 5.497299671173096,
+          "start_time": 0.8079999999999998,
+          "end_time": 4.808,
+          "confidence": "medium",
+          "details": {
+            "audio_score": 5.497299671173096,
+            "spectral_flux": 136.48341369628906,
+            "rms": 0.07363845407962799,
+            "hf_ratio": 0.28846320509910583,
+            "spectral_centroid_hz": 1334.7186279296875,
+            "spectral_flatness": 0.27978062629699707,
+            "post_flux_ratio": 1.412737488746643,
+            "post_rms_ratio": 3.0380499362945557,
+            "local_prominence": 5.029611110687256,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8156.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8156.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: athlete on board above pool.",
+      "exists": true,
+      "runtime_seconds": 0.25551342964172363,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        6.208
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 6.208,
+          "audio_score": 17.514419555664062,
+          "video_score": 0.0,
+          "combined_score": 17.514419555664062,
+          "start_time": 3.208,
+          "end_time": 7.208,
+          "confidence": "high",
+          "details": {
+            "audio_score": 17.514419555664062,
+            "spectral_flux": 297.1227722167969,
+            "rms": 0.10080984234809875,
+            "hf_ratio": 0.2015199363231659,
+            "spectral_centroid_hz": 1312.9896240234375,
+            "spectral_flatness": 0.28374770283699036,
+            "post_flux_ratio": 1.0721049308776855,
+            "post_rms_ratio": 1.1552027463912964,
+            "local_prominence": 13.068814277648926,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8162.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8162.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: airborne diver over pool.",
+      "exists": true,
+      "runtime_seconds": 0.17229413986206055,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": false,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8164.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8164.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: athletes on board over pool.",
+      "exists": true,
+      "runtime_seconds": 0.20709466934204102,
+      "actual_event_count": 2,
+      "confidence_counts": {
+        "high": 2,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        4.944,
+        9.248
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 4.944,
+          "audio_score": 12.43045425415039,
+          "video_score": 0.0,
+          "combined_score": 12.43045425415039,
+          "start_time": 1.944,
+          "end_time": 5.944,
+          "confidence": "high",
+          "details": {
+            "audio_score": 12.43045425415039,
+            "spectral_flux": 339.0587158203125,
+            "rms": 0.08536986261606216,
+            "hf_ratio": 0.36952370405197144,
+            "spectral_centroid_hz": 1707.0811767578125,
+            "spectral_flatness": 0.4091019332408905,
+            "post_flux_ratio": 0.6775956153869629,
+            "post_rms_ratio": 0.6822447776794434,
+            "local_prominence": 11.61668586730957,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 9.248,
+          "audio_score": 8.299596786499023,
+          "video_score": 0.0,
+          "combined_score": 8.299596786499023,
+          "start_time": 6.247999999999999,
+          "end_time": 10.248,
+          "confidence": "high",
+          "details": {
+            "audio_score": 8.299596786499023,
+            "spectral_flux": 224.68505859375,
+            "rms": 0.04644550010561943,
+            "hf_ratio": 0.6407216191291809,
+            "spectral_centroid_hz": 2995.932861328125,
+            "spectral_flatness": 0.6163946390151978,
+            "post_flux_ratio": 0.9625862240791321,
+            "post_rms_ratio": 0.9474940896034241,
+            "local_prominence": 7.934720039367676,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8166.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8166.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: airborne diver.",
+      "exists": true,
+      "runtime_seconds": 0.1737349033355713,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        3.888
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 3.888,
+          "audio_score": 9.003561973571777,
+          "video_score": 0.0,
+          "combined_score": 9.003561973571777,
+          "start_time": 0.8879999999999999,
+          "end_time": 4.888,
+          "confidence": "high",
+          "details": {
+            "audio_score": 9.003561973571777,
+            "spectral_flux": 298.6856994628906,
+            "rms": 0.06080785021185875,
+            "hf_ratio": 0.5006060004234314,
+            "spectral_centroid_hz": 2501.075927734375,
+            "spectral_flatness": 0.5595132112503052,
+            "post_flux_ratio": 2.514596939086914,
+            "post_rms_ratio": 4.298072814941406,
+            "local_prominence": 8.824499130249023,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8170.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8170.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: pool dive clip.",
+      "exists": true,
+      "runtime_seconds": 0.21547985076904297,
+      "actual_event_count": 2,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 1,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        0.784,
+        11.952
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 0.784,
+          "audio_score": 5.316052436828613,
+          "video_score": 0.0,
+          "combined_score": 5.316052436828613,
+          "start_time": 0.0,
+          "end_time": 1.784,
+          "confidence": "medium",
+          "details": {
+            "audio_score": 5.316052436828613,
+            "spectral_flux": 142.8100128173828,
+            "rms": 0.11251428723335266,
+            "hf_ratio": 0.1799771636724472,
+            "spectral_centroid_hz": 941.3612060546875,
+            "spectral_flatness": 0.20070113241672516,
+            "post_flux_ratio": 0.8395145535469055,
+            "post_rms_ratio": 1.1886152029037476,
+            "local_prominence": 4.154428005218506,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 11.952,
+          "audio_score": 12.655518531799316,
+          "video_score": 0.0,
+          "combined_score": 12.655518531799316,
+          "start_time": 8.952,
+          "end_time": 12.952,
+          "confidence": "high",
+          "details": {
+            "audio_score": 12.655518531799316,
+            "spectral_flux": 330.65948486328125,
+            "rms": 0.11388063430786133,
+            "hf_ratio": 0.13942193984985352,
+            "spectral_centroid_hz": 1029.8497314453125,
+            "spectral_flatness": 0.1908472627401352,
+            "post_flux_ratio": 1.4809623956680298,
+            "post_rms_ratio": 1.8623559474945068,
+            "local_prominence": 10.635860443115234,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8175.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8175.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: diver above platform.",
+      "exists": true,
+      "runtime_seconds": 0.18931174278259277,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 1,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        0.0
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 0.0,
+          "audio_score": 5.055720329284668,
+          "video_score": 0.0,
+          "combined_score": 5.055720329284668,
+          "start_time": 0.0,
+          "end_time": 1.0,
+          "confidence": "medium",
+          "details": {
+            "audio_score": 5.055720329284668,
+            "spectral_flux": 140.32603454589844,
+            "rms": 0.10767948627471924,
+            "hf_ratio": 0.17230233550071716,
+            "spectral_centroid_hz": 1001.9172973632812,
+            "spectral_flatness": 0.20849716663360596,
+            "post_flux_ratio": 1.1201910972595215,
+            "post_rms_ratio": 1.292303204536438,
+            "local_prominence": 4.7465596199035645,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8181.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8181.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: diver in motion over pool.",
+      "exists": true,
+      "runtime_seconds": 0.20093059539794922,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        6.864
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 6.864,
+          "audio_score": 8.583846092224121,
+          "video_score": 0.0,
+          "combined_score": 8.583846092224121,
+          "start_time": 3.864,
+          "end_time": 7.864,
+          "confidence": "high",
+          "details": {
+            "audio_score": 8.583846092224121,
+            "spectral_flux": 244.85838317871094,
+            "rms": 0.05057191103696823,
+            "hf_ratio": 0.38934043049812317,
+            "spectral_centroid_hz": 1839.4454345703125,
+            "spectral_flatness": 0.3092672824859619,
+            "post_flux_ratio": 0.9947476983070374,
+            "post_rms_ratio": 1.353619933128357,
+            "local_prominence": 8.628504753112793,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8182.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8182.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: airborne diver over pool.",
+      "exists": true,
+      "runtime_seconds": 0.17551779747009277,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        5.536
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 5.536,
+          "audio_score": 30.609167098999023,
+          "video_score": 0.0,
+          "combined_score": 30.609167098999023,
+          "start_time": 2.5359999999999996,
+          "end_time": 6.536,
+          "confidence": "high",
+          "details": {
+            "audio_score": 30.609167098999023,
+            "spectral_flux": 268.55792236328125,
+            "rms": 0.07930710911750793,
+            "hf_ratio": 0.35316723585128784,
+            "spectral_centroid_hz": 1801.49169921875,
+            "spectral_flatness": 0.42888498306274414,
+            "post_flux_ratio": 0.8060800433158875,
+            "post_rms_ratio": 1.747758388519287,
+            "local_prominence": 30.039817810058594,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8183.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8183.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: pool dive clip.",
+      "exists": true,
+      "runtime_seconds": 0.21025943756103516,
+      "actual_event_count": 2,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 1,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        0.0,
+        8.064
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 0.0,
+          "audio_score": 4.359376430511475,
+          "video_score": 0.0,
+          "combined_score": 4.359376430511475,
+          "start_time": 0.0,
+          "end_time": 1.0,
+          "confidence": "medium",
+          "details": {
+            "audio_score": 4.359376430511475,
+            "spectral_flux": 143.93701171875,
+            "rms": 0.05541374906897545,
+            "hf_ratio": 0.23779726028442383,
+            "spectral_centroid_hz": 1242.106201171875,
+            "spectral_flatness": 0.309550404548645,
+            "post_flux_ratio": 1.4234434366226196,
+            "post_rms_ratio": 2.2652077674865723,
+            "local_prominence": 4.62235689163208,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 8.064,
+          "audio_score": 10.543866157531738,
+          "video_score": 0.0,
+          "combined_score": 10.543866157531738,
+          "start_time": 5.064,
+          "end_time": 9.064,
+          "confidence": "high",
+          "details": {
+            "audio_score": 10.543866157531738,
+            "spectral_flux": 263.0510559082031,
+            "rms": 0.17399531602859497,
+            "hf_ratio": 0.18001337349414825,
+            "spectral_centroid_hz": 1091.1329345703125,
+            "spectral_flatness": 0.2580868899822235,
+            "post_flux_ratio": 0.7928816080093384,
+            "post_rms_ratio": 1.0407345294952393,
+            "local_prominence": 7.545741558074951,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8184.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8184.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: airborne diver over pool.",
+      "exists": true,
+      "runtime_seconds": 0.21098804473876953,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        14.336
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 14.336,
+          "audio_score": 13.18482780456543,
+          "video_score": 0.0,
+          "combined_score": 13.18482780456543,
+          "start_time": 11.336,
+          "end_time": 15.336,
+          "confidence": "high",
+          "details": {
+            "audio_score": 13.18482780456543,
+            "spectral_flux": 198.80990600585938,
+            "rms": 0.02530951425433159,
+            "hf_ratio": 0.6492630839347839,
+            "spectral_centroid_hz": 3083.57080078125,
+            "spectral_flatness": 0.7363155484199524,
+            "post_flux_ratio": 1.3617275953292847,
+            "post_rms_ratio": 1.5602024793624878,
+            "local_prominence": 13.280149459838867,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8185.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8185.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: athlete on board above pool.",
+      "exists": true,
+      "runtime_seconds": 0.24928569793701172,
+      "actual_event_count": 2,
+      "confidence_counts": {
+        "high": 2,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        6.416,
+        17.328
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 6.416,
+          "audio_score": 8.744987487792969,
+          "video_score": 0.0,
+          "combined_score": 8.744987487792969,
+          "start_time": 3.4160000000000004,
+          "end_time": 7.416,
+          "confidence": "high",
+          "details": {
+            "audio_score": 8.744987487792969,
+            "spectral_flux": 149.02142333984375,
+            "rms": 0.08365143835544586,
+            "hf_ratio": 0.48529231548309326,
+            "spectral_centroid_hz": 1854.5860595703125,
+            "spectral_flatness": 0.23701061308383942,
+            "post_flux_ratio": 1.3775944709777832,
+            "post_rms_ratio": 2.0727570056915283,
+            "local_prominence": 8.029658317565918,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 17.328,
+          "audio_score": 14.325465202331543,
+          "video_score": 0.0,
+          "combined_score": 14.325465202331543,
+          "start_time": 14.328,
+          "end_time": 18.328,
+          "confidence": "high",
+          "details": {
+            "audio_score": 14.325465202331543,
+            "spectral_flux": 271.3629150390625,
+            "rms": 0.07606185972690582,
+            "hf_ratio": 0.23153530061244965,
+            "spectral_centroid_hz": 1406.955322265625,
+            "spectral_flatness": 0.27837714552879333,
+            "post_flux_ratio": 2.548117160797119,
+            "post_rms_ratio": 4.273650169372559,
+            "local_prominence": 13.548251152038574,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8186.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8186.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: diving platform/pool clip.",
+      "exists": true,
+      "runtime_seconds": 0.19742846488952637,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 1,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        9.008
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 9.008,
+          "audio_score": 4.799478530883789,
+          "video_score": 0.0,
+          "combined_score": 4.799478530883789,
+          "start_time": 6.007999999999999,
+          "end_time": 10.008,
+          "confidence": "medium",
+          "details": {
+            "audio_score": 4.799478530883789,
+            "spectral_flux": 228.21926879882812,
+            "rms": 0.09149035811424255,
+            "hf_ratio": 0.21217097342014313,
+            "spectral_centroid_hz": 1180.1744384765625,
+            "spectral_flatness": 0.2509165108203888,
+            "post_flux_ratio": 1.718688726425171,
+            "post_rms_ratio": 2.150869369506836,
+            "local_prominence": 4.213776588439941,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8187.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8187.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: platform dive clip.",
+      "exists": true,
+      "runtime_seconds": 0.23785829544067383,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        1.536
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 1.536,
+          "audio_score": 8.367035865783691,
+          "video_score": 0.0,
+          "combined_score": 8.367035865783691,
+          "start_time": 0.0,
+          "end_time": 2.536,
+          "confidence": "high",
+          "details": {
+            "audio_score": 8.367035865783691,
+            "spectral_flux": 284.7062072753906,
+            "rms": 0.10589034110307693,
+            "hf_ratio": 0.5582813024520874,
+            "spectral_centroid_hz": 2141.60302734375,
+            "spectral_flatness": 0.35536956787109375,
+            "post_flux_ratio": 0.5900718569755554,
+            "post_rms_ratio": 0.9752668142318726,
+            "local_prominence": 8.152782440185547,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8190.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8190.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: diver hanging above pool.",
+      "exists": true,
+      "runtime_seconds": 0.2082500457763672,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        11.36
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 11.36,
+          "audio_score": 9.365232467651367,
+          "video_score": 0.0,
+          "combined_score": 9.365232467651367,
+          "start_time": 8.36,
+          "end_time": 12.36,
+          "confidence": "high",
+          "details": {
+            "audio_score": 9.365232467651367,
+            "spectral_flux": 339.211181640625,
+            "rms": 0.09003317356109619,
+            "hf_ratio": 0.4912705421447754,
+            "spectral_centroid_hz": 2117.826416015625,
+            "spectral_flatness": 0.5156528949737549,
+            "post_flux_ratio": 1.0575937032699585,
+            "post_rms_ratio": 1.0890476703643799,
+            "local_prominence": 8.651073455810547,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8201.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8201.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: diver on platform above pool.",
+      "exists": true,
+      "runtime_seconds": 0.20022988319396973,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 1,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        0.352
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 0.352,
+          "audio_score": 4.1037797927856445,
+          "video_score": 0.0,
+          "combined_score": 4.1037797927856445,
+          "start_time": 0.0,
+          "end_time": 1.3519999999999999,
+          "confidence": "medium",
+          "details": {
+            "audio_score": 4.1037797927856445,
+            "spectral_flux": 209.70021057128906,
+            "rms": 0.03197064623236656,
+            "hf_ratio": 0.5012692809104919,
+            "spectral_centroid_hz": 2109.024658203125,
+            "spectral_flatness": 0.39562034606933594,
+            "post_flux_ratio": 0.989151656627655,
+            "post_rms_ratio": 1.1843314170837402,
+            "local_prominence": 4.682957649230957,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8206.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8206.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: diver on platform above pool.",
+      "exists": true,
+      "runtime_seconds": 0.20400691032409668,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        12.016
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 12.016,
+          "audio_score": 13.446344375610352,
+          "video_score": 0.0,
+          "combined_score": 13.446344375610352,
+          "start_time": 9.016,
+          "end_time": 13.016,
+          "confidence": "high",
+          "details": {
+            "audio_score": 13.446344375610352,
+            "spectral_flux": 288.12969970703125,
+            "rms": 0.05775361880660057,
+            "hf_ratio": 0.33867147564888,
+            "spectral_centroid_hz": 1854.2950439453125,
+            "spectral_flatness": 0.3680003583431244,
+            "post_flux_ratio": 0.8470979928970337,
+            "post_rms_ratio": 1.1381782293319702,
+            "local_prominence": 12.037729263305664,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8208.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8208.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: water-entry frame with divers descending into pool.",
+      "exists": true,
+      "runtime_seconds": 0.15052270889282227,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 1,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        0.0
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 0.0,
+          "audio_score": 4.909759521484375,
+          "video_score": 0.0,
+          "combined_score": 4.909759521484375,
+          "start_time": 0.0,
+          "end_time": 1.0,
+          "confidence": "medium",
+          "details": {
+            "audio_score": 4.909759521484375,
+            "spectral_flux": 168.4498291015625,
+            "rms": 0.07603245973587036,
+            "hf_ratio": 0.1777239739894867,
+            "spectral_centroid_hz": 1074.6954345703125,
+            "spectral_flatness": 0.25579923391342163,
+            "post_flux_ratio": 1.155864953994751,
+            "post_rms_ratio": 1.702963948249817,
+            "local_prominence": 4.341701507568359,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8209.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8209.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: diver poised on springboard over pool.",
+      "exists": true,
+      "runtime_seconds": 0.2645864486694336,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        18.928
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 18.928,
+          "audio_score": 28.051176071166992,
+          "video_score": 0.0,
+          "combined_score": 28.051176071166992,
+          "start_time": 15.928,
+          "end_time": 19.928,
+          "confidence": "high",
+          "details": {
+            "audio_score": 28.051176071166992,
+            "spectral_flux": 297.94281005859375,
+            "rms": 0.092544324696064,
+            "hf_ratio": 0.19028280675411224,
+            "spectral_centroid_hz": 1251.698486328125,
+            "spectral_flatness": 0.24664801359176636,
+            "post_flux_ratio": 2.619558811187744,
+            "post_rms_ratio": 4.641701698303223,
+            "local_prominence": 26.021268844604492,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8210.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8210.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: athletes poised on springboard over pool.",
+      "exists": true,
+      "runtime_seconds": 0.2810075283050537,
+      "actual_event_count": 3,
+      "confidence_counts": {
+        "high": 3,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        4.192,
+        11.952,
+        22.736
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 4.192,
+          "audio_score": 10.364786148071289,
+          "video_score": 0.0,
+          "combined_score": 10.364786148071289,
+          "start_time": 1.1920000000000002,
+          "end_time": 5.192,
+          "confidence": "high",
+          "details": {
+            "audio_score": 10.364786148071289,
+            "spectral_flux": 168.4671173095703,
+            "rms": 0.036374591290950775,
+            "hf_ratio": 0.4792078733444214,
+            "spectral_centroid_hz": 2168.1689453125,
+            "spectral_flatness": 0.44799450039863586,
+            "post_flux_ratio": 1.149921178817749,
+            "post_rms_ratio": 1.4544495344161987,
+            "local_prominence": 9.969871520996094,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 11.952,
+          "audio_score": 12.058244705200195,
+          "video_score": 0.0,
+          "combined_score": 12.058244705200195,
+          "start_time": 8.952,
+          "end_time": 12.952,
+          "confidence": "high",
+          "details": {
+            "audio_score": 12.058244705200195,
+            "spectral_flux": 180.1549530029297,
+            "rms": 0.06661252677440643,
+            "hf_ratio": 0.45119231939315796,
+            "spectral_centroid_hz": 1848.81201171875,
+            "spectral_flatness": 0.3118055462837219,
+            "post_flux_ratio": 1.1776790618896484,
+            "post_rms_ratio": 1.9414290189743042,
+            "local_prominence": 11.963968276977539,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 22.736,
+          "audio_score": 13.131612777709961,
+          "video_score": 0.0,
+          "combined_score": 13.131612777709961,
+          "start_time": 19.736,
+          "end_time": 23.736,
+          "confidence": "high",
+          "details": {
+            "audio_score": 13.131612777709961,
+            "spectral_flux": 176.58067321777344,
+            "rms": 0.14206825196743011,
+            "hf_ratio": 0.21698661148548126,
+            "spectral_centroid_hz": 1362.8115234375,
+            "spectral_flatness": 0.2813742160797119,
+            "post_flux_ratio": 0.8829062581062317,
+            "post_rms_ratio": 1.411193609237671,
+            "local_prominence": 10.157231330871582,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8221.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8221.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: diver in takeoff position above pool.",
+      "exists": true,
+      "runtime_seconds": 0.23031020164489746,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        12.432
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 12.432,
+          "audio_score": 23.601577758789062,
+          "video_score": 0.0,
+          "combined_score": 23.601577758789062,
+          "start_time": 9.432,
+          "end_time": 13.432,
+          "confidence": "high",
+          "details": {
+            "audio_score": 23.601577758789062,
+            "spectral_flux": 212.59718322753906,
+            "rms": 0.024372883141040802,
+            "hf_ratio": 0.7603849172592163,
+            "spectral_centroid_hz": 2969.79638671875,
+            "spectral_flatness": 0.6466184258460999,
+            "post_flux_ratio": 2.5598337650299072,
+            "post_rms_ratio": 2.7116270065307617,
+            "local_prominence": 21.787643432617188,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8222.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8222.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: diver in takeoff position above pool.",
+      "exists": true,
+      "runtime_seconds": 0.2673811912536621,
+      "actual_event_count": 4,
+      "confidence_counts": {
+        "high": 3,
+        "medium": 1,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        0.64,
+        7.232,
+        14.32,
+        24.0
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 0.64,
+          "audio_score": 4.462910175323486,
+          "video_score": 0.0,
+          "combined_score": 4.462910175323486,
+          "start_time": 0.0,
+          "end_time": 1.6400000000000001,
+          "confidence": "medium",
+          "details": {
+            "audio_score": 4.462910175323486,
+            "spectral_flux": 50.6451416015625,
+            "rms": 0.022211847826838493,
+            "hf_ratio": 0.5255482792854309,
+            "spectral_centroid_hz": 2025.9879150390625,
+            "spectral_flatness": 0.3906097114086151,
+            "post_flux_ratio": 0.74937903881073,
+            "post_rms_ratio": 0.6872552633285522,
+            "local_prominence": 4.684345245361328,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 7.232,
+          "audio_score": 16.48110580444336,
+          "video_score": 0.0,
+          "combined_score": 16.48110580444336,
+          "start_time": 4.232,
+          "end_time": 8.232,
+          "confidence": "high",
+          "details": {
+            "audio_score": 16.48110580444336,
+            "spectral_flux": 148.55728149414062,
+            "rms": 0.04493769258260727,
+            "hf_ratio": 0.17641721665859222,
+            "spectral_centroid_hz": 1044.7135009765625,
+            "spectral_flatness": 0.24458931386470795,
+            "post_flux_ratio": 2.1824731826782227,
+            "post_rms_ratio": 2.475491523742676,
+            "local_prominence": 14.622444152832031,
+            "nearby_peaks_8s": 3,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 14.32,
+          "audio_score": 17.48309898376465,
+          "video_score": 0.0,
+          "combined_score": 17.48309898376465,
+          "start_time": 11.32,
+          "end_time": 15.32,
+          "confidence": "high",
+          "details": {
+            "audio_score": 17.48309898376465,
+            "spectral_flux": 149.9967041015625,
+            "rms": 0.057995572686195374,
+            "hf_ratio": 0.22875884175300598,
+            "spectral_centroid_hz": 1164.1678466796875,
+            "spectral_flatness": 0.25441867113113403,
+            "post_flux_ratio": 1.6685731410980225,
+            "post_rms_ratio": 3.4962191581726074,
+            "local_prominence": 16.24017333984375,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 24.0,
+          "audio_score": 45.672645568847656,
+          "video_score": 0.0,
+          "combined_score": 45.672645568847656,
+          "start_time": 21.0,
+          "end_time": 25.0,
+          "confidence": "high",
+          "details": {
+            "audio_score": 45.672645568847656,
+            "spectral_flux": 366.33477783203125,
+            "rms": 0.06593552231788635,
+            "hf_ratio": 0.48806032538414,
+            "spectral_centroid_hz": 2429.5234375,
+            "spectral_flatness": 0.6215894818305969,
+            "post_flux_ratio": 1.3369663953781128,
+            "post_rms_ratio": 0.912640392780304,
+            "local_prominence": 37.163421630859375,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": false,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8231.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8231.MOV",
+      "label": "positive",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed positive: diver airborne above pool.",
+      "exists": true,
+      "runtime_seconds": 0.2504405975341797,
+      "actual_event_count": 2,
+      "confidence_counts": {
+        "high": 2,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        2.96,
+        8.768
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 2.96,
+          "audio_score": 13.045780181884766,
+          "video_score": 0.0,
+          "combined_score": 13.045780181884766,
+          "start_time": 0.0,
+          "end_time": 3.96,
+          "confidence": "high",
+          "details": {
+            "audio_score": 13.045780181884766,
+            "spectral_flux": 355.6134948730469,
+            "rms": 0.15710271894931793,
+            "hf_ratio": 0.1185879036784172,
+            "spectral_centroid_hz": 798.9765014648438,
+            "spectral_flatness": 0.15843817591667175,
+            "post_flux_ratio": 1.7755767107009888,
+            "post_rms_ratio": 2.2774510383605957,
+            "local_prominence": 12.05689525604248,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 8.768,
+          "audio_score": 8.532265663146973,
+          "video_score": 0.0,
+          "combined_score": 8.532265663146973,
+          "start_time": 5.768000000000001,
+          "end_time": 9.768,
+          "confidence": "high",
+          "details": {
+            "audio_score": 8.532265663146973,
+            "spectral_flux": 238.52635192871094,
+            "rms": 0.0361870676279068,
+            "hf_ratio": 0.4905123710632324,
+            "spectral_centroid_hz": 2355.454833984375,
+            "spectral_flatness": 0.6339465975761414,
+            "post_flux_ratio": 1.7189645767211914,
+            "post_rms_ratio": 1.5605862140655518,
+            "local_prominence": 8.539952278137207,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8088.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8088.MOV",
+      "label": "negative",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed negative: indoor social clip.",
+      "exists": true,
+      "runtime_seconds": 0.18598341941833496,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": true,
+      "expected": {
+        "min_events": 0,
+        "max_events": 0
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8089.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8089.MOV",
+      "label": "negative",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed negative: indoor selfie/retail clip.",
+      "exists": true,
+      "runtime_seconds": 0.18895626068115234,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": true,
+      "expected": {
+        "min_events": 0,
+        "max_events": 0
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8090.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8090.MOV",
+      "label": "negative",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed negative: hotel/interior clip.",
+      "exists": true,
+      "runtime_seconds": 0.8586783409118652,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": true,
+      "expected": {
+        "min_events": 0,
+        "max_events": 0
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8098.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8098.MOV",
+      "label": "negative",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed negative: bathroom/interior clip.",
+      "exists": true,
+      "runtime_seconds": 0.6170456409454346,
+      "actual_event_count": 3,
+      "confidence_counts": {
+        "high": 3,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        5.712,
+        40.576,
+        72.656
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 5.712,
+          "audio_score": 7.962201118469238,
+          "video_score": 0.0,
+          "combined_score": 7.962201118469238,
+          "start_time": 2.7119999999999997,
+          "end_time": 6.712,
+          "confidence": "high",
+          "details": {
+            "audio_score": 7.962201118469238,
+            "spectral_flux": 557.9992065429688,
+            "rms": 0.11859573423862457,
+            "hf_ratio": 0.43224814534187317,
+            "spectral_centroid_hz": 1788.5401611328125,
+            "spectral_flatness": 0.3357890248298645,
+            "post_flux_ratio": 0.816336452960968,
+            "post_rms_ratio": 1.3953197002410889,
+            "local_prominence": 7.832301616668701,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 40.576,
+          "audio_score": 9.564274787902832,
+          "video_score": 0.0,
+          "combined_score": 9.564274787902832,
+          "start_time": 37.576,
+          "end_time": 41.576,
+          "confidence": "high",
+          "details": {
+            "audio_score": 9.564274787902832,
+            "spectral_flux": 675.1929931640625,
+            "rms": 0.13885465264320374,
+            "hf_ratio": 0.3191465139389038,
+            "spectral_centroid_hz": 1527.539306640625,
+            "spectral_flatness": 0.2900410592556,
+            "post_flux_ratio": 0.9469098448753357,
+            "post_rms_ratio": 1.3225531578063965,
+            "local_prominence": 9.526392936706543,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 72.656,
+          "audio_score": 10.030248641967773,
+          "video_score": 0.0,
+          "combined_score": 10.030248641967773,
+          "start_time": 69.656,
+          "end_time": 73.656,
+          "confidence": "high",
+          "details": {
+            "audio_score": 10.030248641967773,
+            "spectral_flux": 710.4039916992188,
+            "rms": 0.13838203251361847,
+            "hf_ratio": 0.3025849163532257,
+            "spectral_centroid_hz": 1874.39111328125,
+            "spectral_flatness": 0.520926833152771,
+            "post_flux_ratio": 1.103481411933899,
+            "post_rms_ratio": 1.3879961967468262,
+            "local_prominence": 9.266460418701172,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": false,
+      "expected": {
+        "min_events": 0,
+        "max_events": 0
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8099.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8099.MOV",
+      "label": "negative",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed negative: hotel/interior clip.",
+      "exists": true,
+      "runtime_seconds": 0.3395726680755615,
+      "actual_event_count": 2,
+      "confidence_counts": {
+        "high": 2,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        2.8,
+        7.12
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 2.8,
+          "audio_score": 8.76194953918457,
+          "video_score": 0.0,
+          "combined_score": 8.76194953918457,
+          "start_time": 0.0,
+          "end_time": 3.8,
+          "confidence": "high",
+          "details": {
+            "audio_score": 8.76194953918457,
+            "spectral_flux": 648.4349365234375,
+            "rms": 0.1322885900735855,
+            "hf_ratio": 0.2245699167251587,
+            "spectral_centroid_hz": 1432.595703125,
+            "spectral_flatness": 0.30319732427597046,
+            "post_flux_ratio": 1.8090379238128662,
+            "post_rms_ratio": 1.1212252378463745,
+            "local_prominence": 8.79919147491455,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 7.12,
+          "audio_score": 12.283230781555176,
+          "video_score": 0.0,
+          "combined_score": 12.283230781555176,
+          "start_time": 4.12,
+          "end_time": 8.120000000000001,
+          "confidence": "high",
+          "details": {
+            "audio_score": 12.283230781555176,
+            "spectral_flux": 829.671142578125,
+            "rms": 0.19625528156757355,
+            "hf_ratio": 0.41135337948799133,
+            "spectral_centroid_hz": 2102.750244140625,
+            "spectral_flatness": 0.5512824654579163,
+            "post_flux_ratio": 2.3651301860809326,
+            "post_rms_ratio": 2.9915249347686768,
+            "local_prominence": 12.139039039611816,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": false,
+      "expected": {
+        "min_events": 0,
+        "max_events": 0
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8105.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8105.MOV",
+      "label": "negative",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed negative: dryland training hall, no splash event.",
+      "exists": true,
+      "runtime_seconds": 0.5361607074737549,
+      "actual_event_count": 5,
+      "confidence_counts": {
+        "high": 5,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        2.384,
+        24.544,
+        42.608,
+        55.6,
+        61.536
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 2.384,
+          "audio_score": 67.6236572265625,
+          "video_score": 0.0,
+          "combined_score": 67.6236572265625,
+          "start_time": 0.0,
+          "end_time": 3.384,
+          "confidence": "high",
+          "details": {
+            "audio_score": 67.6236572265625,
+            "spectral_flux": 466.1080017089844,
+            "rms": 0.15262757241725922,
+            "hf_ratio": 0.11599951982498169,
+            "spectral_centroid_hz": 697.3955078125,
+            "spectral_flatness": 0.15064139664173126,
+            "post_flux_ratio": 3.5523979663848877,
+            "post_rms_ratio": 12.321659088134766,
+            "local_prominence": 64.68331146240234,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 24.544,
+          "audio_score": 58.05916976928711,
+          "video_score": 0.0,
+          "combined_score": 58.05916976928711,
+          "start_time": 21.544,
+          "end_time": 25.544,
+          "confidence": "high",
+          "details": {
+            "audio_score": 58.05916976928711,
+            "spectral_flux": 402.1077880859375,
+            "rms": 0.11059841513633728,
+            "hf_ratio": 0.2608862519264221,
+            "spectral_centroid_hz": 1188.85888671875,
+            "spectral_flatness": 0.2741219103336334,
+            "post_flux_ratio": 3.0637576580047607,
+            "post_rms_ratio": 2.865664005279541,
+            "local_prominence": 50.53998947143555,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 42.608,
+          "audio_score": 60.180511474609375,
+          "video_score": 0.0,
+          "combined_score": 60.180511474609375,
+          "start_time": 39.608,
+          "end_time": 43.608,
+          "confidence": "high",
+          "details": {
+            "audio_score": 60.180511474609375,
+            "spectral_flux": 404.60919189453125,
+            "rms": 0.1574488878250122,
+            "hf_ratio": 0.3281048536300659,
+            "spectral_centroid_hz": 1430.3690185546875,
+            "spectral_flatness": 0.3642185628414154,
+            "post_flux_ratio": 1.1957777738571167,
+            "post_rms_ratio": 1.8190404176712036,
+            "local_prominence": 53.469669342041016,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 55.6,
+          "audio_score": 32.76787567138672,
+          "video_score": 0.0,
+          "combined_score": 32.76787567138672,
+          "start_time": 52.6,
+          "end_time": 56.6,
+          "confidence": "high",
+          "details": {
+            "audio_score": 32.76787567138672,
+            "spectral_flux": 216.12294006347656,
+            "rms": 0.1269690990447998,
+            "hf_ratio": 0.13687285780906677,
+            "spectral_centroid_hz": 902.7590942382812,
+            "spectral_flatness": 0.1751357465982437,
+            "post_flux_ratio": 0.5815042853355408,
+            "post_rms_ratio": 1.5850615501403809,
+            "local_prominence": 31.27931785583496,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 61.536,
+          "audio_score": 50.063724517822266,
+          "video_score": 0.0,
+          "combined_score": 50.063724517822266,
+          "start_time": 58.536,
+          "end_time": 62.536,
+          "confidence": "high",
+          "details": {
+            "audio_score": 50.063724517822266,
+            "spectral_flux": 344.91973876953125,
+            "rms": 0.10548438131809235,
+            "hf_ratio": 0.2531754970550537,
+            "spectral_centroid_hz": 1522.508056640625,
+            "spectral_flatness": 0.22075554728507996,
+            "post_flux_ratio": 1.7005951404571533,
+            "post_rms_ratio": 1.3583884239196777,
+            "local_prominence": 46.16535186767578,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": false,
+      "expected": {
+        "min_events": 0,
+        "max_events": 0
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8212.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8212.MOV",
+      "label": "negative",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed negative: indoor selfie clip.",
+      "exists": true,
+      "runtime_seconds": 0.23136520385742188,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        6.416
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 6.416,
+          "audio_score": 7.694372177124023,
+          "video_score": 0.0,
+          "combined_score": 7.694372177124023,
+          "start_time": 3.4160000000000004,
+          "end_time": 7.416,
+          "confidence": "high",
+          "details": {
+            "audio_score": 7.694372177124023,
+            "spectral_flux": 67.13969421386719,
+            "rms": 0.023945558816194534,
+            "hf_ratio": 0.1915433257818222,
+            "spectral_centroid_hz": 1405.4554443359375,
+            "spectral_flatness": 0.31422364711761475,
+            "post_flux_ratio": 1.4226912260055542,
+            "post_rms_ratio": 1.4231592416763306,
+            "local_prominence": 6.7737040519714355,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": false,
+      "expected": {
+        "min_events": 0,
+        "max_events": 0
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8214.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8214.MOV",
+      "label": "negative",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed negative: abstract close-up, no pool or dive.",
+      "exists": true,
+      "runtime_seconds": 0.25282740592956543,
+      "actual_event_count": 2,
+      "confidence_counts": {
+        "high": 2,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        1.632,
+        7.472
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 1.632,
+          "audio_score": 11.911983489990234,
+          "video_score": 0.0,
+          "combined_score": 11.911983489990234,
+          "start_time": 0.0,
+          "end_time": 2.6319999999999997,
+          "confidence": "high",
+          "details": {
+            "audio_score": 11.911983489990234,
+            "spectral_flux": 304.40032958984375,
+            "rms": 0.12026195973157883,
+            "hf_ratio": 0.14411087334156036,
+            "spectral_centroid_hz": 1257.611328125,
+            "spectral_flatness": 0.15086475014686584,
+            "post_flux_ratio": 0.8225319981575012,
+            "post_rms_ratio": 3.1399126052856445,
+            "local_prominence": 11.648736000061035,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 7.472,
+          "audio_score": 8.64415168762207,
+          "video_score": 0.0,
+          "combined_score": 8.64415168762207,
+          "start_time": 4.472,
+          "end_time": 8.472000000000001,
+          "confidence": "high",
+          "details": {
+            "audio_score": 8.64415168762207,
+            "spectral_flux": 213.24383544921875,
+            "rms": 0.11401554942131042,
+            "hf_ratio": 0.27851590514183044,
+            "spectral_centroid_hz": 1403.78515625,
+            "spectral_flatness": 0.12608543038368225,
+            "post_flux_ratio": 1.9626516103744507,
+            "post_rms_ratio": 1.6048214435577393,
+            "local_prominence": 7.995057106018066,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": false,
+      "expected": {
+        "min_events": 0,
+        "max_events": 0
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8215.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8215.MOV",
+      "label": "negative",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed negative: elevator/interior clip.",
+      "exists": true,
+      "runtime_seconds": 0.3088963031768799,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": true,
+      "expected": {
+        "min_events": 0,
+        "max_events": 0
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8216.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8216.MOV",
+      "label": "negative",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed negative: koi pond/outdoor water clip, not diving.",
+      "exists": true,
+      "runtime_seconds": 0.29204416275024414,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        17.568
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 17.568,
+          "audio_score": 7.891973972320557,
+          "video_score": 0.0,
+          "combined_score": 7.891973972320557,
+          "start_time": 14.568000000000001,
+          "end_time": 18.568,
+          "confidence": "high",
+          "details": {
+            "audio_score": 7.891973972320557,
+            "spectral_flux": 121.54900360107422,
+            "rms": 0.05553605780005455,
+            "hf_ratio": 0.22757160663604736,
+            "spectral_centroid_hz": 1449.8232421875,
+            "spectral_flatness": 0.2944818437099457,
+            "post_flux_ratio": 0.41692599654197693,
+            "post_rms_ratio": 0.47122326493263245,
+            "local_prominence": 7.724976539611816,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": false,
+      "expected": {
+        "min_events": 0,
+        "max_events": 0
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8217.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8217.MOV",
+      "label": "negative",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed negative: phone/selfie clip.",
+      "exists": true,
+      "runtime_seconds": 0.26023054122924805,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        10.064
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 10.064,
+          "audio_score": 19.434133529663086,
+          "video_score": 0.0,
+          "combined_score": 19.434133529663086,
+          "start_time": 7.064,
+          "end_time": 11.064,
+          "confidence": "high",
+          "details": {
+            "audio_score": 19.434133529663086,
+            "spectral_flux": 430.8876647949219,
+            "rms": 0.1630590558052063,
+            "hf_ratio": 0.3319527208805084,
+            "spectral_centroid_hz": 1575.730224609375,
+            "spectral_flatness": 0.2823609411716461,
+            "post_flux_ratio": 0.6683876514434814,
+            "post_rms_ratio": 1.3911081552505493,
+            "local_prominence": 18.526453018188477,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v1_heuristic"
+          }
+        }
+      ],
+      "passed": false,
+      "expected": {
+        "min_events": 0,
+        "max_events": 0
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8227.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8227.MOV",
+      "label": "negative",
+      "detector_id": "audio_v1_heuristic",
+      "detector_label": "Baseline heuristic",
+      "notes": "Reviewed negative: selfie/ground close-up clip.",
+      "exists": true,
+      "runtime_seconds": 0.1629047393798828,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": true,
+      "expected": {
+        "min_events": 0,
+        "max_events": 0
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_2478.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_2478.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: diver visible above water near platform.",
+      "exists": true,
+      "runtime_seconds": 0.2544679641723633,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": false,
+      "expected": {
+        "min_events": 1,
+        "max_events": 2
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_2496.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_2496.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: diver inverted above pool.",
+      "exists": true,
+      "runtime_seconds": 0.20533037185668945,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        2.592
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 2.592,
+          "audio_score": 10.417569160461426,
+          "video_score": 0.0,
+          "combined_score": 10.417569160461426,
+          "start_time": 0.0,
+          "end_time": 3.592,
+          "confidence": "high",
+          "details": {
+            "audio_score": 10.417569160461426,
+            "spectral_flux": 116.75011444091797,
+            "rms": 0.023264924064278603,
+            "hf_ratio": 0.26563674211502075,
+            "spectral_centroid_hz": 1610.7369384765625,
+            "spectral_flatness": 0.3840928375720978,
+            "post_flux_ratio": 9.773813247680664,
+            "post_rms_ratio": 13.042141914367676,
+            "local_prominence": 10.399515151977539,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "pcen_multiband",
+            "pcen_onset_mean": 0.17969731986522675,
+            "pcen_onset_peak": 0.40306031703948975,
+            "clip_rms_mean": 0.03925180435180664,
+            "clip_rms_std": 0.033804088830947876,
+            "clip_rms_peak": 0.18492284417152405,
+            "clip_flux_mean": 53.554954528808594,
+            "clip_flux_peak": 366.3737487792969,
+            "clip_flux_std": 49.16767120361328,
+            "clip_hf_ratio_mean": 0.24903860688209534,
+            "clip_hf_ratio_peak": 0.4703812301158905,
+            "clip_centroid_mean": 1447.478271484375,
+            "clip_flatness_mean": 0.3387763500213623,
+            "clip_pcen_onset_mean": 0.015979530289769173,
+            "clip_pcen_onset_peak": 0.2541695833206177,
+            "clip_pcen_onset_std": 0.023734554648399353,
+            "clip_pcen_band_spread": 0.2857142857142857,
+            "clip_pcen_peak_band": 0.3333333333333333,
+            "clip_pcen_high_band_ratio": 0.1148499995470047,
+            "clip_pcen_low_band_ratio": 0.35503989458084106,
+            "audio_clip_probability": 0.9846440197658002,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 2
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8148.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8148.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: pool dive clip.",
+      "exists": true,
+      "runtime_seconds": 0.34089183807373047,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": false,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8150.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8150.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: pool dive clip.",
+      "exists": true,
+      "runtime_seconds": 0.34377193450927734,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        15.472
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 15.472,
+          "audio_score": 26.189298629760742,
+          "video_score": 0.0,
+          "combined_score": 26.189298629760742,
+          "start_time": 12.472,
+          "end_time": 16.472,
+          "confidence": "high",
+          "details": {
+            "audio_score": 26.189298629760742,
+            "spectral_flux": 290.26885986328125,
+            "rms": 0.04815579205751419,
+            "hf_ratio": 0.3344685435295105,
+            "spectral_centroid_hz": 1653.1407470703125,
+            "spectral_flatness": 0.34351250529289246,
+            "post_flux_ratio": 6.4073591232299805,
+            "post_rms_ratio": 8.495511054992676,
+            "local_prominence": 25.197948455810547,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "pcen_multiband",
+            "pcen_onset_mean": 0.2705065906047821,
+            "pcen_onset_peak": 0.4391740560531616,
+            "clip_rms_mean": 0.029620124027132988,
+            "clip_rms_std": 0.02852330170571804,
+            "clip_rms_peak": 0.1474560797214508,
+            "clip_flux_mean": 47.90489196777344,
+            "clip_flux_peak": 323.39691162109375,
+            "clip_flux_std": 42.89881896972656,
+            "clip_hf_ratio_mean": 0.38047724962234497,
+            "clip_hf_ratio_peak": 0.5796047449111938,
+            "clip_centroid_mean": 1845.018798828125,
+            "clip_flatness_mean": 0.45588418841362,
+            "clip_pcen_onset_mean": 0.014829089865088463,
+            "clip_pcen_onset_peak": 0.19594840705394745,
+            "clip_pcen_onset_std": 0.02016819454729557,
+            "clip_pcen_band_spread": 0.5714285714285714,
+            "clip_pcen_peak_band": 0.16666666666666666,
+            "clip_pcen_high_band_ratio": 0.19364655017852783,
+            "clip_pcen_low_band_ratio": 0.3830510973930359,
+            "audio_clip_probability": 0.9992853807550033,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8151.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8151.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: pool dive clip.",
+      "exists": true,
+      "runtime_seconds": 0.5343348979949951,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": false,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8152.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8152.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: pool dive clip.",
+      "exists": true,
+      "runtime_seconds": 0.5737063884735107,
+      "actual_event_count": 3,
+      "confidence_counts": {
+        "high": 3,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        0.0,
+        5.136,
+        23.824
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 0.0,
+          "audio_score": 10.06067943572998,
+          "video_score": 0.0,
+          "combined_score": 10.06067943572998,
+          "start_time": 0.0,
+          "end_time": 1.0,
+          "confidence": "high",
+          "details": {
+            "audio_score": 10.06067943572998,
+            "spectral_flux": 111.80049896240234,
+            "rms": 0.09064292162656784,
+            "hf_ratio": 0.18806402385234833,
+            "spectral_centroid_hz": 1034.0308837890625,
+            "spectral_flatness": 0.2517717480659485,
+            "post_flux_ratio": 1.0262337923049927,
+            "post_rms_ratio": 1.6574558019638062,
+            "local_prominence": 7.464909076690674,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "clip_rms_mean": 0.03892185539007187,
+            "clip_rms_std": 0.018017137423157692,
+            "clip_rms_peak": 0.09064292162656784,
+            "clip_flux_mean": 49.61389923095703,
+            "clip_flux_peak": 116.3531723022461,
+            "clip_flux_std": 21.504430770874023,
+            "clip_hf_ratio_mean": 0.2737632393836975,
+            "clip_hf_ratio_peak": 0.4138767719268799,
+            "clip_centroid_mean": 1388.8712158203125,
+            "clip_flatness_mean": 0.35551294684410095,
+            "clip_pcen_onset_mean": 0.013278508558869362,
+            "clip_pcen_onset_peak": 0.053716521710157394,
+            "clip_pcen_onset_std": 0.010333115234971046,
+            "clip_pcen_band_spread": 0.14285714285714285,
+            "clip_pcen_peak_band": 0.16666666666666666,
+            "clip_pcen_high_band_ratio": 0.06536215543746948,
+            "clip_pcen_low_band_ratio": 0.6389743685722351,
+            "audio_clip_probability": 0.9987678297742364,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 5.136,
+          "audio_score": 8.35267162322998,
+          "video_score": 0.0,
+          "combined_score": 8.35267162322998,
+          "start_time": 2.136,
+          "end_time": 6.136,
+          "confidence": "high",
+          "details": {
+            "audio_score": 8.35267162322998,
+            "spectral_flux": 107.1635971069336,
+            "rms": 0.043774474412202835,
+            "hf_ratio": 0.26411008834838867,
+            "spectral_centroid_hz": 1457.1566162109375,
+            "spectral_flatness": 0.32870543003082275,
+            "post_flux_ratio": 1.5935981273651123,
+            "post_rms_ratio": 3.0670948028564453,
+            "local_prominence": 8.239720344543457,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "clip_rms_mean": 0.017175845801830292,
+            "clip_rms_std": 0.008810797706246376,
+            "clip_rms_peak": 0.059077002108097076,
+            "clip_flux_mean": 28.537412643432617,
+            "clip_flux_peak": 105.84748077392578,
+            "clip_flux_std": 11.824731826782227,
+            "clip_hf_ratio_mean": 0.4262624680995941,
+            "clip_hf_ratio_peak": 0.5640209913253784,
+            "clip_centroid_mean": 2009.7408447265625,
+            "clip_flatness_mean": 0.499544233083725,
+            "clip_pcen_onset_mean": 0.013229455798864365,
+            "clip_pcen_onset_peak": 0.08710331469774246,
+            "clip_pcen_onset_std": 0.010494263842701912,
+            "clip_pcen_band_spread": 0.14285714285714285,
+            "clip_pcen_peak_band": 0.3333333333333333,
+            "clip_pcen_high_band_ratio": 0.02371363155543804,
+            "clip_pcen_low_band_ratio": 0.3023967444896698,
+            "audio_clip_probability": 0.9882745224383932,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 23.824,
+          "audio_score": 55.3596076965332,
+          "video_score": 0.0,
+          "combined_score": 55.3596076965332,
+          "start_time": 20.824,
+          "end_time": 24.824,
+          "confidence": "high",
+          "details": {
+            "audio_score": 55.3596076965332,
+            "spectral_flux": 558.47802734375,
+            "rms": 0.11493324488401413,
+            "hf_ratio": 0.20554476976394653,
+            "spectral_centroid_hz": 1313.5477294921875,
+            "spectral_flatness": 0.25578030943870544,
+            "post_flux_ratio": 4.560917377471924,
+            "post_rms_ratio": 7.930113792419434,
+            "local_prominence": 53.31767654418945,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "clip_rms_mean": 0.04372118413448334,
+            "clip_rms_std": 0.043491680175065994,
+            "clip_rms_peak": 0.19119791686534882,
+            "clip_flux_mean": 69.61811828613281,
+            "clip_flux_peak": 515.8822631835938,
+            "clip_flux_std": 75.36499786376953,
+            "clip_hf_ratio_mean": 0.3946508467197418,
+            "clip_hf_ratio_peak": 0.6189593076705933,
+            "clip_centroid_mean": 1867.6231689453125,
+            "clip_flatness_mean": 0.43895572423934937,
+            "clip_pcen_onset_mean": 0.015769751742482185,
+            "clip_pcen_onset_peak": 0.3142266869544983,
+            "clip_pcen_onset_std": 0.025721898302435875,
+            "clip_pcen_band_spread": 0.42857142857142855,
+            "clip_pcen_peak_band": 0.16666666666666666,
+            "clip_pcen_high_band_ratio": 0.12886013090610504,
+            "clip_pcen_low_band_ratio": 0.34547796845436096,
+            "audio_clip_probability": 0.9994335539422211,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8154.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8154.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: athlete on springboard/platform over pool.",
+      "exists": true,
+      "runtime_seconds": 0.4896864891052246,
+      "actual_event_count": 2,
+      "confidence_counts": {
+        "high": 2,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        0.848,
+        18.96
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 0.848,
+          "audio_score": 19.579252243041992,
+          "video_score": 0.0,
+          "combined_score": 19.579252243041992,
+          "start_time": 0.0,
+          "end_time": 1.8479999999999999,
+          "confidence": "high",
+          "details": {
+            "audio_score": 19.579252243041992,
+            "spectral_flux": 172.5502471923828,
+            "rms": 0.08795150369405746,
+            "hf_ratio": 0.21158914268016815,
+            "spectral_centroid_hz": 1569.79541015625,
+            "spectral_flatness": 0.1816003918647766,
+            "post_flux_ratio": 1.4391674995422363,
+            "post_rms_ratio": 1.9740574359893799,
+            "local_prominence": 17.71869659423828,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "clip_rms_mean": 0.028768425807356834,
+            "clip_rms_std": 0.032800279557704926,
+            "clip_rms_peak": 0.12344339489936829,
+            "clip_flux_mean": 35.884464263916016,
+            "clip_flux_peak": 172.5502471923828,
+            "clip_flux_std": 30.801639556884766,
+            "clip_hf_ratio_mean": 0.38063040375709534,
+            "clip_hf_ratio_peak": 0.5047866702079773,
+            "clip_centroid_mean": 1896.7203369140625,
+            "clip_flatness_mean": 0.4266737401485443,
+            "clip_pcen_onset_mean": 0.014740943908691406,
+            "clip_pcen_onset_peak": 0.08855558931827545,
+            "clip_pcen_onset_std": 0.012324106879532337,
+            "clip_pcen_band_spread": 0.14285714285714285,
+            "clip_pcen_peak_band": 0.5,
+            "clip_pcen_high_band_ratio": 0.014621302485466003,
+            "clip_pcen_low_band_ratio": 0.31397849321365356,
+            "audio_clip_probability": 0.9842187869295517,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 18.96,
+          "audio_score": 64.16407012939453,
+          "video_score": 0.0,
+          "combined_score": 64.16407012939453,
+          "start_time": 15.96,
+          "end_time": 19.96,
+          "confidence": "high",
+          "details": {
+            "audio_score": 64.16407012939453,
+            "spectral_flux": 556.4088134765625,
+            "rms": 0.15043900907039642,
+            "hf_ratio": 0.19430309534072876,
+            "spectral_centroid_hz": 1195.8548583984375,
+            "spectral_flatness": 0.20145931839942932,
+            "post_flux_ratio": 3.0727710723876953,
+            "post_rms_ratio": 8.463943481445312,
+            "local_prominence": 61.687591552734375,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "clip_rms_mean": 0.03919334337115288,
+            "clip_rms_std": 0.03479544073343277,
+            "clip_rms_peak": 0.18704897165298462,
+            "clip_flux_mean": 61.934730529785156,
+            "clip_flux_peak": 532.8201904296875,
+            "clip_flux_std": 64.55889129638672,
+            "clip_hf_ratio_mean": 0.32093849778175354,
+            "clip_hf_ratio_peak": 0.6074153780937195,
+            "clip_centroid_mean": 1612.770263671875,
+            "clip_flatness_mean": 0.40110504627227783,
+            "clip_pcen_onset_mean": 0.016730666160583496,
+            "clip_pcen_onset_peak": 0.32505670189857483,
+            "clip_pcen_onset_std": 0.028577366843819618,
+            "clip_pcen_band_spread": 0.5714285714285714,
+            "clip_pcen_peak_band": 0.16666666666666666,
+            "clip_pcen_high_band_ratio": 0.16202519834041595,
+            "clip_pcen_low_band_ratio": 0.3763943910598755,
+            "audio_clip_probability": 0.9862668342802552,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8155.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8155.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: splash/pool dive clip.",
+      "exists": true,
+      "runtime_seconds": 0.29844212532043457,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        4.464
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 4.464,
+          "audio_score": 8.86793327331543,
+          "video_score": 0.0,
+          "combined_score": 8.86793327331543,
+          "start_time": 1.4640000000000004,
+          "end_time": 5.464,
+          "confidence": "high",
+          "details": {
+            "audio_score": 8.86793327331543,
+            "spectral_flux": 118.40131378173828,
+            "rms": 0.036306533962488174,
+            "hf_ratio": 0.26388660073280334,
+            "spectral_centroid_hz": 1310.8587646484375,
+            "spectral_flatness": 0.32284945249557495,
+            "post_flux_ratio": 1.0517092943191528,
+            "post_rms_ratio": 1.2225137948989868,
+            "local_prominence": 8.549625396728516,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "pcen_multiband",
+            "pcen_onset_mean": 0.08833789825439453,
+            "pcen_onset_peak": 0.36079561710357666,
+            "clip_rms_mean": 0.024026881903409958,
+            "clip_rms_std": 0.014620308764278889,
+            "clip_rms_peak": 0.07703612744808197,
+            "clip_flux_mean": 39.048370361328125,
+            "clip_flux_peak": 146.17929077148438,
+            "clip_flux_std": 18.274614334106445,
+            "clip_hf_ratio_mean": 0.4244861602783203,
+            "clip_hf_ratio_peak": 0.6377283334732056,
+            "clip_centroid_mean": 2000.3199462890625,
+            "clip_flatness_mean": 0.494179904460907,
+            "clip_pcen_onset_mean": 0.01504512969404459,
+            "clip_pcen_onset_peak": 0.08756305277347565,
+            "clip_pcen_onset_std": 0.013420220464468002,
+            "clip_pcen_band_spread": 0.2857142857142857,
+            "clip_pcen_peak_band": 0.16666666666666666,
+            "clip_pcen_high_band_ratio": 0.0,
+            "clip_pcen_low_band_ratio": 0.7258466482162476,
+            "audio_clip_probability": 0.9259606059748835,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8156.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8156.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: athlete on board above pool.",
+      "exists": true,
+      "runtime_seconds": 0.29763293266296387,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        6.208
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 6.208,
+          "audio_score": 17.514419555664062,
+          "video_score": 0.0,
+          "combined_score": 17.514419555664062,
+          "start_time": 3.208,
+          "end_time": 7.208,
+          "confidence": "high",
+          "details": {
+            "audio_score": 17.514419555664062,
+            "spectral_flux": 297.1227722167969,
+            "rms": 0.10080984234809875,
+            "hf_ratio": 0.2015199363231659,
+            "spectral_centroid_hz": 1312.9896240234375,
+            "spectral_flatness": 0.28374770283699036,
+            "post_flux_ratio": 1.0721049308776855,
+            "post_rms_ratio": 1.1552027463912964,
+            "local_prominence": 13.068814277648926,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "clip_rms_mean": 0.0454232394695282,
+            "clip_rms_std": 0.030525311827659607,
+            "clip_rms_peak": 0.12913447618484497,
+            "clip_flux_mean": 69.21577453613281,
+            "clip_flux_peak": 264.59454345703125,
+            "clip_flux_std": 48.2690544128418,
+            "clip_hf_ratio_mean": 0.29894107580184937,
+            "clip_hf_ratio_peak": 0.4551325738430023,
+            "clip_centroid_mean": 1531.52001953125,
+            "clip_flatness_mean": 0.38407841324806213,
+            "clip_pcen_onset_mean": 0.015608293004333973,
+            "clip_pcen_onset_peak": 0.18083332479000092,
+            "clip_pcen_onset_std": 0.018409572541713715,
+            "clip_pcen_band_spread": 0.7142857142857143,
+            "clip_pcen_peak_band": 0.5,
+            "clip_pcen_high_band_ratio": 0.22723588347434998,
+            "clip_pcen_low_band_ratio": 0.3252032399177551,
+            "audio_clip_probability": 0.9887992672145163,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8162.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8162.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: airborne diver over pool.",
+      "exists": true,
+      "runtime_seconds": 0.23129725456237793,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": false,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8164.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8164.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: athletes on board over pool.",
+      "exists": true,
+      "runtime_seconds": 0.3343467712402344,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": false,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8166.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8166.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: airborne diver.",
+      "exists": true,
+      "runtime_seconds": 0.24219012260437012,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        3.968
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 3.968,
+          "audio_score": 15.866893768310547,
+          "video_score": 0.0,
+          "combined_score": 15.866893768310547,
+          "start_time": 0.968,
+          "end_time": 4.968,
+          "confidence": "high",
+          "details": {
+            "audio_score": 15.866893768310547,
+            "spectral_flux": 238.870849609375,
+            "rms": 0.03142567351460457,
+            "hf_ratio": 0.5415399670600891,
+            "spectral_centroid_hz": 2635.054443359375,
+            "spectral_flatness": 0.6034536957740784,
+            "post_flux_ratio": 4.600589752197266,
+            "post_rms_ratio": 4.79386043548584,
+            "local_prominence": 15.786970138549805,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "pcen_multiband",
+            "pcen_onset_mean": 0.22565338015556335,
+            "pcen_onset_peak": 0.42414331436157227,
+            "clip_rms_mean": 0.02535836026072502,
+            "clip_rms_std": 0.014528385363519192,
+            "clip_rms_peak": 0.09666088968515396,
+            "clip_flux_mean": 52.638343811035156,
+            "clip_flux_peak": 341.36676025390625,
+            "clip_flux_std": 40.15070343017578,
+            "clip_hf_ratio_mean": 0.41170310974121094,
+            "clip_hf_ratio_peak": 0.5687196254730225,
+            "clip_centroid_mean": 1976.8837890625,
+            "clip_flatness_mean": 0.49716517329216003,
+            "clip_pcen_onset_mean": 0.01497290562838316,
+            "clip_pcen_onset_peak": 0.2763856053352356,
+            "clip_pcen_onset_std": 0.022867068648338318,
+            "clip_pcen_band_spread": 0.42857142857142855,
+            "clip_pcen_peak_band": 0.3333333333333333,
+            "clip_pcen_high_band_ratio": 0.30191802978515625,
+            "clip_pcen_low_band_ratio": 0.1208934411406517,
+            "audio_clip_probability": 0.8615079881203768,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8170.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8170.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: pool dive clip.",
+      "exists": true,
+      "runtime_seconds": 0.3011162281036377,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 1,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        0.784
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 0.784,
+          "audio_score": 5.316052436828613,
+          "video_score": 0.0,
+          "combined_score": 5.316052436828613,
+          "start_time": 0.0,
+          "end_time": 1.784,
+          "confidence": "medium",
+          "details": {
+            "audio_score": 5.316052436828613,
+            "spectral_flux": 142.8100128173828,
+            "rms": 0.11251428723335266,
+            "hf_ratio": 0.1799771636724472,
+            "spectral_centroid_hz": 941.3612060546875,
+            "spectral_flatness": 0.20070113241672516,
+            "post_flux_ratio": 0.8395145535469055,
+            "post_rms_ratio": 1.1886152029037476,
+            "local_prominence": 4.154428005218506,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "clip_rms_mean": 0.04841838777065277,
+            "clip_rms_std": 0.023864172399044037,
+            "clip_rms_peak": 0.13757480680942535,
+            "clip_flux_mean": 59.94723892211914,
+            "clip_flux_peak": 142.8100128173828,
+            "clip_flux_std": 22.520431518554688,
+            "clip_hf_ratio_mean": 0.27597132325172424,
+            "clip_hf_ratio_peak": 0.46755287051200867,
+            "clip_centroid_mean": 1481.53466796875,
+            "clip_flatness_mean": 0.34573715925216675,
+            "clip_pcen_onset_mean": 0.014784407801926136,
+            "clip_pcen_onset_peak": 0.06483929604291916,
+            "clip_pcen_onset_std": 0.011865302920341492,
+            "clip_pcen_band_spread": 0.2857142857142857,
+            "clip_pcen_peak_band": 0.16666666666666666,
+            "clip_pcen_high_band_ratio": 0.0,
+            "clip_pcen_low_band_ratio": 0.6729901432991028,
+            "audio_clip_probability": 0.9926028421305494,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8175.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8175.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: diver above platform.",
+      "exists": true,
+      "runtime_seconds": 0.259519100189209,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 1,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        0.0
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 0.0,
+          "audio_score": 5.239408016204834,
+          "video_score": 0.0,
+          "combined_score": 5.239408016204834,
+          "start_time": 0.0,
+          "end_time": 1.0,
+          "confidence": "medium",
+          "details": {
+            "audio_score": 5.239408016204834,
+            "spectral_flux": 102.1295166015625,
+            "rms": 0.04246716573834419,
+            "hf_ratio": 0.3055676817893982,
+            "spectral_centroid_hz": 1594.5010986328125,
+            "spectral_flatness": 0.4128880798816681,
+            "post_flux_ratio": 2.062962055206299,
+            "post_rms_ratio": 2.918875217437744,
+            "local_prominence": 4.998498916625977,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "pcen_multiband",
+            "pcen_onset_mean": 0.05578814074397087,
+            "pcen_onset_peak": 0.2860300540924072,
+            "clip_rms_mean": 0.045064471662044525,
+            "clip_rms_std": 0.025601664558053017,
+            "clip_rms_peak": 0.11191467195749283,
+            "clip_flux_mean": 55.96577835083008,
+            "clip_flux_peak": 140.32603454589844,
+            "clip_flux_std": 27.43565559387207,
+            "clip_hf_ratio_mean": 0.2750002443790436,
+            "clip_hf_ratio_peak": 0.4538552761077881,
+            "clip_centroid_mean": 1451.6998291015625,
+            "clip_flatness_mean": 0.342340350151062,
+            "clip_pcen_onset_mean": 0.015147046186029911,
+            "clip_pcen_onset_peak": 0.05920001491904259,
+            "clip_pcen_onset_std": 0.012632935307919979,
+            "clip_pcen_band_spread": 0.2857142857142857,
+            "clip_pcen_peak_band": 0.0,
+            "clip_pcen_high_band_ratio": 0.09628598392009735,
+            "clip_pcen_low_band_ratio": 0.6667483448982239,
+            "audio_clip_probability": 0.9693426960326585,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8181.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8181.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: diver in motion over pool.",
+      "exists": true,
+      "runtime_seconds": 0.26201415061950684,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": false,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8182.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8182.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: airborne diver over pool.",
+      "exists": true,
+      "runtime_seconds": 0.21327543258666992,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        5.536
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 5.536,
+          "audio_score": 30.609167098999023,
+          "video_score": 0.0,
+          "combined_score": 30.609167098999023,
+          "start_time": 2.5359999999999996,
+          "end_time": 6.536,
+          "confidence": "high",
+          "details": {
+            "audio_score": 30.609167098999023,
+            "spectral_flux": 268.55792236328125,
+            "rms": 0.07930710911750793,
+            "hf_ratio": 0.35316723585128784,
+            "spectral_centroid_hz": 1801.49169921875,
+            "spectral_flatness": 0.42888498306274414,
+            "post_flux_ratio": 0.8060800433158875,
+            "post_rms_ratio": 1.747758388519287,
+            "local_prominence": 30.039817810058594,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "clip_rms_mean": 0.01713092438876629,
+            "clip_rms_std": 0.010737355798482895,
+            "clip_rms_peak": 0.08234038203954697,
+            "clip_flux_mean": 37.565773010253906,
+            "clip_flux_peak": 319.2340087890625,
+            "clip_flux_std": 34.36112976074219,
+            "clip_hf_ratio_mean": 0.4409467577934265,
+            "clip_hf_ratio_peak": 0.5523834824562073,
+            "clip_centroid_mean": 2081.098876953125,
+            "clip_flatness_mean": 0.5193971991539001,
+            "clip_pcen_onset_mean": 0.015219543129205704,
+            "clip_pcen_onset_peak": 0.2550678849220276,
+            "clip_pcen_onset_std": 0.022389866411685944,
+            "clip_pcen_band_spread": 0.8571428571428571,
+            "clip_pcen_peak_band": 0.16666666666666666,
+            "clip_pcen_high_band_ratio": 0.2862924039363861,
+            "clip_pcen_low_band_ratio": 0.23862847685813904,
+            "audio_clip_probability": 0.8179563031586441,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8183.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8183.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: pool dive clip.",
+      "exists": true,
+      "runtime_seconds": 0.25687694549560547,
+      "actual_event_count": 2,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 1,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        0.0,
+        8.064
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 0.0,
+          "audio_score": 4.941003322601318,
+          "video_score": 0.0,
+          "combined_score": 4.941003322601318,
+          "start_time": 0.0,
+          "end_time": 1.0,
+          "confidence": "medium",
+          "details": {
+            "audio_score": 4.941003322601318,
+            "spectral_flux": 143.93701171875,
+            "rms": 0.05541374906897545,
+            "hf_ratio": 0.23779726028442383,
+            "spectral_centroid_hz": 1242.106201171875,
+            "spectral_flatness": 0.309550404548645,
+            "post_flux_ratio": 1.4234434366226196,
+            "post_rms_ratio": 2.2652077674865723,
+            "local_prominence": 5.145153522491455,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "pcen_multiband",
+            "pcen_onset_mean": 0.058267559856176376,
+            "pcen_onset_peak": 0.14128339290618896,
+            "clip_rms_mean": 0.02441110648214817,
+            "clip_rms_std": 0.011321118101477623,
+            "clip_rms_peak": 0.09564778208732605,
+            "clip_flux_mean": 42.42171096801758,
+            "clip_flux_peak": 143.93701171875,
+            "clip_flux_std": 17.81298828125,
+            "clip_hf_ratio_mean": 0.3774870038032532,
+            "clip_hf_ratio_peak": 0.4965829849243164,
+            "clip_centroid_mean": 1797.9453125,
+            "clip_flatness_mean": 0.44327887892723083,
+            "clip_pcen_onset_mean": 0.012945404276251793,
+            "clip_pcen_onset_peak": 0.058267559856176376,
+            "clip_pcen_onset_std": 0.010433787479996681,
+            "clip_pcen_band_spread": 0.14285714285714285,
+            "clip_pcen_peak_band": 0.0,
+            "clip_pcen_high_band_ratio": 0.1202293336391449,
+            "clip_pcen_low_band_ratio": 0.5408300161361694,
+            "audio_clip_probability": 0.9991506645505922,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 8.064,
+          "audio_score": 10.543866157531738,
+          "video_score": 0.0,
+          "combined_score": 10.543866157531738,
+          "start_time": 5.064,
+          "end_time": 9.064,
+          "confidence": "high",
+          "details": {
+            "audio_score": 10.543866157531738,
+            "spectral_flux": 263.0510559082031,
+            "rms": 0.17399531602859497,
+            "hf_ratio": 0.18001337349414825,
+            "spectral_centroid_hz": 1091.1329345703125,
+            "spectral_flatness": 0.2580868899822235,
+            "post_flux_ratio": 0.7928816080093384,
+            "post_rms_ratio": 1.0407345294952393,
+            "local_prominence": 7.545741558074951,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "clip_rms_mean": 0.06350503116846085,
+            "clip_rms_std": 0.05771097540855408,
+            "clip_rms_peak": 0.22093497216701508,
+            "clip_flux_mean": 63.46248245239258,
+            "clip_flux_peak": 261.3048400878906,
+            "clip_flux_std": 49.45740509033203,
+            "clip_hf_ratio_mean": 0.3355697691440582,
+            "clip_hf_ratio_peak": 0.578831672668457,
+            "clip_centroid_mean": 1693.3128662109375,
+            "clip_flatness_mean": 0.39365872740745544,
+            "clip_pcen_onset_mean": 0.014487002044916153,
+            "clip_pcen_onset_peak": 0.08425530046224594,
+            "clip_pcen_onset_std": 0.01312939077615738,
+            "clip_pcen_band_spread": 0.2857142857142857,
+            "clip_pcen_peak_band": 0.16666666666666666,
+            "clip_pcen_high_band_ratio": 0.25415271520614624,
+            "clip_pcen_low_band_ratio": 0.4006246328353882,
+            "audio_clip_probability": 0.9999996942990013,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8184.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8184.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: airborne diver over pool.",
+      "exists": true,
+      "runtime_seconds": 0.2764315605163574,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        14.336
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 14.336,
+          "audio_score": 13.73770523071289,
+          "video_score": 0.0,
+          "combined_score": 13.73770523071289,
+          "start_time": 11.336,
+          "end_time": 15.336,
+          "confidence": "high",
+          "details": {
+            "audio_score": 13.73770523071289,
+            "spectral_flux": 198.80990600585938,
+            "rms": 0.02530951425433159,
+            "hf_ratio": 0.6492630839347839,
+            "spectral_centroid_hz": 3083.57080078125,
+            "spectral_flatness": 0.7363155484199524,
+            "post_flux_ratio": 1.3617275953292847,
+            "post_rms_ratio": 1.5602024793624878,
+            "local_prominence": 13.685622215270996,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "pcen_multiband",
+            "pcen_onset_mean": 0.16476066410541534,
+            "pcen_onset_peak": 0.26368939876556396,
+            "clip_rms_mean": 0.023944592103362083,
+            "clip_rms_std": 0.009707191027700901,
+            "clip_rms_peak": 0.06345809251070023,
+            "clip_flux_mean": 42.77289962768555,
+            "clip_flux_peak": 176.45314025878906,
+            "clip_flux_std": 17.919174194335938,
+            "clip_hf_ratio_mean": 0.3598593771457672,
+            "clip_hf_ratio_peak": 0.650908350944519,
+            "clip_centroid_mean": 1832.2479248046875,
+            "clip_flatness_mean": 0.46718254685401917,
+            "clip_pcen_onset_mean": 0.013952032662928104,
+            "clip_pcen_onset_peak": 0.10617518424987793,
+            "clip_pcen_onset_std": 0.013994726352393627,
+            "clip_pcen_band_spread": 0.5714285714285714,
+            "clip_pcen_peak_band": 0.5,
+            "clip_pcen_high_band_ratio": 0.3294622004032135,
+            "clip_pcen_low_band_ratio": 0.1566513180732727,
+            "audio_clip_probability": 0.9883481809795583,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8185.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8185.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: athlete on board above pool.",
+      "exists": true,
+      "runtime_seconds": 0.3364865779876709,
+      "actual_event_count": 3,
+      "confidence_counts": {
+        "high": 3,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        3.104,
+        6.416,
+        17.328
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 3.104,
+          "audio_score": 8.51251220703125,
+          "video_score": 0.0,
+          "combined_score": 8.51251220703125,
+          "start_time": 0.10400000000000009,
+          "end_time": 4.104,
+          "confidence": "high",
+          "details": {
+            "audio_score": 8.51251220703125,
+            "spectral_flux": 76.53492736816406,
+            "rms": 0.01614794135093689,
+            "hf_ratio": 0.586883544921875,
+            "spectral_centroid_hz": 2435.89306640625,
+            "spectral_flatness": 0.579533040523529,
+            "post_flux_ratio": 1.7647840976715088,
+            "post_rms_ratio": 1.8850247859954834,
+            "local_prominence": 8.71157455444336,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "pcen_multiband",
+            "pcen_onset_mean": 0.11123691499233246,
+            "pcen_onset_peak": 0.2397083044052124,
+            "clip_rms_mean": 0.014714151620864868,
+            "clip_rms_std": 0.003988472279161215,
+            "clip_rms_peak": 0.03223046287894249,
+            "clip_flux_mean": 30.915607452392578,
+            "clip_flux_peak": 92.2479248046875,
+            "clip_flux_std": 9.389307975769043,
+            "clip_hf_ratio_mean": 0.43756917119026184,
+            "clip_hf_ratio_peak": 0.6165130734443665,
+            "clip_centroid_mean": 2057.698486328125,
+            "clip_flatness_mean": 0.505135715007782,
+            "clip_pcen_onset_mean": 0.012902703136205673,
+            "clip_pcen_onset_peak": 0.12338978797197342,
+            "clip_pcen_onset_std": 0.01191040500998497,
+            "clip_pcen_band_spread": 0.2857142857142857,
+            "clip_pcen_peak_band": 0.6666666666666666,
+            "clip_pcen_high_band_ratio": 0.3243103623390198,
+            "clip_pcen_low_band_ratio": 0.0922803208231926,
+            "audio_clip_probability": 0.9651555175141752,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 6.416,
+          "audio_score": 8.744987487792969,
+          "video_score": 0.0,
+          "combined_score": 8.744987487792969,
+          "start_time": 3.4160000000000004,
+          "end_time": 7.416,
+          "confidence": "high",
+          "details": {
+            "audio_score": 8.744987487792969,
+            "spectral_flux": 149.02142333984375,
+            "rms": 0.08365143835544586,
+            "hf_ratio": 0.48529231548309326,
+            "spectral_centroid_hz": 1854.5860595703125,
+            "spectral_flatness": 0.23701061308383942,
+            "post_flux_ratio": 1.3775944709777832,
+            "post_rms_ratio": 2.0727570056915283,
+            "local_prominence": 8.029658317565918,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "clip_rms_mean": 0.021742668002843857,
+            "clip_rms_std": 0.015168544836342335,
+            "clip_rms_peak": 0.09056208282709122,
+            "clip_flux_mean": 41.447078704833984,
+            "clip_flux_peak": 155.48541259765625,
+            "clip_flux_std": 21.509313583374023,
+            "clip_hf_ratio_mean": 0.43108633160591125,
+            "clip_hf_ratio_peak": 0.5219130516052246,
+            "clip_centroid_mean": 1995.4266357421875,
+            "clip_flatness_mean": 0.4636452794075012,
+            "clip_pcen_onset_mean": 0.01315498910844326,
+            "clip_pcen_onset_peak": 0.04634334519505501,
+            "clip_pcen_onset_std": 0.008963224478065968,
+            "clip_pcen_band_spread": 0.2857142857142857,
+            "clip_pcen_peak_band": 0.5,
+            "clip_pcen_high_band_ratio": 0.12388630956411362,
+            "clip_pcen_low_band_ratio": 0.20715345442295074,
+            "audio_clip_probability": 0.9884621690301636,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 17.328,
+          "audio_score": 14.325465202331543,
+          "video_score": 0.0,
+          "combined_score": 14.325465202331543,
+          "start_time": 14.328,
+          "end_time": 18.328,
+          "confidence": "high",
+          "details": {
+            "audio_score": 14.325465202331543,
+            "spectral_flux": 271.3629150390625,
+            "rms": 0.07606185972690582,
+            "hf_ratio": 0.23153530061244965,
+            "spectral_centroid_hz": 1406.955322265625,
+            "spectral_flatness": 0.27837714552879333,
+            "post_flux_ratio": 2.548117160797119,
+            "post_rms_ratio": 4.273650169372559,
+            "local_prominence": 13.548251152038574,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "clip_rms_mean": 0.03275555372238159,
+            "clip_rms_std": 0.02138940617442131,
+            "clip_rms_peak": 0.1184081956744194,
+            "clip_flux_mean": 57.96260452270508,
+            "clip_flux_peak": 247.4781036376953,
+            "clip_flux_std": 34.997169494628906,
+            "clip_hf_ratio_mean": 0.34908461570739746,
+            "clip_hf_ratio_peak": 0.5235487818717957,
+            "clip_centroid_mean": 1728.23095703125,
+            "clip_flatness_mean": 0.41004976630210876,
+            "clip_pcen_onset_mean": 0.013562600128352642,
+            "clip_pcen_onset_peak": 0.1683584749698639,
+            "clip_pcen_onset_std": 0.013879075646400452,
+            "clip_pcen_band_spread": 0.2857142857142857,
+            "clip_pcen_peak_band": 0.16666666666666666,
+            "clip_pcen_high_band_ratio": 0.17455404996871948,
+            "clip_pcen_low_band_ratio": 0.3268508017063141,
+            "audio_clip_probability": 0.9998702370867303,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8186.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8186.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: diving platform/pool clip.",
+      "exists": true,
+      "runtime_seconds": 0.2919316291809082,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": false,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8187.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8187.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: platform dive clip.",
+      "exists": true,
+      "runtime_seconds": 0.324725866317749,
+      "actual_event_count": 2,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 1,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        1.536,
+        11.12
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 1.536,
+          "audio_score": 8.367035865783691,
+          "video_score": 0.0,
+          "combined_score": 8.367035865783691,
+          "start_time": 0.0,
+          "end_time": 2.536,
+          "confidence": "high",
+          "details": {
+            "audio_score": 8.367035865783691,
+            "spectral_flux": 284.7062072753906,
+            "rms": 0.10589034110307693,
+            "hf_ratio": 0.5582813024520874,
+            "spectral_centroid_hz": 2141.60302734375,
+            "spectral_flatness": 0.35536956787109375,
+            "post_flux_ratio": 0.5900718569755554,
+            "post_rms_ratio": 0.9752668142318726,
+            "local_prominence": 8.152782440185547,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "clip_rms_mean": 0.06588031351566315,
+            "clip_rms_std": 0.013314563781023026,
+            "clip_rms_peak": 0.10944636911153793,
+            "clip_flux_mean": 85.92401885986328,
+            "clip_flux_peak": 303.2826232910156,
+            "clip_flux_std": 35.87977600097656,
+            "clip_hf_ratio_mean": 0.31833910942077637,
+            "clip_hf_ratio_peak": 0.5520002841949463,
+            "clip_centroid_mean": 1530.703857421875,
+            "clip_flatness_mean": 0.3827382028102875,
+            "clip_pcen_onset_mean": 0.014149165712296963,
+            "clip_pcen_onset_peak": 0.06841736286878586,
+            "clip_pcen_onset_std": 0.010456315241754055,
+            "clip_pcen_band_spread": 0.42857142857142855,
+            "clip_pcen_peak_band": 0.5,
+            "clip_pcen_high_band_ratio": 0.09574153274297714,
+            "clip_pcen_low_band_ratio": 0.07134473323822021,
+            "audio_clip_probability": 0.8905185991164709,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 11.12,
+          "audio_score": 6.420785903930664,
+          "video_score": 0.0,
+          "combined_score": 6.420785903930664,
+          "start_time": 8.12,
+          "end_time": 12.12,
+          "confidence": "medium",
+          "details": {
+            "audio_score": 6.420785903930664,
+            "spectral_flux": 160.9363555908203,
+            "rms": 0.04416540265083313,
+            "hf_ratio": 0.4264147877693176,
+            "spectral_centroid_hz": 2107.5556640625,
+            "spectral_flatness": 0.5182855129241943,
+            "post_flux_ratio": 2.199230909347534,
+            "post_rms_ratio": 2.2465901374816895,
+            "local_prominence": 6.520267486572266,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "pcen_multiband",
+            "pcen_onset_mean": 0.09470801800489426,
+            "pcen_onset_peak": 0.15933871269226074,
+            "clip_rms_mean": 0.058625318109989166,
+            "clip_rms_std": 0.016300084069371223,
+            "clip_rms_peak": 0.11164416372776031,
+            "clip_flux_mean": 82.19377899169922,
+            "clip_flux_peak": 258.29962158203125,
+            "clip_flux_std": 27.89552879333496,
+            "clip_hf_ratio_mean": 0.3014342784881592,
+            "clip_hf_ratio_peak": 0.4337083101272583,
+            "clip_centroid_mean": 1528.674072265625,
+            "clip_flatness_mean": 0.3916482627391815,
+            "clip_pcen_onset_mean": 0.01367439515888691,
+            "clip_pcen_onset_peak": 0.09934426844120026,
+            "clip_pcen_onset_std": 0.010604271665215492,
+            "clip_pcen_band_spread": 0.5714285714285714,
+            "clip_pcen_peak_band": 1.0,
+            "clip_pcen_high_band_ratio": 0.4005602300167084,
+            "clip_pcen_low_band_ratio": 0.1422821283340454,
+            "audio_clip_probability": 0.9962669374303987,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8190.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8190.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: diver hanging above pool.",
+      "exists": true,
+      "runtime_seconds": 0.31545042991638184,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 1,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        0.96
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 0.96,
+          "audio_score": 4.5935516357421875,
+          "video_score": 0.0,
+          "combined_score": 4.5935516357421875,
+          "start_time": 0.0,
+          "end_time": 1.96,
+          "confidence": "medium",
+          "details": {
+            "audio_score": 4.5935516357421875,
+            "spectral_flux": 94.84148406982422,
+            "rms": 0.042815253138542175,
+            "hf_ratio": 0.3558999300003052,
+            "spectral_centroid_hz": 1626.70849609375,
+            "spectral_flatness": 0.41567739844322205,
+            "post_flux_ratio": 1.6488709449768066,
+            "post_rms_ratio": 1.7540749311447144,
+            "local_prominence": 4.8156256675720215,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "pcen_multiband",
+            "pcen_onset_mean": 0.07140813767910004,
+            "pcen_onset_peak": 0.18030834197998047,
+            "clip_rms_mean": 0.05695134401321411,
+            "clip_rms_std": 0.017436601221561432,
+            "clip_rms_peak": 0.13020563125610352,
+            "clip_flux_mean": 72.1275405883789,
+            "clip_flux_peak": 148.5779266357422,
+            "clip_flux_std": 23.033409118652344,
+            "clip_hf_ratio_mean": 0.3070107102394104,
+            "clip_hf_ratio_peak": 0.42622098326683044,
+            "clip_centroid_mean": 1489.323486328125,
+            "clip_flatness_mean": 0.372579962015152,
+            "clip_pcen_onset_mean": 0.013377857394516468,
+            "clip_pcen_onset_peak": 0.07140813767910004,
+            "clip_pcen_onset_std": 0.009886086918413639,
+            "clip_pcen_band_spread": 0.14285714285714285,
+            "clip_pcen_peak_band": 0.0,
+            "clip_pcen_high_band_ratio": 0.07157809287309647,
+            "clip_pcen_low_band_ratio": 0.46396490931510925,
+            "audio_clip_probability": 0.9992082659070806,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8201.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8201.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: diver on platform above pool.",
+      "exists": true,
+      "runtime_seconds": 0.26058197021484375,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": false,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8206.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8206.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: diver on platform above pool.",
+      "exists": true,
+      "runtime_seconds": 0.24733400344848633,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": false,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8208.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8208.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: water-entry frame with divers descending into pool.",
+      "exists": true,
+      "runtime_seconds": 0.16228580474853516,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 1,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        0.0
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 0.0,
+          "audio_score": 4.909759521484375,
+          "video_score": 0.0,
+          "combined_score": 4.909759521484375,
+          "start_time": 0.0,
+          "end_time": 1.0,
+          "confidence": "medium",
+          "details": {
+            "audio_score": 4.909759521484375,
+            "spectral_flux": 168.4498291015625,
+            "rms": 0.07603245973587036,
+            "hf_ratio": 0.1777239739894867,
+            "spectral_centroid_hz": 1074.6954345703125,
+            "spectral_flatness": 0.25579923391342163,
+            "post_flux_ratio": 1.155864953994751,
+            "post_rms_ratio": 1.702963948249817,
+            "local_prominence": 4.341701507568359,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "clip_rms_mean": 0.04273988679051399,
+            "clip_rms_std": 0.016056522727012634,
+            "clip_rms_peak": 0.09788740426301956,
+            "clip_flux_mean": 60.41303634643555,
+            "clip_flux_peak": 168.4498291015625,
+            "clip_flux_std": 25.891164779663086,
+            "clip_hf_ratio_mean": 0.2388114035129547,
+            "clip_hf_ratio_peak": 0.4854115843772888,
+            "clip_centroid_mean": 1333.099365234375,
+            "clip_flatness_mean": 0.3410153388977051,
+            "clip_pcen_onset_mean": 0.014372709207236767,
+            "clip_pcen_onset_peak": 0.07373885065317154,
+            "clip_pcen_onset_std": 0.012284554541110992,
+            "clip_pcen_band_spread": 0.14285714285714285,
+            "clip_pcen_peak_band": 1.0,
+            "clip_pcen_high_band_ratio": 0.5221790671348572,
+            "clip_pcen_low_band_ratio": 0.06232856959104538,
+            "audio_clip_probability": 0.921213387644867,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8209.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8209.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: diver poised on springboard over pool.",
+      "exists": true,
+      "runtime_seconds": 0.3401453495025635,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        18.928
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 18.928,
+          "audio_score": 28.051176071166992,
+          "video_score": 0.0,
+          "combined_score": 28.051176071166992,
+          "start_time": 15.928,
+          "end_time": 19.928,
+          "confidence": "high",
+          "details": {
+            "audio_score": 28.051176071166992,
+            "spectral_flux": 297.94281005859375,
+            "rms": 0.092544324696064,
+            "hf_ratio": 0.19028280675411224,
+            "spectral_centroid_hz": 1251.698486328125,
+            "spectral_flatness": 0.24664801359176636,
+            "post_flux_ratio": 2.619558811187744,
+            "post_rms_ratio": 4.641701698303223,
+            "local_prominence": 26.021268844604492,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "clip_rms_mean": 0.03323185071349144,
+            "clip_rms_std": 0.023719727993011475,
+            "clip_rms_peak": 0.13800565898418427,
+            "clip_flux_mean": 53.86900329589844,
+            "clip_flux_peak": 269.0692138671875,
+            "clip_flux_std": 36.98653030395508,
+            "clip_hf_ratio_mean": 0.31118157505989075,
+            "clip_hf_ratio_peak": 0.49107658863067627,
+            "clip_centroid_mean": 1616.9632568359375,
+            "clip_flatness_mean": 0.41104623675346375,
+            "clip_pcen_onset_mean": 0.015030916780233383,
+            "clip_pcen_onset_peak": 0.15698273479938507,
+            "clip_pcen_onset_std": 0.01591876894235611,
+            "clip_pcen_band_spread": 0.14285714285714285,
+            "clip_pcen_peak_band": 0.3333333333333333,
+            "clip_pcen_high_band_ratio": 0.16305184364318848,
+            "clip_pcen_low_band_ratio": 0.27894026041030884,
+            "audio_clip_probability": 0.9972266221044549,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8210.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8210.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: athletes poised on springboard over pool.",
+      "exists": true,
+      "runtime_seconds": 0.3541758060455322,
+      "actual_event_count": 3,
+      "confidence_counts": {
+        "high": 3,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        4.144,
+        11.952,
+        22.736
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 4.144,
+          "audio_score": 10.749598503112793,
+          "video_score": 0.0,
+          "combined_score": 10.749598503112793,
+          "start_time": 1.1440000000000001,
+          "end_time": 5.144,
+          "confidence": "high",
+          "details": {
+            "audio_score": 10.749598503112793,
+            "spectral_flux": 124.58805847167969,
+            "rms": 0.022038649767637253,
+            "hf_ratio": 0.4798358976840973,
+            "spectral_centroid_hz": 2169.99853515625,
+            "spectral_flatness": 0.45964860916137695,
+            "post_flux_ratio": 1.8486522436141968,
+            "post_rms_ratio": 1.6007128953933716,
+            "local_prominence": 10.74343204498291,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "pcen_multiband",
+            "pcen_onset_mean": 0.14229130744934082,
+            "pcen_onset_peak": 0.25421619415283203,
+            "clip_rms_mean": 0.022533774375915527,
+            "clip_rms_std": 0.010157650336623192,
+            "clip_rms_peak": 0.08280275762081146,
+            "clip_flux_mean": 40.171329498291016,
+            "clip_flux_peak": 166.9498748779297,
+            "clip_flux_std": 15.825641632080078,
+            "clip_hf_ratio_mean": 0.4094395339488983,
+            "clip_hf_ratio_peak": 0.5206563472747803,
+            "clip_centroid_mean": 1940.28173828125,
+            "clip_flatness_mean": 0.46380043029785156,
+            "clip_pcen_onset_mean": 0.013762546703219414,
+            "clip_pcen_onset_peak": 0.1826465129852295,
+            "clip_pcen_onset_std": 0.015600452199578285,
+            "clip_pcen_band_spread": 0.5714285714285714,
+            "clip_pcen_peak_band": 0.6666666666666666,
+            "clip_pcen_high_band_ratio": 0.2885904312133789,
+            "clip_pcen_low_band_ratio": 0.13207872211933136,
+            "audio_clip_probability": 0.9520386630223248,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 11.952,
+          "audio_score": 12.058244705200195,
+          "video_score": 0.0,
+          "combined_score": 12.058244705200195,
+          "start_time": 8.952,
+          "end_time": 12.952,
+          "confidence": "high",
+          "details": {
+            "audio_score": 12.058244705200195,
+            "spectral_flux": 180.1549530029297,
+            "rms": 0.06661252677440643,
+            "hf_ratio": 0.45119231939315796,
+            "spectral_centroid_hz": 1848.81201171875,
+            "spectral_flatness": 0.3118055462837219,
+            "post_flux_ratio": 1.1776790618896484,
+            "post_rms_ratio": 1.9414290189743042,
+            "local_prominence": 11.963968276977539,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "clip_rms_mean": 0.018231570720672607,
+            "clip_rms_std": 0.008413136936724186,
+            "clip_rms_peak": 0.0679878294467926,
+            "clip_flux_mean": 39.17533493041992,
+            "clip_flux_peak": 201.26954650878906,
+            "clip_flux_std": 21.10404396057129,
+            "clip_hf_ratio_mean": 0.42441460490226746,
+            "clip_hf_ratio_peak": 0.6487924456596375,
+            "clip_centroid_mean": 1981.818603515625,
+            "clip_flatness_mean": 0.4810612201690674,
+            "clip_pcen_onset_mean": 0.013179636560380459,
+            "clip_pcen_onset_peak": 0.06152091547846794,
+            "clip_pcen_onset_std": 0.009742675349116325,
+            "clip_pcen_band_spread": 0.42857142857142855,
+            "clip_pcen_peak_band": 0.0,
+            "clip_pcen_high_band_ratio": 0.2629327178001404,
+            "clip_pcen_low_band_ratio": 0.4560692608356476,
+            "audio_clip_probability": 0.9995917222395061,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 22.736,
+          "audio_score": 13.131612777709961,
+          "video_score": 0.0,
+          "combined_score": 13.131612777709961,
+          "start_time": 19.736,
+          "end_time": 23.736,
+          "confidence": "high",
+          "details": {
+            "audio_score": 13.131612777709961,
+            "spectral_flux": 176.58067321777344,
+            "rms": 0.14206825196743011,
+            "hf_ratio": 0.21698661148548126,
+            "spectral_centroid_hz": 1362.8115234375,
+            "spectral_flatness": 0.2813742160797119,
+            "post_flux_ratio": 0.8829062581062317,
+            "post_rms_ratio": 1.411193609237671,
+            "local_prominence": 10.157231330871582,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "clip_rms_mean": 0.05576536804437637,
+            "clip_rms_std": 0.03490305691957474,
+            "clip_rms_peak": 0.18094734847545624,
+            "clip_flux_mean": 64.5581283569336,
+            "clip_flux_peak": 176.58250427246094,
+            "clip_flux_std": 31.884220123291016,
+            "clip_hf_ratio_mean": 0.26413702964782715,
+            "clip_hf_ratio_peak": 0.5197072625160217,
+            "clip_centroid_mean": 1506.568603515625,
+            "clip_flatness_mean": 0.31995829939842224,
+            "clip_pcen_onset_mean": 0.015015420503914356,
+            "clip_pcen_onset_peak": 0.08997385948896408,
+            "clip_pcen_onset_std": 0.012985515408217907,
+            "clip_pcen_band_spread": 0.5714285714285714,
+            "clip_pcen_peak_band": 0.8333333333333334,
+            "clip_pcen_high_band_ratio": 0.4998411536216736,
+            "clip_pcen_low_band_ratio": 0.010911179706454277,
+            "audio_clip_probability": 0.998195307808889,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8221.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8221.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: diver in takeoff position above pool.",
+      "exists": true,
+      "runtime_seconds": 0.31338953971862793,
+      "actual_event_count": 1,
+      "confidence_counts": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        12.432
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 12.432,
+          "audio_score": 23.601577758789062,
+          "video_score": 0.0,
+          "combined_score": 23.601577758789062,
+          "start_time": 9.432,
+          "end_time": 13.432,
+          "confidence": "high",
+          "details": {
+            "audio_score": 23.601577758789062,
+            "spectral_flux": 212.59718322753906,
+            "rms": 0.024372883141040802,
+            "hf_ratio": 0.7603849172592163,
+            "spectral_centroid_hz": 2969.79638671875,
+            "spectral_flatness": 0.6466184258460999,
+            "post_flux_ratio": 2.5598337650299072,
+            "post_rms_ratio": 2.7116270065307617,
+            "local_prominence": 21.787643432617188,
+            "nearby_peaks_8s": 1,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "clip_rms_mean": 0.014720823615789413,
+            "clip_rms_std": 0.009804826229810715,
+            "clip_rms_peak": 0.05057475343346596,
+            "clip_flux_mean": 30.91547393798828,
+            "clip_flux_peak": 201.59552001953125,
+            "clip_flux_std": 20.75056266784668,
+            "clip_hf_ratio_mean": 0.5044097900390625,
+            "clip_hf_ratio_peak": 0.7580528855323792,
+            "clip_centroid_mean": 2331.14208984375,
+            "clip_flatness_mean": 0.5848832130432129,
+            "clip_pcen_onset_mean": 0.014350468292832375,
+            "clip_pcen_onset_peak": 0.1650584489107132,
+            "clip_pcen_onset_std": 0.01670854538679123,
+            "clip_pcen_band_spread": 0.7142857142857143,
+            "clip_pcen_peak_band": 0.16666666666666666,
+            "clip_pcen_high_band_ratio": 0.25261420011520386,
+            "clip_pcen_low_band_ratio": 0.324497252702713,
+            "audio_clip_probability": 0.9896908970935939,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8222.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8222.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: diver in takeoff position above pool.",
+      "exists": true,
+      "runtime_seconds": 0.3618149757385254,
+      "actual_event_count": 3,
+      "confidence_counts": {
+        "high": 2,
+        "medium": 1,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        0.64,
+        7.232,
+        14.32
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 0.64,
+          "audio_score": 6.24623966217041,
+          "video_score": 0.0,
+          "combined_score": 6.24623966217041,
+          "start_time": 0.0,
+          "end_time": 1.6400000000000001,
+          "confidence": "medium",
+          "details": {
+            "audio_score": 6.24623966217041,
+            "spectral_flux": 55.31102752685547,
+            "rms": 0.017798466607928276,
+            "hf_ratio": 0.2891695201396942,
+            "spectral_centroid_hz": 1614.353759765625,
+            "spectral_flatness": 0.40124642848968506,
+            "post_flux_ratio": 1.2037034034729004,
+            "post_rms_ratio": 1.494490623474121,
+            "local_prominence": 6.320232391357422,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "pcen_multiband",
+            "pcen_onset_mean": 0.08430515229701996,
+            "pcen_onset_peak": 0.14711987972259521,
+            "clip_rms_mean": 0.010449746623635292,
+            "clip_rms_std": 0.0035929486621171236,
+            "clip_rms_peak": 0.025305788964033127,
+            "clip_flux_mean": 21.09016990661621,
+            "clip_flux_peak": 55.31102752685547,
+            "clip_flux_std": 6.506869792938232,
+            "clip_hf_ratio_mean": 0.4402483403682709,
+            "clip_hf_ratio_peak": 0.5458971261978149,
+            "clip_centroid_mean": 2081.430419921875,
+            "clip_flatness_mean": 0.5216789841651917,
+            "clip_pcen_onset_mean": 0.012932194396853447,
+            "clip_pcen_onset_peak": 0.08430515229701996,
+            "clip_pcen_onset_std": 0.010015612468123436,
+            "clip_pcen_band_spread": 0.42857142857142855,
+            "clip_pcen_peak_band": 0.0,
+            "clip_pcen_high_band_ratio": 0.1569785326719284,
+            "clip_pcen_low_band_ratio": 0.44019684195518494,
+            "audio_clip_probability": 0.9975361211495322,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 7.232,
+          "audio_score": 16.48110580444336,
+          "video_score": 0.0,
+          "combined_score": 16.48110580444336,
+          "start_time": 4.232,
+          "end_time": 8.232,
+          "confidence": "high",
+          "details": {
+            "audio_score": 16.48110580444336,
+            "spectral_flux": 148.55728149414062,
+            "rms": 0.04493769258260727,
+            "hf_ratio": 0.17641721665859222,
+            "spectral_centroid_hz": 1044.7135009765625,
+            "spectral_flatness": 0.24458931386470795,
+            "post_flux_ratio": 2.1824731826782227,
+            "post_rms_ratio": 2.475491523742676,
+            "local_prominence": 14.622444152832031,
+            "nearby_peaks_8s": 3,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "clip_rms_mean": 0.01797335594892502,
+            "clip_rms_std": 0.019193319603800774,
+            "clip_rms_peak": 0.08818319439888,
+            "clip_flux_mean": 28.2249813079834,
+            "clip_flux_peak": 150.63751220703125,
+            "clip_flux_std": 22.583864212036133,
+            "clip_hf_ratio_mean": 0.4511483311653137,
+            "clip_hf_ratio_peak": 0.7249537706375122,
+            "clip_centroid_mean": 2116.787353515625,
+            "clip_flatness_mean": 0.513354480266571,
+            "clip_pcen_onset_mean": 0.014835194684565067,
+            "clip_pcen_onset_peak": 0.1277083456516266,
+            "clip_pcen_onset_std": 0.015613959170877934,
+            "clip_pcen_band_spread": 0.14285714285714285,
+            "clip_pcen_peak_band": 0.16666666666666666,
+            "clip_pcen_high_band_ratio": 0.01885739155113697,
+            "clip_pcen_low_band_ratio": 0.6341520547866821,
+            "audio_clip_probability": 0.9833972410069902,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 14.32,
+          "audio_score": 17.48309898376465,
+          "video_score": 0.0,
+          "combined_score": 17.48309898376465,
+          "start_time": 11.32,
+          "end_time": 15.32,
+          "confidence": "high",
+          "details": {
+            "audio_score": 17.48309898376465,
+            "spectral_flux": 149.9967041015625,
+            "rms": 0.057995572686195374,
+            "hf_ratio": 0.22875884175300598,
+            "spectral_centroid_hz": 1164.1678466796875,
+            "spectral_flatness": 0.25441867113113403,
+            "post_flux_ratio": 1.6685731410980225,
+            "post_rms_ratio": 3.4962191581726074,
+            "local_prominence": 16.24017333984375,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "clip_rms_mean": 0.025837717577815056,
+            "clip_rms_std": 0.02101757563650608,
+            "clip_rms_peak": 0.09350226819515228,
+            "clip_flux_mean": 28.268396377563477,
+            "clip_flux_peak": 143.65562438964844,
+            "clip_flux_std": 16.51722526550293,
+            "clip_hf_ratio_mean": 0.3897232711315155,
+            "clip_hf_ratio_peak": 0.5808177590370178,
+            "clip_centroid_mean": 1853.8577880859375,
+            "clip_flatness_mean": 0.45758339762687683,
+            "clip_pcen_onset_mean": 0.013282758183777332,
+            "clip_pcen_onset_peak": 0.0786912813782692,
+            "clip_pcen_onset_std": 0.010891611687839031,
+            "clip_pcen_band_spread": 0.2857142857142857,
+            "clip_pcen_peak_band": 0.16666666666666666,
+            "clip_pcen_high_band_ratio": 0.019349761307239532,
+            "clip_pcen_low_band_ratio": 0.6449146270751953,
+            "audio_clip_probability": 0.9998847727518504,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8231.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8231.MOV",
+      "label": "positive",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed positive: diver airborne above pool.",
+      "exists": true,
+      "runtime_seconds": 0.4951820373535156,
+      "actual_event_count": 2,
+      "confidence_counts": {
+        "high": 2,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [
+        2.96,
+        8.752
+      ],
+      "candidates": [
+        {
+          "frame_idx": 0,
+          "timestamp": 2.96,
+          "audio_score": 13.045780181884766,
+          "video_score": 0.0,
+          "combined_score": 13.045780181884766,
+          "start_time": 0.0,
+          "end_time": 3.96,
+          "confidence": "high",
+          "details": {
+            "audio_score": 13.045780181884766,
+            "spectral_flux": 355.6134948730469,
+            "rms": 0.15710271894931793,
+            "hf_ratio": 0.1185879036784172,
+            "spectral_centroid_hz": 798.9765014648438,
+            "spectral_flatness": 0.15843817591667175,
+            "post_flux_ratio": 1.7755767107009888,
+            "post_rms_ratio": 2.2774510383605957,
+            "local_prominence": 12.05689525604248,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "heuristic",
+            "clip_rms_mean": 0.052084799855947495,
+            "clip_rms_std": 0.03236488252878189,
+            "clip_rms_peak": 0.18360981345176697,
+            "clip_flux_mean": 72.2416763305664,
+            "clip_flux_peak": 348.9288635253906,
+            "clip_flux_std": 48.06081771850586,
+            "clip_hf_ratio_mean": 0.25264662504196167,
+            "clip_hf_ratio_peak": 0.3968530595302582,
+            "clip_centroid_mean": 1355.2125244140625,
+            "clip_flatness_mean": 0.34269464015960693,
+            "clip_pcen_onset_mean": 0.014385171234607697,
+            "clip_pcen_onset_peak": 0.1332470029592514,
+            "clip_pcen_onset_std": 0.01495404727756977,
+            "clip_pcen_band_spread": 0.42857142857142855,
+            "clip_pcen_peak_band": 1.0,
+            "clip_pcen_high_band_ratio": 0.4800986647605896,
+            "clip_pcen_low_band_ratio": 0.17575474083423615,
+            "audio_clip_probability": 0.9998451947146956,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        },
+        {
+          "frame_idx": 0,
+          "timestamp": 8.752,
+          "audio_score": 13.28055477142334,
+          "video_score": 0.0,
+          "combined_score": 13.28055477142334,
+          "start_time": 5.752000000000001,
+          "end_time": 9.752,
+          "confidence": "high",
+          "details": {
+            "audio_score": 13.28055477142334,
+            "spectral_flux": 238.52635192871094,
+            "rms": 0.0361870676279068,
+            "hf_ratio": 0.4905123710632324,
+            "spectral_centroid_hz": 2355.454833984375,
+            "spectral_flatness": 0.6339465975761414,
+            "post_flux_ratio": 1.7189645767211914,
+            "post_rms_ratio": 1.5605862140655518,
+            "local_prominence": 13.286749839782715,
+            "nearby_peaks_8s": 2,
+            "audio_model_probability": 0.0,
+            "proposal_frontend": "pcen_multiband",
+            "pcen_onset_mean": 0.1949933022260666,
+            "pcen_onset_peak": 0.23413407802581787,
+            "clip_rms_mean": 0.023956086486577988,
+            "clip_rms_std": 0.008451148867607117,
+            "clip_rms_peak": 0.05497543886303902,
+            "clip_flux_mean": 42.55073547363281,
+            "clip_flux_peak": 217.8537139892578,
+            "clip_flux_std": 19.587682723999023,
+            "clip_hf_ratio_mean": 0.3315940499305725,
+            "clip_hf_ratio_peak": 0.4899023473262787,
+            "clip_centroid_mean": 1697.9405517578125,
+            "clip_flatness_mean": 0.43543657660484314,
+            "clip_pcen_onset_mean": 0.013801569119095802,
+            "clip_pcen_onset_peak": 0.14427030086517334,
+            "clip_pcen_onset_std": 0.015317047946155071,
+            "clip_pcen_band_spread": 0.42857142857142855,
+            "clip_pcen_peak_band": 0.6666666666666666,
+            "clip_pcen_high_band_ratio": 0.4124663770198822,
+            "clip_pcen_low_band_ratio": 0.10178494453430176,
+            "audio_clip_probability": 0.9029507298254513,
+            "video_score": 0.0,
+            "audio_only": true,
+            "detector": "audio_v2_pcen_classifier"
+          }
+        }
+      ],
+      "passed": true,
+      "expected": {
+        "min_events": 1,
+        "max_events": 3
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8088.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8088.MOV",
+      "label": "negative",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed negative: indoor social clip.",
+      "exists": true,
+      "runtime_seconds": 0.16004610061645508,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": true,
+      "expected": {
+        "min_events": 0,
+        "max_events": 0
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8089.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8089.MOV",
+      "label": "negative",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed negative: indoor selfie/retail clip.",
+      "exists": true,
+      "runtime_seconds": 0.1664571762084961,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": true,
+      "expected": {
+        "min_events": 0,
+        "max_events": 0
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8090.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8090.MOV",
+      "label": "negative",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed negative: hotel/interior clip.",
+      "exists": true,
+      "runtime_seconds": 1.2765653133392334,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": true,
+      "expected": {
+        "min_events": 0,
+        "max_events": 0
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8098.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8098.MOV",
+      "label": "negative",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed negative: bathroom/interior clip.",
+      "exists": true,
+      "runtime_seconds": 1.1282849311828613,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": true,
+      "expected": {
+        "min_events": 0,
+        "max_events": 0
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8099.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8099.MOV",
+      "label": "negative",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed negative: hotel/interior clip.",
+      "exists": true,
+      "runtime_seconds": 0.37169957160949707,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": true,
+      "expected": {
+        "min_events": 0,
+        "max_events": 0
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8105.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8105.MOV",
+      "label": "negative",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed negative: dryland training hall, no splash event.",
+      "exists": true,
+      "runtime_seconds": 0.7984836101531982,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": true,
+      "expected": {
+        "min_events": 0,
+        "max_events": 0
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8212.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8212.MOV",
+      "label": "negative",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed negative: indoor selfie clip.",
+      "exists": true,
+      "runtime_seconds": 0.2516932487487793,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": true,
+      "expected": {
+        "min_events": 0,
+        "max_events": 0
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8214.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8214.MOV",
+      "label": "negative",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed negative: abstract close-up, no pool or dive.",
+      "exists": true,
+      "runtime_seconds": 0.2885911464691162,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": true,
+      "expected": {
+        "min_events": 0,
+        "max_events": 0
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8215.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8215.MOV",
+      "label": "negative",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed negative: elevator/interior clip.",
+      "exists": true,
+      "runtime_seconds": 0.3362257480621338,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": true,
+      "expected": {
+        "min_events": 0,
+        "max_events": 0
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8216.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8216.MOV",
+      "label": "negative",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed negative: koi pond/outdoor water clip, not diving.",
+      "exists": true,
+      "runtime_seconds": 0.39357471466064453,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": true,
+      "expected": {
+        "min_events": 0,
+        "max_events": 0
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8217.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8217.MOV",
+      "label": "negative",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed negative: phone/selfie clip.",
+      "exists": true,
+      "runtime_seconds": 0.2902524471282959,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": true,
+      "expected": {
+        "min_events": 0,
+        "max_events": 0
+      }
+    },
+    {
+      "path": "/Volumes/Videos/Eindhoven 2026/IMG_8227.MOV",
+      "resolved_path": "/srv/nas/videos/Eindhoven 2026/IMG_8227.MOV",
+      "label": "negative",
+      "detector_id": "audio_v2_pcen_classifier",
+      "detector_label": "PCEN plus clip classifier",
+      "notes": "Reviewed negative: selfie/ground close-up clip.",
+      "exists": true,
+      "runtime_seconds": 0.18231630325317383,
+      "actual_event_count": 0,
+      "confidence_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "predicted_timestamps": [],
+      "candidates": [],
+      "passed": true,
+      "expected": {
+        "min_events": 0,
+        "max_events": 0
+      }
+    }
+  ]
+}

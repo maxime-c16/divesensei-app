@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "divesensei"
 version = "0.1.0"
-description = "Production-ready audio-first dive detection, extraction, and UI metadata pipeline."
+description = "Local-first dive review workspace with audio-first detection and review-first exports."
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [

@@ -13,15 +13,19 @@ venv/
 build/
 dist/
 *.egg-info/
+apps/desktop/node_modules/
+apps/desktop/dist/
+apps/desktop/release/
+apps/desktop/.astro/
 
 # Runtime outputs
 outputs/
 .tmp*/
 *.log
 *.jsonl
+.divesensei-runtime/
 
 # OS / editor
 .DS_Store
 .idea/
 .vscode/
-

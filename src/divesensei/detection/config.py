@@ -20,6 +20,7 @@ class SplashEvent:
 
 @dataclass
 class DetectionConfig:
+    detector_id: str = "audio_v1_heuristic"
     method: str = "audio_visual"
     splash_zone_top_norm: float = 0.72
     splash_zone_bottom_norm: float = 0.95
@@ -66,6 +67,13 @@ class DetectionConfig:
     audio_long_session_max_candidates: int = 120
     audio_model_path: str = ""
     audio_model_min_probability: float = 0.0
+    audio_clip_model_path: str = ""
+    audio_clip_model_min_probability: float = 0.5
+    audio_clip_classifier_window_seconds: float = 3.0
+    audio_clip_classifier_ambiguity_low: float = 0.35
+    audio_clip_classifier_ambiguity_high: float = 0.65
+    audio_pcen_threshold: float = 2.4
+    audio_pcen_merge_weight: float = 0.65
     audio_decode_timeout_seconds: float = 20.0
     ffmpeg_threads: int = 1
     opencv_threads: int = 1

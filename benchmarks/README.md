@@ -2,15 +2,18 @@
 
 This directory contains the manifests used as quality gates.
 
-- `manifests/reviewed_audio.json`
-  - reviewed benchmark set
-- `manifests/long_session.json`
-  - real long-session product gate
+- `manifests/img_8237_compare.json`
+  - hard timestamp regression for the horn/clapping false-positive case
+- `manifests/reviewed_compare.json`
+  - reviewed set comparing baseline vs advanced detector
+- `manifests/long_session_compare.json`
+  - real long-session gate comparing baseline vs advanced detector
 
 Use:
 
 ```bash
-divesensei validate ./benchmarks/manifests/reviewed_audio.json
-divesensei validate ./benchmarks/manifests/long_session.json
+divesensei validate ./benchmarks/manifests/img_8237_compare.json
+divesensei validate ./benchmarks/manifests/reviewed_compare.json
+divesensei validate ./benchmarks/manifests/long_session_compare.json
 divesensei-regress
 ```

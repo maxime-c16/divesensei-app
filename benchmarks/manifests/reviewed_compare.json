@@ -1,0 +1,21 @@
+{
+  "dataset": "Reviewed benchmark detector comparison",
+  "source_manifest": "reviewed_audio.json",
+  "detectors": [
+    {
+      "id": "audio_v1_heuristic",
+      "label": "Baseline heuristic",
+      "config": {
+        "audio_visual_skip_video_verification": true
+      }
+    },
+    {
+      "id": "audio_v2_pcen_classifier",
+      "label": "PCEN plus clip classifier",
+      "config": {
+        "audio_visual_skip_video_verification": true,
+        "audio_clip_model_path": ".divesensei-runtime/models/audio_clip_model.json"
+      }
+    }
+  ]
+}
