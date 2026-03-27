@@ -1,0 +1,15 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">DiveSensei mono mark</title>
+  <desc id="desc">A simplified monochrome DiveSensei mark for small sizes and single-color use.</desc>
+  <circle cx="128" cy="128" r="82" stroke="currentColor" stroke-width="16" opacity="0.96"/>
+  <path
+    d="M166 74C152 73 138 81 130 93C121 107 120 123 122 139C124 153 124 166 117 178C111 188 100 196 84 200"
+    stroke="currentColor"
+    stroke-width="18"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="171" cy="72" r="10" fill="currentColor"/>
+  <path d="M84 197C94 188 106 184 119 184" stroke="currentColor" stroke-width="9" stroke-linecap="round"/>
+  <path d="M133 189C143 189 153 193 161 200" stroke="currentColor" stroke-width="9" stroke-linecap="round"/>
+</svg>

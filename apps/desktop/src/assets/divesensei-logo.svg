@@ -1,0 +1,72 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">DiveSensei logo</title>
+  <desc id="desc">A circular sonar mark with a descending diver stroke and splash ripples.</desc>
+  <defs>
+    <linearGradient id="ring" x1="44" y1="36" x2="208" y2="220" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7FDAFF"/>
+      <stop offset="1" stop-color="#2D90C9"/>
+    </linearGradient>
+    <linearGradient id="dive" x1="138" y1="68" x2="112" y2="182" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#EBF6FF"/>
+      <stop offset="1" stop-color="#7FDAFF"/>
+    </linearGradient>
+    <filter id="glow" x="24" y="24" width="208" height="208" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <circle cx="128" cy="128" r="82" stroke="url(#ring)" stroke-width="14" opacity="0.9"/>
+  <circle cx="128" cy="128" r="54" stroke="#9AB2C4" stroke-opacity="0.2" stroke-width="8"/>
+
+  <path
+    d="M166 74C152 73 138 81 130 93C121 107 120 123 122 139C124 153 124 166 117 178C111 188 100 196 84 200"
+    stroke="url(#dive)"
+    stroke-width="16"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    filter="url(#glow)"
+  />
+
+  <circle cx="171" cy="72" r="10" fill="#EBF6FF"/>
+
+  <path
+    d="M80 197C90 187 104 182 118 182"
+    stroke="#9BF0BF"
+    stroke-width="8"
+    stroke-linecap="round"
+  />
+
+  <path
+    d="M132 188C143 188 154 192 162 200"
+    stroke="#7FDAFF"
+    stroke-width="8"
+    stroke-linecap="round"
+  />
+
+  <path
+    d="M145 176C149 180 151 185 151 190"
+    stroke="#FFD079"
+    stroke-width="7"
+    stroke-linecap="round"
+  />
+
+  <path
+    d="M58 58C72 44 90 35 110 31"
+    stroke="#7FDAFF"
+    stroke-opacity="0.45"
+    stroke-width="7"
+    stroke-linecap="round"
+  />
+
+  <path
+    d="M194 198C184 209 171 217 156 222"
+    stroke="#7FDAFF"
+    stroke-opacity="0.35"
+    stroke-width="7"
+    stroke-linecap="round"
+  />
+</svg>

@@ -14,7 +14,8 @@ The app is local-first.
 - source videos stay in place by default
 - generated artifacts are written under `outputs/`
 - desktop runtime state lives under `.divesensei-runtime/`
-- session catalog and review decisions are stored in local SQLite
+- session catalog and review decisions are stored in local SQLite via `better-sqlite3`
+- picked local files are copied into `.divesensei-runtime/imports/` before analysis; manual absolute paths still work directly
 
 The desktop library should treat the catalog as the source of truth for known sessions.
 
@@ -84,6 +85,7 @@ Regression is part of the product, not an afterthought.
 
 - session library
 - analysis launcher
+- file picker import path
 - review queue
 - review decisions
 - export jobs

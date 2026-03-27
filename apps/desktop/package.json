@@ -5,10 +5,10 @@
   "type": "module",
   "main": "electron/main.mjs",
   "scripts": {
-    "dev": "astro dev --host 0.0.0.0 --port 5173",
-    "build": "astro build",
-    "check": "astro check",
-    "preview": "astro preview --host 0.0.0.0 --port 5173",
+    "dev": "node ./node_modules/astro/astro.js dev --host 0.0.0.0 --port 5173",
+    "build": "node ./node_modules/astro/astro.js build",
+    "check": "node ./node_modules/astro/astro.js check",
+    "preview": "node ./node_modules/astro/astro.js preview --host 0.0.0.0 --port 5173",
     "electron:dev": "node ./electron/dev.mjs",
     "electron:start": "node ./electron/start.mjs",
     "electron:prepare": "node ./scripts/prepare-electron-dist.mjs",
@@ -16,10 +16,12 @@
   },
   "dependencies": {
     "@astrojs/node": "^9.5.0",
-    "astro": "^5.5.5"
+    "astro": "^5.5.5",
+    "better-sqlite3": "^12.8.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.7",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.5.5",
     "electron": "^37.4.0",
     "electron-builder": "^26.0.12",

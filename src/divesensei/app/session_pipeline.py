@@ -91,6 +91,10 @@ def build_config(args: argparse.Namespace):
         audio_clip_classifier_ambiguity_high=args.audio_clip_classifier_ambiguity_high,
         audio_pcen_threshold=args.audio_pcen_threshold,
         audio_pcen_merge_weight=args.audio_pcen_merge_weight,
+        audio_duplicate_suppress_window_seconds=args.audio_duplicate_suppress_window_seconds,
+        audio_duplicate_leader_min_score=args.audio_duplicate_leader_min_score,
+        audio_duplicate_leader_min_prominence=args.audio_duplicate_leader_min_prominence,
+        audio_duplicate_follower_max_score_ratio=args.audio_duplicate_follower_max_score_ratio,
         audio_decode_timeout_seconds=args.audio_decode_timeout_seconds,
         ffmpeg_threads=args.ffmpeg_threads,
         opencv_threads=args.opencv_threads,
@@ -226,6 +230,10 @@ def build_parser() -> argparse.ArgumentParser:
     internal.add_argument("--audio-clip-classifier-ambiguity-high", type=float, default=0.65, help=argparse.SUPPRESS)
     internal.add_argument("--audio-pcen-threshold", type=float, default=2.4, help=argparse.SUPPRESS)
     internal.add_argument("--audio-pcen-merge-weight", type=float, default=0.65, help=argparse.SUPPRESS)
+    internal.add_argument("--audio-duplicate-suppress-window-seconds", type=float, default=0.9, help=argparse.SUPPRESS)
+    internal.add_argument("--audio-duplicate-leader-min-score", type=float, default=12.0, help=argparse.SUPPRESS)
+    internal.add_argument("--audio-duplicate-leader-min-prominence", type=float, default=10.0, help=argparse.SUPPRESS)
+    internal.add_argument("--audio-duplicate-follower-max-score-ratio", type=float, default=0.55, help=argparse.SUPPRESS)
     internal.add_argument("--audio-decode-timeout-seconds", type=float, default=180.0, help=argparse.SUPPRESS)
     internal.add_argument("--audio-only-pre-seconds", type=float, default=6.0, help=argparse.SUPPRESS)
     internal.add_argument("--audio-only-post-seconds", type=float, default=3.0, help=argparse.SUPPRESS)

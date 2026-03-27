@@ -1,0 +1,27 @@
+<svg width="720" height="220" viewBox="0 0 720 220" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">DiveSensei light lockup</title>
+  <desc id="desc">DiveSensei brand lockup for light backgrounds.</desc>
+  <defs>
+    <linearGradient id="ring" x1="37" y1="31" x2="180" y2="190" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1495CB"/>
+      <stop offset="1" stop-color="#0F4B73"/>
+    </linearGradient>
+    <linearGradient id="dive" x1="126" y1="62" x2="103" y2="153" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0F2130"/>
+      <stop offset="1" stop-color="#1495CB"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(16 16)">
+    <circle cx="94" cy="94" r="68" stroke="url(#ring)" stroke-width="12"/>
+    <circle cx="94" cy="94" r="43" stroke="#7A93A6" stroke-opacity="0.26" stroke-width="6"/>
+    <path d="M128 63C116 63 106 69 99 79C92 89 91 102 93 114C94 125 94 136 89 145C84 153 76 159 64 163" stroke="url(#dive)" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="132" cy="61" r="8" fill="#0F2130"/>
+    <path d="M63 160C71 153 81 150 92 150" stroke="#16936A" stroke-width="6" stroke-linecap="round"/>
+    <path d="M103 154C112 154 120 157 126 163" stroke="#1495CB" stroke-width="6" stroke-linecap="round"/>
+    <path d="M114 146C117 149 119 153 119 157" stroke="#C98A19" stroke-width="5" stroke-linecap="round"/>
+  </g>
+
+  <text x="220" y="103" fill="#0F2130" font-family="'IBM Plex Sans', 'Segoe UI', sans-serif" font-size="74" font-weight="600" letter-spacing="-1.5">DiveSensei</text>
+  <text x="224" y="142" fill="#567082" font-family="'IBM Plex Mono', 'SFMono-Regular', monospace" font-size="18" letter-spacing="4">DIVE REVIEW INTELLIGENCE</text>
+</svg>

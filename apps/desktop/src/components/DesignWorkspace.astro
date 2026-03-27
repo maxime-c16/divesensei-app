@@ -26,6 +26,7 @@ const requestedJob = Astro.url.searchParams.get("job");
 const activeTabIndex = Number.parseInt(requestedTab ?? "0", 10);
 const initialTabIndex = Number.isNaN(activeTabIndex) ? 0 : Math.max(0, Math.min(theme.tabs.length - 1, activeTabIndex));
 const { library, manifest, selectedSessionId, artifactsPreview } = getUiData(requestedSession);
+const hasSession = library.session_count > 0;
 const session = manifest.session;
 const detections = manifest.detections.map((item) => ({
   ...item,
@@ -33,7 +34,14 @@ const detections = manifest.detections.map((item) => ({
 }));
 const selected = detections[0];
 const highest = [...detections].sort((a, b) => b.scores.combined - a.scores.combined)[0] ?? selected;
-const benchmarkVideoPath = "/srv/nas/videos/Eindhoven 2026/IMG_8281.MOV";
+const defaultSessionName = `Session ${new Intl.DateTimeFormat("sv-SE", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+}).format(new Date()).replace(" ", " ").replace(",", "")}`;
 const sessionReadyNow = sessionIsReviewReady(session.status);
 const sourceModeNote = session.status === "ready_proxy_pending"
   ? "Attempts are ready. The review video is still being prepared."
@@ -73,7 +81,6 @@ const timelineScaleLabels = [
   ...timelineTicks.map((tick) => ({ left: tick.left, label: tick.label, edge: "mid" })),
   { left: 99.2, label: formatSeconds(timelineEnd), edge: "end" },
 ];
-const sessionSwitcherHref = (sessionId: string) => `${theme.route}?session=${encodeURIComponent(sessionId)}&tab=1`;
 const markerPosition = (timestamp: number) => {
   const normalized = ((timestamp - rangeStart) / rangeSpan) * 100;
   return Math.min(99.2, Math.max(0.8, normalized));
@@ -98,7 +105,27 @@ const formatSessionStamp = (value: string | undefined) => {
   }).format(parsed);
 };
 const sessionDisplayName = session.session_name ?? session.title;
+const hasActiveSession = hasSession && Boolean(session.id);
+const sessionDurationSeconds = Number(session.session_duration_seconds ?? session.timestamp_range.last ?? 0);
+const analysisRuntimeSeconds = Number(session.telemetry.total_runtime_seconds ?? 0);
+const sourceVideoLabel = session.source_video_path ? path.basename(session.source_video_path) : "No video selected";
+const sourceAvailabilityLabel = session.source_availability === "missing"
+  ? "Source missing"
+  : session.source_availability === "relink-required"
+    ? "Relink required"
+    : "Source available";
+const topAttemptSummary = highest
+  ? `${formatSeconds(highest.timestamp_seconds)} · ${highest.confidence} confidence`
+  : "Analysis not run yet";
+const nextActionLabel = !hasActiveSession
+  ? "Choose a video on the left, keep the default detector, then start the analysis."
+  : detections.length === 0
+    ? "This session is loaded, but no candidate was detected yet."
+    : sessionReadyNow
+      ? "Open review to validate the detected attempts and export only the kept clips."
+      : "Wait for analysis to finish, then open review.";
 const clientBundle = JSON.stringify({
+  hasSession,
   session,
   detections,
   primaryVideoUrl,
@@ -174,11 +201,30 @@ const clientBundle = JSON.stringify({
           <div class="analysis-launcher__grid">
             <label class="field">
               <span>Session name</span>
-              <input type="text" name="sessionName" value="" data-analysis-session-name autocomplete="off" placeholder="Optional session label" />
+              <input
+                type="text"
+                name="sessionName"
+                value={defaultSessionName}
+                data-analysis-session-name
+                data-default-session-name={defaultSessionName}
+                autocomplete="off"
+              />
             </label>
             <label class="field">
               <span>Video file</span>
-              <input type="text" name="videoPath" value={benchmarkVideoPath} data-analysis-path autocomplete="off" />
+              <div class="analysis-picker">
+                <input type="text" name="videoPath" value="" data-analysis-path autocomplete="off" placeholder="/absolute/path/to/video.mov" />
+                <div class="analysis-picker__controls">
+                  <button type="button" class="action-link analysis-picker__button" data-analysis-pick>Choose file</button>
+                  <span class="analysis-picker__label" data-analysis-file-label>No picked file. Manual path stays available.</span>
+                </div>
+                <input
+                  type="file"
+                  accept="video/*,.mov,.mp4,.m4v,.avi,.mkv,.webm"
+                  class="analysis-picker__native"
+                  data-analysis-file
+                />
+              </div>
             </label>
             <label class="field">
               <span>Session type</span>
@@ -204,7 +250,7 @@ const clientBundle = JSON.stringify({
         <div class="session-list">
           {library.sessions.map((item) => (
             <article class={`session-listing ${item.id === selectedSessionId ? "is-current" : ""}`} data-session-row={item.id}>
-              <a class="session-listing__main" href={sessionSwitcherHref(item.id)} data-session-open={item.id}>
+              <div class="session-listing__main">
                 <div class="session-listing__summary">
                   <strong>{item.session_name ?? item.title}</strong>
                   <small>{path.basename(item.source_video_path)}</small>
@@ -219,7 +265,7 @@ const clientBundle = JSON.stringify({
                   <span>{item.extracted_count} exports</span>
                   <span>{formatSeconds(item.timestamp_range.last)}</span>
                 </div>
-              </a>
+              </div>
               <div class="session-listing__actions">
                 <button type="button" class="action-link" data-session-open={item.id}>Open</button>
                 <button type="button" class="action-link" data-session-rename={item.id} data-session-current-name={item.session_name ?? item.title}>Rename</button>
@@ -234,24 +280,88 @@ const clientBundle = JSON.stringify({
         <div class="section-card__header">
           <div>
             <h2>Session details</h2>
-            <p class="section-note">{sessionDisplayName}</p>
+            <p class="section-note">{hasActiveSession ? sessionDisplayName : "No analysis loaded yet"}</p>
           </div>
         </div>
-        <dl class="data-list">
-          <div><dt>Session name</dt><dd>{sessionDisplayName}</dd></div>
-          <div><dt>Video</dt><dd>{path.basename(session.source_video_path)}</dd></div>
-          <div><dt>Created</dt><dd>{formatSessionStamp(session.created_at)}</dd></div>
-          <div><dt>Updated</dt><dd>{formatSessionStamp(session.updated_at)}</dd></div>
-          <div><dt>State</dt><dd>{sessionStatusLabel(session.status)}</dd></div>
-          <div><dt>Run time</dt><dd>{session.telemetry.total_runtime_seconds.toFixed(2)}s</dd></div>
-          <div><dt>Top attempt</dt><dd>{highest ? `${highest.id} · ${highest.scores.combined.toFixed(2)}` : "n/a"}</dd></div>
-          <div><dt>Review</dt><dd>{detections.length} attempts, {session.extracted_count} exports</dd></div>
-          <div><dt>Storage</dt><dd>Uses the original video path. Source files are not duplicated by default.</dd></div>
-        </dl>
-        <div class="action-list">
-          <button class="action-link" type="button" data-open-tab="1">Open review</button>
-          <button class="action-link" type="button" data-open-tab="3">Open diagnostics</button>
-        </div>
+        {hasActiveSession ? (
+          <>
+            <div class="session-summary">
+              <div class="session-summary__hero">
+                <strong>{sourceVideoLabel}</strong>
+                <span>{sessionStatusLabel(session.status)}</span>
+              </div>
+              <p class="session-summary__note">{nextActionLabel}</p>
+              <dl class="session-summary__grid">
+                <div>
+                  <dt>Detector</dt>
+                  <dd>{session.detector_id ?? "audio_v1_heuristic"}</dd>
+                </div>
+                <div>
+                  <dt>Profile</dt>
+                  <dd>{session.profile}</dd>
+                </div>
+                <div>
+                  <dt>Video length</dt>
+                  <dd>{formatSeconds(sessionDurationSeconds)}</dd>
+                </div>
+                <div>
+                  <dt>Analysis time</dt>
+                  <dd>{analysisRuntimeSeconds > 0 ? `${analysisRuntimeSeconds.toFixed(2)}s` : "Pending"}</dd>
+                </div>
+                <div>
+                  <dt>Attempts found</dt>
+                  <dd>{detections.length}</dd>
+                </div>
+                <div>
+                  <dt>Exports</dt>
+                  <dd>{session.extracted_count}</dd>
+                </div>
+                <div>
+                  <dt>Best candidate</dt>
+                  <dd>{topAttemptSummary}</dd>
+                </div>
+                <div>
+                  <dt>Updated</dt>
+                  <dd>{formatSessionStamp(session.updated_at)}</dd>
+                </div>
+              </dl>
+              <div class="session-summary__path-block">
+                <span>Video path</span>
+                <code>{session.source_video_path}</code>
+              </div>
+              <div class="session-summary__meta-row">
+                <span>{sourceAvailabilityLabel}</span>
+                <span>Output {path.basename(session.output_dir)}</span>
+              </div>
+            </div>
+            <div class="action-list">
+              <button class="action-link" type="button" data-open-tab="1">Open review</button>
+              <button class="action-link" type="button" data-open-tab="3">Open diagnostics</button>
+            </div>
+          </>
+        ) : (
+          <div class="session-summary session-summary--empty">
+            <div class="session-summary__hero">
+              <strong>No session selected</strong>
+              <span>Ready to start</span>
+            </div>
+            <p class="session-summary__note">Start from the analysis form on the left. The session card will populate with real runtime data after the first run.</p>
+            <div class="session-summary__empty-grid">
+              <article>
+                <strong>1. Choose a video</strong>
+                <p>Pick a file or type an absolute path manually.</p>
+              </article>
+              <article>
+                <strong>2. Launch analysis</strong>
+                <p>The pipeline detects dive candidates and creates a review session.</p>
+              </article>
+              <article>
+                <strong>3. Review and export</strong>
+                <p>Open the review tab, keep the right attempts, then export only those clips.</p>
+              </article>
+            </div>
+          </div>
+        )}
       </article>
     </div>
   </section>
@@ -446,7 +556,7 @@ const clientBundle = JSON.stringify({
           </div>
         </div>
         <div class="artifact-grid">
-          {Object.entries(manifest.artifacts).map(([key, value]) => (
+          {Object.entries(manifest.artifacts).filter(([, value]) => Boolean(value)).map(([key, value]) => (
             <a href={mediaUrl(value)} target="_blank">
               <strong>{key}</strong>
               <span>{value}</span>
@@ -462,7 +572,7 @@ const clientBundle = JSON.stringify({
           </div>
         </div>
         <div class="artifact-grid">
-          {Object.entries(artifactsPreview).map(([key, value]) => (
+          {Object.entries(artifactsPreview).filter(([, value]) => value && value !== "Artifact unavailable in current workspace.").map(([key, value]) => (
             <article>
               <strong>{key}</strong>
               <pre>{value}</pre>
@@ -865,12 +975,24 @@ const clientBundle = JSON.stringify({
     const profile = document.querySelector("[data-analysis-profile]");
     const detector = document.querySelector("[data-analysis-detector]");
     const sessionNameInput = document.querySelector("[data-analysis-session-name]");
+    const pickedFileInput = document.querySelector("[data-analysis-file]");
+    const pickButton = document.querySelector("[data-analysis-pick]");
+    const pickedFileLabel = document.querySelector("[data-analysis-file-label]");
+    let pickedVideoFile = null;
+    const defaultSessionName = String(sessionNameInput?.getAttribute("data-default-session-name") ?? "").trim();
+    let sessionNameAutoFilled = !sessionNameInput || String(sessionNameInput.value ?? "").trim() === defaultSessionName;
 
     function deriveSessionNameFromPath(filePath) {
       const raw = String(filePath ?? "").trim();
       if (!raw) return "";
       const leaf = raw.split(/[\\\\/]/).pop() ?? raw;
       return leaf.replace(/\.[^.]+$/, "");
+    }
+
+    function canAutoFillSessionName() {
+      if (!sessionNameInput) return false;
+      const currentValue = String(sessionNameInput.value ?? "").trim();
+      return !currentValue || currentValue === defaultSessionName || sessionNameAutoFilled;
     }
 
     function reconcileSessionList(sessions) {
@@ -904,10 +1026,27 @@ const clientBundle = JSON.stringify({
       `).join("");
     }
 
+    async function readJsonResponse(response) {
+      const contentType = String(response.headers.get("content-type") ?? "").toLowerCase();
+      const raw = await response.text();
+      if (!raw) return {};
+      if (!contentType.includes("application/json")) {
+        return {
+          error: response.ok ? "Unexpected non-JSON response." : raw.trim() || "Request failed.",
+          _invalidJson: true,
+        };
+      }
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return { error: "Invalid JSON response.", _invalidJson: true };
+      }
+    }
+
     async function refreshDecisions() {
       if (!parsed.session?.id) return;
       const response = await fetch(`/api/review?analysisRunId=${encodeURIComponent(parsed.session.id)}`);
-      const payload = await response.json();
+      const payload = await readJsonResponse(response);
       decisions = payload.decisions ?? [];
       renderDecisions(decisions);
       updateReviewCounts();
@@ -915,10 +1054,30 @@ const clientBundle = JSON.stringify({
       if (current) selectDetection(current.id);
     }
 
-    input?.addEventListener("change", () => {
-      if (!sessionNameInput) return;
-      if (String(sessionNameInput.value ?? "").trim()) return;
-      sessionNameInput.value = deriveSessionNameFromPath(input?.value ?? "");
+    sessionNameInput?.addEventListener("input", () => {
+      const currentValue = String(sessionNameInput.value ?? "").trim();
+      sessionNameAutoFilled = !currentValue || currentValue === defaultSessionName;
+    });
+
+    pickButton?.addEventListener("click", () => {
+      pickedFileInput?.click();
+    });
+
+    pickedFileInput?.addEventListener("change", () => {
+      pickedVideoFile = pickedFileInput?.files?.[0] ?? null;
+      if (pickedFileLabel) {
+        pickedFileLabel.textContent = pickedVideoFile
+          ? `${pickedVideoFile.name} selected. It will be copied into the local runtime on submit.`
+          : "No picked file. Manual path stays available.";
+      }
+      if (input) {
+        input.value = pickedVideoFile
+          ? pickedVideoFile.name
+          : "";
+      }
+      if (!sessionNameInput || !pickedVideoFile || !canAutoFillSessionName()) return;
+      sessionNameInput.value = deriveSessionNameFromPath(pickedVideoFile.name);
+      sessionNameAutoFilled = true;
     });
 
     virtualPlayButton?.addEventListener("click", async () => {
@@ -964,11 +1123,12 @@ const clientBundle = JSON.stringify({
     }
 
     async function refreshManifest() {
-      if (!parsed.session?.output_dir) return;
+      if (!parsed.hasSession || !parsed.session?.output_dir) return;
       const manifestPath = `${parsed.session.output_dir}/ui_session_manifest.json`;
       const response = await fetch(`/api/media?path=${encodeURIComponent(manifestPath)}`, { cache: "no-store" });
       if (!response.ok) return;
-      const manifest = await response.json();
+      const manifest = await readJsonResponse(response);
+      if (manifest?._invalidJson || !manifest?.session) return;
       parsed.session = manifest.session;
       parsed.primaryVideoUrl = `/api/media?path=${encodeURIComponent(`${manifest.session.output_dir}/web/session_source_review.mp4`)}`;
       parsed.sourceVideoUrl = `/api/media?path=${encodeURIComponent(manifest.session.source_video_path)}`;
@@ -990,7 +1150,12 @@ const clientBundle = JSON.stringify({
       let redirectedToReview = false;
       while (true) {
         const response = await fetch(`/api/analysis?job=${encodeURIComponent(jobId)}`);
-        const payload = await response.json();
+        const payload = await readJsonResponse(response);
+        if (payload?._invalidJson) {
+          status && (status.textContent = payload.error ?? "Could not read analysis status.");
+          reviewProgress && (reviewProgress.textContent = payload.error ?? "Could not read analysis status.");
+          return;
+        }
         const headline = payload.phaseLabel ?? payload.phase ?? payload.status;
         const detail = payload.progressDetail ? ` - ${payload.progressDetail}` : "";
         status && (status.textContent = `${headline}${detail}`);
@@ -1021,11 +1186,11 @@ const clientBundle = JSON.stringify({
       }
     }
 
-    if (parsed.requestedJob && parsed.session?.status === "ready_proxy_pending") {
+    if (parsed.hasSession && parsed.requestedJob && parsed.session?.status === "ready_proxy_pending") {
       pollJob(parsed.requestedJob);
     }
 
-    if (!parsed.requestedJob && parsed.session?.status === "ready_proxy_pending") {
+    if (parsed.hasSession && !parsed.requestedJob && parsed.session?.status === "ready_proxy_pending") {
       const passivePoll = async () => {
         while (parsed.session?.status === "ready_proxy_pending") {
           await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -1040,17 +1205,41 @@ const clientBundle = JSON.stringify({
     form?.addEventListener("submit", async (event) => {
       event.preventDefault();
       status && (status.textContent = "Starting analysis...");
+      let videoPath = input?.value ?? "";
+      if (pickedVideoFile) {
+        status && (status.textContent = `Copying ${pickedVideoFile.name} into the local runtime...`);
+        const uploadBytes = await pickedVideoFile.arrayBuffer();
+        const importResponse = await fetch("/api/import-video", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/octet-stream",
+            "X-File-Name": pickedVideoFile.name,
+          },
+          body: uploadBytes,
+        });
+        const importPayload = await readJsonResponse(importResponse);
+        if (!importResponse.ok) {
+          status && (status.textContent = importPayload.error ?? "Could not import the selected file.");
+          return;
+        }
+        videoPath = importPayload.path ?? "";
+        if (!videoPath) {
+          status && (status.textContent = "Could not resolve the imported file path.");
+          return;
+        }
+        input && (input.value = videoPath);
+      }
       const response = await fetch("/api/analysis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          videoPath: input?.value ?? "",
+          videoPath,
           sessionName: sessionNameInput?.value ?? "",
           profile: profile?.value ?? "long-session",
           detectorId: detector?.value ?? "audio_v2_pcen_classifier",
         }),
       });
-      const payload = await response.json();
+      const payload = await readJsonResponse(response);
       if (!response.ok) {
         status && (status.textContent = payload.error ?? "Could not start analysis.");
         return;
@@ -1100,7 +1289,7 @@ const clientBundle = JSON.stringify({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "delete", analysisRunId: sessionId }),
         });
-        const payload = await response.json();
+        const payload = await readJsonResponse(response);
         if (!response.ok) {
           rowButtons.forEach((node) => { node.disabled = false; });
           button.textContent = originalLabel;
@@ -1141,7 +1330,7 @@ const clientBundle = JSON.stringify({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "rename", analysisRunId: sessionId, sessionName: trimmed }),
         });
-        const payload = await response.json();
+        const payload = await readJsonResponse(response);
         if (!response.ok) {
           status && (status.textContent = payload.error ?? "Could not rename the session.");
           return;
@@ -1170,7 +1359,7 @@ const clientBundle = JSON.stringify({
           notes: decisionNotes?.value ?? "",
         }),
       });
-      const payload = await response.json();
+      const payload = await readJsonResponse(response);
       if (!response.ok) {
         decisionStatus && (decisionStatus.textContent = payload.error ?? "Could not save the decision.");
         return;
@@ -1210,7 +1399,11 @@ const clientBundle = JSON.stringify({
       exportJobId = jobId;
       while (true) {
         const response = await fetch(`/api/export?job=${encodeURIComponent(jobId)}`);
-        const payload = await response.json();
+        const payload = await readJsonResponse(response);
+        if (payload?._invalidJson) {
+          exportStatus && (exportStatus.textContent = payload.error ?? "Could not read export status.");
+          return;
+        }
         const detail = payload.progressDetail ? ` - ${payload.progressDetail}` : "";
         exportStatus && (exportStatus.textContent = `Export ${payload.id}: ${payload.phaseLabel}${detail}`);
         if (payload.status === "completed") {
@@ -1233,7 +1426,7 @@ const clientBundle = JSON.stringify({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ analysisRunId: parsed.session.id }),
       });
-      const payload = await response.json();
+      const payload = await readJsonResponse(response);
       if (!response.ok) {
         exportStatus && (exportStatus.textContent = payload.error ?? "Could not start export.");
         return;
@@ -1264,9 +1457,6 @@ const clientBundle = JSON.stringify({
     updateReviewModeCopy();
     updateToggleButtons();
     renderExportList([]);
-    if (sessionNameInput && !String(sessionNameInput.value ?? "").trim()) {
-      sessionNameInput.value = deriveSessionNameFromPath(input?.value ?? "");
-    }
     syncVideoSource();
     renderDetectionTable();
     if (current) selectDetection(current.id, { autoplay: autoPlayEnabled });

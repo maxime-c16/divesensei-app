@@ -7,6 +7,10 @@ from pathlib import Path
 import numpy as np
 
 
+def _temp_media_output_path(output_path: Path) -> Path:
+    return output_path.with_name(f"{output_path.stem}.part{output_path.suffix}")
+
+
 def _review_scale_filter(max_dimension: int, target_fps: float | None = None) -> str:
     filters: list[str] = []
     if target_fps is not None and target_fps > 0:
@@ -96,7 +100,7 @@ def extract_clip_ffmpeg(
     duration = end_time - start_time
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    temp_output_path = output_path.with_suffix(f"{output_path.suffix}.part")
+    temp_output_path = _temp_media_output_path(output_path)
     if temp_output_path.exists():
         temp_output_path.unlink()
     cmd = [
@@ -154,7 +158,7 @@ def generate_review_proxy_ffmpeg(
 ) -> None:
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    temp_output_path = output_path.with_suffix(f"{output_path.suffix}.part")
+    temp_output_path = _temp_media_output_path(output_path)
     if temp_output_path.exists():
         temp_output_path.unlink()
     cmd = [

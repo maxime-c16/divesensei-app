@@ -15,7 +15,7 @@ This repository is the canonical product repo. The older `/home/mcauchy/divesens
 ## What The App Does
 
 - Astro desktop app with an Electron shell scaffold
-- local SQLite catalog for sessions and review decisions
+- local SQLite catalog for sessions and review decisions via `better-sqlite3`
 - review-first workflow with source-backed virtual clips
 - browser-safe session review proxy generated locally
 - optional export of approved clips after review
@@ -64,6 +64,7 @@ make desktop-setup
 Required runtime dependency:
 
 - `ffmpeg` on `PATH`
+- Node.js present locally for the Astro preview server and native module rebuilds
 
 ## Main Commands
 
@@ -84,6 +85,16 @@ divesensei-regress
 Desktop:
 
 ```bash
+make up
+make status
+make logs
+make down
+make re
+```
+
+Desktop dev helpers:
+
+```bash
 cd apps/desktop
 bun run dev
 bun run check
@@ -100,6 +111,8 @@ make desktop-build
 make electron-dev
 make electron-prepare
 ```
+
+The default demo/runtime path is `make up`, which builds the Astro app and runs `astro preview` in the background on `http://127.0.0.1:5173`.
 
 ## Detector Variants
 
@@ -118,6 +131,19 @@ make electron-prepare
 - review decisions are stored locally in SQLite
 - exports are secondary artifacts, not part of the primary review loop
 - source videos are not duplicated by default
+- the analysis form accepts either:
+  - a manual absolute video path
+  - a picked local file, which is copied into `.divesensei-runtime/imports/` before analysis
+
+## Demo Branch Notes
+
+- current demo branch: `feat/better-sqlite3-catalog`
+- preferred operator flow:
+  1. `make up`
+  2. open `http://127.0.0.1:5173/`
+  3. use the file picker or manual path
+  4. review on the same branch without switching runtimes mid-demo
+- use `make logs` if the UI stalls or an API route fails
 
 ## Docs
 

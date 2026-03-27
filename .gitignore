@@ -21,6 +21,7 @@ apps/desktop/.astro/
 # Runtime outputs
 outputs/
 .tmp*/
+.run/
 *.log
 *.jsonl
 .divesensei-runtime/

@@ -1,0 +1,34 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">DiveSensei app tile</title>
+  <desc id="desc">A rounded square app icon with the DiveSensei sonar-and-splash mark.</desc>
+  <defs>
+    <linearGradient id="tile" x1="28" y1="22" x2="214" y2="236" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0F2130"/>
+      <stop offset="1" stop-color="#08131D"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="58" y1="46" x2="198" y2="202" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7FDAFF"/>
+      <stop offset="1" stop-color="#2D90C9"/>
+    </linearGradient>
+    <linearGradient id="dive" x1="143" y1="77" x2="120" y2="170" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#EBF6FF"/>
+      <stop offset="1" stop-color="#7FDAFF"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="16" y="16" width="224" height="224" rx="52" fill="url(#tile)"/>
+  <rect x="16" y="16" width="224" height="224" rx="52" stroke="rgba(154,199,226,0.18)"/>
+  <circle cx="128" cy="128" r="74" stroke="url(#ring)" stroke-width="14"/>
+  <circle cx="128" cy="128" r="48" stroke="#9AB2C4" stroke-opacity="0.2" stroke-width="7"/>
+  <path
+    d="M161 78C148 77 136 84 129 95C122 107 121 121 122 135C124 147 123 159 117 169C112 178 102 186 89 190"
+    stroke="url(#dive)"
+    stroke-width="15"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="165" cy="76" r="9" fill="#EBF6FF"/>
+  <path d="M88 187C96 179 108 175 119 175" stroke="#9BF0BF" stroke-width="7" stroke-linecap="round"/>
+  <path d="M130 180C140 180 149 184 156 191" stroke="#7FDAFF" stroke-width="7" stroke-linecap="round"/>
+  <path d="M141 171C145 175 147 179 147 184" stroke="#FFD079" stroke-width="6" stroke-linecap="round"/>
+</svg>

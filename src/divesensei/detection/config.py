@@ -74,6 +74,10 @@ class DetectionConfig:
     audio_clip_classifier_ambiguity_high: float = 0.65
     audio_pcen_threshold: float = 2.4
     audio_pcen_merge_weight: float = 0.65
+    audio_duplicate_suppress_window_seconds: float = 0.9
+    audio_duplicate_leader_min_score: float = 12.0
+    audio_duplicate_leader_min_prominence: float = 10.0
+    audio_duplicate_follower_max_score_ratio: float = 0.55
     audio_decode_timeout_seconds: float = 20.0
     ffmpeg_threads: int = 1
     opencv_threads: int = 1

@@ -85,75 +85,48 @@ function buildLibraryFromManifests(manifests: SessionManifest[]): LibraryIndex {
   };
 }
 
+function buildEmptyLibrary(): LibraryIndex {
+  return {
+    schema_version: "1.0.0",
+    kind: "divesensei.ui-library",
+    generated_at: new Date().toISOString(),
+    session_count: 0,
+    sessions: [],
+  };
+}
+
 const fallbackManifest: SessionManifest = {
   schema_version: "1.0.0",
   kind: "divesensei.ui-session",
   generated_at: "2026-03-11T11:31:00Z",
   session: {
-    id: "demo_session",
-    title: "Benchmark workspace preview",
-    session_name: "Benchmark workspace preview · 2026-03-11 11:31",
+    id: "",
+    title: "No session selected",
+    session_name: "No session selected",
     profile: "long-session",
-    source_video_path: "/srv/nas/videos/Eindhoven 2026/IMG_8281.MOV",
-    output_dir: path.join(repoRoot, "outputs", "demo_session"),
-    status: "ready_proxy_pending",
+    source_video_path: "",
+    output_dir: "",
+    status: "complete",
     created_at: "2026-03-11T11:31:00Z",
     updated_at: "2026-03-11T11:31:00Z",
-    candidate_count: 3,
-    extracted_count: 3,
-    manifest_path: path.join(repoRoot, "outputs", "demo_session", "ui_session_manifest.json"),
-    timestamp_range: { first: 4.192, last: 88.604 },
+    candidate_count: 0,
+    extracted_count: 0,
+    manifest_path: "",
+    timestamp_range: { first: 0, last: 0 },
     telemetry: {
-      detector_seconds: 5.8,
-      extract_seconds: 4.2,
-      total_runtime_seconds: 10.4,
-      peak_rss_kb: 1011192,
+      detector_seconds: 0,
+      extract_seconds: 0,
+      total_runtime_seconds: 0,
+      peak_rss_kb: 0,
     },
   },
   artifacts: {
-    session_pipeline_report: path.join(repoRoot, "outputs", "demo_session", "session_pipeline_report.json"),
-    session_debug_summary: path.join(repoRoot, "outputs", "demo_session", "session_debug_summary.json"),
-    session_pipeline_log: path.join(repoRoot, "outputs", "demo_session", "session_pipeline.log.jsonl"),
-    detections_csv: path.join(repoRoot, "outputs", "demo_session", "detections.csv"),
+    session_pipeline_report: "",
+    session_debug_summary: "",
+    session_pipeline_log: "",
+    detections_csv: "",
   },
-  detections: [
-    {
-      id: "det-0001",
-      index: 1,
-      timestamp_seconds: 4.192,
-      start_time_seconds: 0.0,
-      end_time_seconds: 7.192,
-      duration_seconds: 7.192,
-      confidence: "high",
-      scores: { audio: 9.91, video: 0, combined: 9.91, audio_model_probability: 0, audio_clip_probability: 0 },
-      features: { spectral_flux: 309.7, rms: 0.169, local_prominence: 10.29, nearby_peaks_8s: 2 },
-      clip: { path: null, filename: "dive_splash_1_t4.2s.mp4" },
-    },
-    {
-      id: "det-0002",
-      index: 2,
-      timestamp_seconds: 42.624,
-      start_time_seconds: 36.624,
-      end_time_seconds: 45.624,
-      duration_seconds: 9,
-      confidence: "medium",
-      scores: { audio: 7.2, video: 0, combined: 7.2, audio_model_probability: 0, audio_clip_probability: 0 },
-      features: { spectral_flux: 201.5, rms: 0.102, local_prominence: 7.1, nearby_peaks_8s: 1 },
-      clip: { path: null, filename: "dive_splash_2_t42.6s_medium.mp4" },
-    },
-    {
-      id: "det-0003",
-      index: 3,
-      timestamp_seconds: 88.604,
-      start_time_seconds: 82.604,
-      end_time_seconds: 91.604,
-      duration_seconds: 9,
-      confidence: "low",
-      scores: { audio: 5.8, video: 0, combined: 5.8, audio_model_probability: 0, audio_clip_probability: 0 },
-      features: { spectral_flux: 121.4, rms: 0.073, local_prominence: 4.2, nearby_peaks_8s: 3 },
-      clip: { path: null, filename: "dive_splash_3_t88.6s_low.mp4" },
-    },
-  ],
+  detections: [],
 };
 
 function pickPrimaryManifest(manifests: SessionManifest[], selectedSessionId?: string): SessionManifest {
@@ -188,7 +161,7 @@ export function getUiData(selectedSessionId?: string): UiDataBundle {
     : catalogManifestPaths;
   const discoveredManifests = manifestPaths.map((manifestPath) => readJsonFile<SessionManifest>(manifestPath)).filter((manifest): manifest is SessionManifest => manifest !== null);
   const manifest = discoveredManifests.length > 0 ? pickPrimaryManifest(discoveredManifests, selectedSessionId) : fallbackManifest;
-  const library = discoveredManifests.length > 0 ? buildLibraryFromManifests(discoveredManifests) : buildLibraryFromManifests([fallbackManifest]);
+  const library = discoveredManifests.length > 0 ? buildLibraryFromManifests(discoveredManifests) : buildEmptyLibrary();
   return {
     library,
     manifest,

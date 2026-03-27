@@ -28,6 +28,7 @@ make desktop-setup
 Required runtime dependency:
 
 - `ffmpeg` on `PATH`
+- Node.js available locally for the Astro server and `better-sqlite3` rebuild
 
 ## Main Commands
 
@@ -48,6 +49,16 @@ divesensei-regress
 Desktop app:
 
 ```bash
+make up
+make down
+make re
+make status
+make logs
+```
+
+Local dev helpers:
+
+```bash
 cd apps/desktop
 bun run dev
 bun run check
@@ -66,6 +77,8 @@ make desktop-build
 make electron-dev
 make electron-prepare
 ```
+
+`make up` is the stable local deployment target. It builds the Astro app if needed, starts `astro preview` in the background on `http://127.0.0.1:5173`, and stores runtime state under `.run/`.
 
 ## Working Rules
 
@@ -93,6 +106,7 @@ Expected loop:
   - export job state
   - labeled audio clips
   - local models
+  - imported picker uploads under `imports/`
 - `outputs/`
   - session manifests
   - review proxies
@@ -104,3 +118,12 @@ Expected loop:
 - exported clips are optional derived artifacts
 - the library should reflect catalog state, not blind directory discovery
 - sessions should remain reviewable when proxy generation is still pending
+- the analysis launcher supports two input modes:
+  - manual absolute path entry
+  - file picker import, which copies the selected file into `.divesensei-runtime/imports/` before analysis starts
+
+## Demo Notes
+
+- for the demo branch, prefer `make re` over restarting `bun run dev`
+- if a picked-file analysis appears stalled, check `.run/desktop-preview.log`
+- avoid committing `.run/`, local sample videos, or generated `outputs/` artifacts unless intentionally updating fixtures

@@ -5,11 +5,27 @@ import { fileURLToPath } from "node:url";
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 
-export const repoRoot = path.resolve(currentDir, "../../../..");
+function resolveRepoRoot(startDir: string): string {
+  let current = startDir;
+  for (let index = 0; index < 8; index += 1) {
+    const hasPythonProject = fs.existsSync(path.join(current, "pyproject.toml"));
+    const hasSourceTree = fs.existsSync(path.join(current, "src", "divesensei"));
+    if (hasPythonProject && hasSourceTree) {
+      return current;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  return path.resolve(startDir, "../../../..");
+}
+
+export const repoRoot = resolveRepoRoot(currentDir);
 export const runtimeRoot = path.join(repoRoot, ".divesensei-runtime");
 export const outputsRoot = path.join(repoRoot, "outputs");
 export const analysisJobsRoot = path.join(runtimeRoot, "analysis-jobs");
 export const exportJobsRoot = path.join(runtimeRoot, "export-jobs");
+export const importsRoot = path.join(runtimeRoot, "imports");
 export const sessionCatalogPath = path.join(runtimeRoot, "session-catalog.json");
 export const sessionCatalogDbPath = path.join(runtimeRoot, "session-catalog.sqlite");
 export const allowedMediaRoots = [
@@ -30,6 +46,7 @@ export function ensureRuntimeDirs(): void {
   fs.mkdirSync(outputsRoot, { recursive: true });
   fs.mkdirSync(analysisJobsRoot, { recursive: true });
   fs.mkdirSync(exportJobsRoot, { recursive: true });
+  fs.mkdirSync(importsRoot, { recursive: true });
 }
 
 export function isAllowedLocalPath(targetPath: string): boolean {

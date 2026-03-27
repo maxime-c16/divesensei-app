@@ -6,8 +6,13 @@
 - verify CLI help and docs
 - verify `ui_session_manifest.json` and `ui_library_index.json`
 - confirm no accidental benchmark artifacts are committed
+- confirm no local runtime or demo-only files are committed:
+  - `.run/`
+  - `.divesensei-runtime/imports/`
+  - local sample videos
 - verify GitHub issue templates and PR template are current
 - verify README matches the shipped CLI and repo layout
+- verify `make up`, `make re`, and `make down` still work on a clean checkout
 
 ## Release Notes Should Include
 
@@ -15,6 +20,8 @@
 - benchmark deltas
 - UI contract changes
 - migration notes for the desktop shell if needed
+- catalog/storage migration notes when SQLite behavior changes
+- deployment/runtime notes when the local demo flow changes
 
 ## Repository Hygiene
 

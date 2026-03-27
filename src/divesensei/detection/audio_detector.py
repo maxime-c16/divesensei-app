@@ -76,6 +76,8 @@ class AudioVisualDiveDetector:
         accepted, ambiguous = self._classify_audio_candidates(signal, sample_rate, proposals)
         accepted = self._suppress_rebound_precursors(accepted)
         ambiguous = self._suppress_rebound_precursors(ambiguous)
+        accepted = self._suppress_dominant_duplicate_followers(accepted)
+        ambiguous = self._suppress_dominant_duplicate_followers(ambiguous)
         if detector_id == "audio_v2_pcen_classifier" or bool(getattr(self.config, "audio_visual_skip_video_verification", False)):
             return self._promote_audio_only(accepted)
 
@@ -310,9 +312,8 @@ class AudioVisualDiveDetector:
         if len(ranked) > noisy_peak_count and ranked[1].audio_score > 0:
             top_ratio = ranked[0].audio_score / ranked[1].audio_score
             if top_ratio < noisy_peak_ratio:
-                if duration_seconds >= long_session_seconds:
-                    return ranked[: max(1, long_session_max_candidates)]
-                return []
+                cap = long_session_max_candidates if duration_seconds >= long_session_seconds else max(noisy_peak_count * 3, 12)
+                return sorted(ranked[: max(1, cap)], key=lambda p: p.timestamp)
         return sorted(proposals, key=lambda p: p.timestamp)
 
     def _suppress_rebound_precursors(self, proposals: Sequence[AudioCandidate]) -> List[AudioCandidate]:
@@ -364,6 +365,42 @@ class AudioVisualDiveDetector:
             if candidate.audio_score > deduped[-1].audio_score:
                 deduped[-1] = candidate
         return deduped
+
+    def _suppress_dominant_duplicate_followers(self, proposals: Sequence[AudioCandidate]) -> List[AudioCandidate]:
+        if len(proposals) <= 1:
+            return list(proposals)
+
+        sorted_proposals = sorted(proposals, key=lambda p: p.timestamp)
+        suppress_window = float(getattr(self.config, "audio_duplicate_suppress_window_seconds", 0.9))
+        leader_min_score = float(getattr(self.config, "audio_duplicate_leader_min_score", 12.0))
+        leader_min_prominence = float(getattr(self.config, "audio_duplicate_leader_min_prominence", 10.0))
+        follower_max_ratio = float(getattr(self.config, "audio_duplicate_follower_max_score_ratio", 0.55))
+        kept: List[AudioCandidate] = []
+        cluster: List[AudioCandidate] = [sorted_proposals[0]]
+
+        def flush_cluster(items: Sequence[AudioCandidate]) -> None:
+            if not items:
+                return
+            if len(items) == 1:
+                kept.extend(items)
+                return
+            leader = max(items, key=lambda item: item.audio_score)
+            if leader.audio_score < leader_min_score or leader.local_prominence < leader_min_prominence:
+                kept.extend(items)
+                return
+            threshold = leader.audio_score * follower_max_ratio
+            for item in items:
+                if item is leader or item.audio_score > threshold:
+                    kept.append(item)
+
+        for candidate in sorted_proposals[1:]:
+            if candidate.timestamp - cluster[-1].timestamp <= suppress_window:
+                cluster.append(candidate)
+                continue
+            flush_cluster(cluster)
+            cluster = [candidate]
+        flush_cluster(cluster)
+        return kept
 
     def _verify_with_video(self, video_path: str, proposals: Sequence[AudioCandidate]) -> List[VerifiedDiveCandidate]:
         cap = cv2.VideoCapture(video_path)
