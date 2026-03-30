@@ -1,0 +1,140 @@
+:root {
+  color-scheme: light;
+  font-family: "SF Pro Text", "Segoe UI", sans-serif;
+  line-height: 1.4;
+  font-weight: 400;
+  color: #12202b;
+  background:
+    radial-gradient(circle at top left, rgba(84, 157, 255, 0.18), transparent 28%),
+    linear-gradient(180deg, #eff6fb 0%, #f8fbfd 100%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+button {
+  cursor: pointer;
+}
+
+.shell {
+  width: min(1120px, calc(100vw - 24px));
+  margin: 0 auto;
+  padding: 20px 0 48px;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(15, 37, 54, 0.1);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 16px 48px rgba(20, 38, 56, 0.08);
+  backdrop-filter: blur(12px);
+  margin-bottom: 16px;
+}
+
+.button-row,
+.actions-cell {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.button-row button,
+.actions-cell button,
+.session-button {
+  border: 1px solid rgba(18, 32, 43, 0.14);
+  background: #f7fafc;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font: inherit;
+}
+
+.session-button.is-active {
+  background: #d8ebff;
+  border-color: #7cb2eb;
+}
+
+.muted {
+  color: #597182;
+}
+
+.error {
+  color: #8a2131;
+}
+
+.json-block {
+  background: #0f1f2a;
+  color: #dff2ff;
+  border-radius: 14px;
+  padding: 12px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.session-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.review-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.review-table th,
+.review-table td {
+  text-align: left;
+  padding: 10px 8px;
+  border-bottom: 1px solid rgba(18, 32, 43, 0.08);
+  vertical-align: top;
+}
+
+.event-log {
+  display: grid;
+  gap: 12px;
+}
+
+@media (max-width: 720px) {
+  .review-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .review-table,
+  .review-table thead,
+  .review-table tbody,
+  .review-table tr,
+  .review-table th,
+  .review-table td {
+    display: block;
+  }
+
+  .review-table thead {
+    display: none;
+  }
+
+  .review-table tr {
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(18, 32, 43, 0.08);
+  }
+
+  .review-table td {
+    border: 0;
+    padding: 4px 0;
+  }
+}
