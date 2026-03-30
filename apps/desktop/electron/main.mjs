@@ -9,6 +9,15 @@ const preloadPath = path.join(__dirname, "preload.mjs");
 const packagedPort = process.env.DIVESENSEI_PORT ?? "35817";
 let desktopStartUrl = process.env.ELECTRON_START_URL ?? `http://127.0.0.1:${packagedPort}/`;
 
+function resolveWindowIcon() {
+  const candidates = [
+    path.join(__dirname, "..", "build", "icons", "256x256.png"),
+    path.join(app.getAppPath(), "build", "icons", "256x256.png"),
+    path.join(process.resourcesPath, "app", "build", "icons", "256x256.png"),
+  ];
+  return candidates.find((candidate) => fs.existsSync(candidate));
+}
+
 function resolveServerEntryPath() {
   const appRoot = app.getAppPath();
   const candidates = [
@@ -30,6 +39,7 @@ async function ensureBundledServer() {
 }
 
 function createWindow() {
+  const icon = resolveWindowIcon();
   const window = new BrowserWindow({
     width: 1520,
     height: 980,
@@ -38,6 +48,7 @@ function createWindow() {
     backgroundColor: "#08131d",
     autoHideMenuBar: true,
     title: "DiveSensei",
+    icon,
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true,

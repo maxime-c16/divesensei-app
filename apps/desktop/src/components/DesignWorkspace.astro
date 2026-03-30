@@ -1,5 +1,6 @@
 ---
 import path from "node:path";
+import brandLockupDark from "@/assets/divesensei-lockup-dark.svg";
 import {
   formatSeconds,
   getUiData,
@@ -43,9 +44,6 @@ const defaultSessionName = `Session ${new Intl.DateTimeFormat("sv-SE", {
   hour12: false,
 }).format(new Date()).replace(" ", " ").replace(",", "")}`;
 const sessionReadyNow = sessionIsReviewReady(session.status);
-const sourceModeNote = session.status === "ready_proxy_pending"
-  ? "Attempts are ready. The review video is still being prepared."
-  : "Review each attempt, then export only the clips you keep.";
 const primaryVideoUrl = mediaUrl(resolveSourceMediaPath(session.source_video_path, session.output_dir));
 const sourceVideoUrl = mediaUrl(session.source_video_path);
 const sourceVideoBrowserFriendly = [".mp4", ".webm", ".m4v"].includes(path.extname(session.source_video_path).toLowerCase());
@@ -92,6 +90,17 @@ const signalLabelFor = (confidence: string) => {
   if (confidence === "medium") return "Review";
   return "Weak";
 };
+const detectorLabelFor = (value: string | undefined) => {
+  if (!value || value === "audio_v2_pcen_classifier") return "Standard audio";
+  if (value === "audio_v1_heuristic") return "Legacy audio";
+  if (value === "audio_v2_hybrid_video") return "Audio + video";
+  return value.replaceAll("_", " ");
+};
+const profileLabelFor = (value: string | undefined) => {
+  if (!value || value === "long-session") return "Training session";
+  if (value === "reviewed") return "Reviewed session";
+  return value.replaceAll("-", " ");
+};
 const formatSessionStamp = (value: string | undefined) => {
   if (!value) return "Unknown";
   const parsed = new Date(value);
@@ -118,18 +127,20 @@ const topAttemptSummary = highest
   ? `${formatSeconds(highest.timestamp_seconds)} · ${highest.confidence} confidence`
   : "Analysis not run yet";
 const nextActionLabel = !hasActiveSession
-  ? "Choose a video on the left, keep the default detector, then start the analysis."
+  ? "Choose a video, keep the default detector, and start a run."
   : detections.length === 0
-    ? "This session is loaded, but no candidate was detected yet."
+    ? "This session is ready, but no attempts have been found yet."
     : sessionReadyNow
-      ? "Open review to validate the detected attempts and export only the kept clips."
-      : "Wait for analysis to finish, then open review.";
+      ? "Open Review, confirm the attempts you want, then export the clips you keep."
+      : "Wait for the run to finish, then open Review.";
 const clientBundle = JSON.stringify({
   hasSession,
   session,
   detections,
   primaryVideoUrl,
   sourceVideoUrl,
+  rangeStart,
+  rangeSpan,
   initialReviewPending: initialReviewPlaceholderVisible,
   requestedTab,
   requestedSession,
@@ -139,63 +150,43 @@ const clientBundle = JSON.stringify({
 
 <main class={`screen theme-${theme.id}`} data-design-root>
   <header class="workspace-header shell">
-    <div class="workspace-header__title">
-      <a class="brand" href="/">DiveSensei</a>
-      <h1>Review workspace</h1>
-      <p>{theme.subtitle}</p>
-    </div>
-    <div class="workspace-header__meta">
-      <article class="header-status-card">
-        <span>Session</span>
-        <strong>{sessionDisplayName}</strong>
-        <small>{sessionStatusLabel(session.status)}</small>
-      </article>
-      <article class="header-status-card">
-        <span>Source</span>
-        <strong>{path.basename(session.source_video_path)}</strong>
-        <small>{session.profile} · {session.detector_id ?? "audio_v1_heuristic"}</small>
-      </article>
-      <article class="header-status-card header-status-card--metrics">
-        <span>Review</span>
-        <strong>{session.candidate_count} attempts</strong>
-        <small>{session.extracted_count} exports · updated {formatSessionStamp(session.updated_at)}</small>
-      </article>
-    </div>
+    <a class="brand-lockup" href="/" aria-label="DiveSensei home">
+      <img src={brandLockupDark.src} alt="DiveSensei" class="brand-lockup__image" />
+    </a>
+    <nav class="header-nav" aria-label="Workspace tabs">
+      {theme.tabs.map((tab, index) => (
+        <button
+          class={`tab ${index === initialTabIndex ? "is-active" : ""}`}
+          type="button"
+          data-tab-trigger
+          data-tab-target={`panel-${index}`}
+        >
+          {tab}
+        </button>
+      ))}
+    </nav>
   </header>
-
-  <nav class="tabbar shell" aria-label="Workspace tabs">
-    {theme.tabs.map((tab, index) => (
-      <button
-        class={`tab ${index === initialTabIndex ? "is-active" : ""}`}
-        type="button"
-        data-tab-trigger
-        data-tab-target={`panel-${index}`}
-      >
-        {tab}
-      </button>
-    ))}
-  </nav>
 
   <section class={`panel shell ${initialTabIndex === 0 ? "is-active" : ""}`} id="panel-0" data-tab-panel>
     <div class="grid library-grid">
       <article class="section-card">
         <div class="section-card__header">
           <div>
-            <h2>Local sessions</h2>
-            <p class="section-note">Analyze a video or reopen an existing session.</p>
+            <h2>Sessions</h2>
+            <p class="section-note">Start a new run or reopen one you already have.</p>
           </div>
-          <div class="section-meta" data-session-total>{library.session_count} total</div>
+          <span class="counter" data-session-total>{library.session_count} total</span>
         </div>
         {sessionReadyNow && session.status === "ready_proxy_pending" && (
           <div class="library-inline-note">
-            <strong>Ready for review.</strong> The review video is still being prepared.
+            <strong>Ready to review.</strong> The review video is still being prepared.
           </div>
         )}
         <form class="analysis-launcher" data-analysis-form>
           <div class="section-card__header">
             <div>
-              <h3>Analyze video</h3>
-              <p class="section-note">Find attempts, review them right away, then export only the clips you keep.</p>
+              <h3>New run</h3>
+              <p class="section-note">Choose a source, pick a detector, and start a new run.</p>
             </div>
           </div>
           <div class="analysis-launcher__grid">
@@ -216,7 +207,7 @@ const clientBundle = JSON.stringify({
                 <input type="text" name="videoPath" value="" data-analysis-path autocomplete="off" placeholder="/absolute/path/to/video.mov" />
                 <div class="analysis-picker__controls">
                   <button type="button" class="action-link analysis-picker__button" data-analysis-pick>Choose file</button>
-                  <span class="analysis-picker__label" data-analysis-file-label>No picked file. Manual path stays available.</span>
+                  <span class="analysis-picker__label" data-analysis-file-label>No file selected. You can still paste a path manually.</span>
                 </div>
                 <input
                   type="file"
@@ -230,22 +221,22 @@ const clientBundle = JSON.stringify({
               <span>Session type</span>
               <select name="profile" data-analysis-profile>
                 <option value="long-session" selected>Training session</option>
-                <option value="reviewed">Reviewed session</option>
+                <option value="reviewed">Reviewed run</option>
               </select>
             </label>
             <label class="field">
               <span>Detection method</span>
               <select name="detectorId" data-analysis-detector>
                 <option value="audio_v2_pcen_classifier" selected>Standard</option>
-                <option value="audio_v1_heuristic">Legacy</option>
+                <option value="audio_v1_heuristic">Legacy audio</option>
                 <option value="audio_v2_hybrid_video">Audio + video</option>
               </select>
             </label>
           </div>
-          <div class="analysis-launcher__actions">
-            <button type="submit" class="action-link">Analyze video</button>
+          <div class="analysis-launcher__actions launcher-actions">
+            <button type="submit" class="action-link action-link--primary">Analyze video</button>
           </div>
-          <p class="analysis-launcher__status" data-analysis-status>Ready to analyze a video.</p>
+          <p class="analysis-launcher__status" data-analysis-status>Ready when you are.</p>
         </form>
         <div class="session-list">
           {library.sessions.map((item) => (
@@ -255,10 +246,7 @@ const clientBundle = JSON.stringify({
                   <strong>{item.session_name ?? item.title}</strong>
                   <small>{path.basename(item.source_video_path)}</small>
                   <small>Updated {formatSessionStamp(item.updated_at ?? item.created_at)}</small>
-                  <div class="session-listing__meta">
-                    <span class="pill">{item.profile}</span>
-                    <span class="pill">{sessionStatusLabel(item.status)}</span>
-                  </div>
+                  <small class="session-listing__status">{sessionStatusLabel(item.status)}</small>
                 </div>
                 <div class="session-listing__stats">
                   <span>{item.candidate_count} attempts</span>
@@ -279,8 +267,8 @@ const clientBundle = JSON.stringify({
       <article class="section-card">
         <div class="section-card__header">
           <div>
-            <h2>Session details</h2>
-            <p class="section-note">{hasActiveSession ? sessionDisplayName : "No analysis loaded yet"}</p>
+            <h2>Current session</h2>
+            <p class="section-note">{hasActiveSession ? sessionDisplayName : "No session selected"}</p>
           </div>
         </div>
         {hasActiveSession ? (
@@ -294,11 +282,11 @@ const clientBundle = JSON.stringify({
               <dl class="session-summary__grid">
                 <div>
                   <dt>Detector</dt>
-                  <dd>{session.detector_id ?? "audio_v1_heuristic"}</dd>
+                  <dd>{detectorLabelFor(session.detector_id)}</dd>
                 </div>
                 <div>
                   <dt>Profile</dt>
-                  <dd>{session.profile}</dd>
+                  <dd>{profileLabelFor(session.profile)}</dd>
                 </div>
                 <div>
                   <dt>Video length</dt>
@@ -336,7 +324,7 @@ const clientBundle = JSON.stringify({
             </div>
             <div class="action-list">
               <button class="action-link" type="button" data-open-tab="1">Open review</button>
-              <button class="action-link" type="button" data-open-tab="3">Open diagnostics</button>
+              <button class="action-link" type="button" data-open-tab="3">Open Inspect</button>
             </div>
           </>
         ) : (
@@ -345,15 +333,15 @@ const clientBundle = JSON.stringify({
               <strong>No session selected</strong>
               <span>Ready to start</span>
             </div>
-            <p class="session-summary__note">Start from the analysis form on the left. The session card will populate with real runtime data after the first run.</p>
+            <p class="session-summary__note">Start with the form on the left. This panel will fill in once your first run is created.</p>
             <div class="session-summary__empty-grid">
               <article>
                 <strong>1. Choose a video</strong>
-                <p>Pick a file or type an absolute path manually.</p>
+                <p>Choose a file or paste an absolute path.</p>
               </article>
               <article>
-                <strong>2. Launch analysis</strong>
-                <p>The pipeline detects dive candidates and creates a review session.</p>
+                <strong>2. Start the run</strong>
+                <p>DiveSensei finds likely attempts and prepares them for review.</p>
               </article>
               <article>
                 <strong>3. Review and export</strong>
@@ -366,25 +354,16 @@ const clientBundle = JSON.stringify({
     </div>
   </section>
 
-  <section class={`panel shell ${initialTabIndex === 1 ? "is-active" : ""}`} id="panel-1" data-tab-panel>
-    <div class="grid workspace-grid">
-      <article class="section-card">
-        <div class="section-card__header">
-          <div>
-            <h2>Review</h2>
-            <p class="section-note">{sourceModeNote}</p>
-          </div>
-          <div class="section-meta">State {sessionStatusLabel(session.status)}</div>
+  <section class={`panel panel--review shell ${initialTabIndex === 1 ? "is-active" : ""}`} id="panel-1" data-tab-panel>
+    <div class="review-layout">
+      <article class="review-main">
+        <div class="review-main__top">
+          <span data-review-current>Attempt {selected?.index ?? 0}</span>
+          <span data-review-counts>{detections.length} waiting</span>
+          <span data-review-position>{selected ? `${selected.index} of ${detections.length}` : "0 of 0"}</span>
+          <span data-review-time>{selected ? formatSeconds(selected.timestamp_seconds) : "0:00.000"}</span>
         </div>
-        <div class="review-meta" style="margin-bottom: 12px;">
-          <div class="section-meta" data-review-counts>{detections.length} pending review</div>
-          <div class="section-meta" data-review-position>{selected ? `Attempt 1 of ${detections.length}` : "Attempt 0 of 0"}</div>
-        </div>
-        <div class="player-stage">
-          <div class="player-stage__hud">
-            <span data-review-current>Attempt {selected?.index ?? 0}</span>
-            <span data-review-time>{selected ? formatSeconds(selected.timestamp_seconds) : "0:00.000"}</span>
-          </div>
+        <div class="review-main__video">
           <div class="player-stage__frame">
             <video
               class="review-video"
@@ -396,40 +375,36 @@ const clientBundle = JSON.stringify({
               data-source-src={primaryVideoUrl}
             ></video>
             <div class="library-inline-note" data-review-placeholder hidden={!initialReviewPlaceholderVisible}>
-              The review video is still being prepared for this source format. Playback will become available automatically.
+              The review video for this file is still being prepared. Playback will appear automatically.
             </div>
-            <p data-review-label>{selected ? `${formatSeconds(reviewStartFor(selected))} to ${formatSeconds(reviewEndFor(selected))} · ${path.basename(session.source_video_path)}` : path.basename(session.source_video_path)}</p>
           </div>
         </div>
-        <div class="analysis-launcher__actions" style="margin-top: 12px;" data-virtual-controls hidden>
-          <button type="button" class="action-link" data-review-prev>Previous</button>
-          <button type="button" class="action-link" data-virtual-play>Play</button>
-          <button type="button" class="action-link" data-review-next>Next</button>
-          <span class="section-meta" data-virtual-time>0:00.000 / 0:00.000</span>
-          <button type="button" class="action-link" data-toggle-loop>Loop on</button>
-          <button type="button" class="action-link" data-toggle-autoplay>Autoplay on</button>
-          <button type="button" class="action-link" data-toggle-autoadvance>Auto-next on</button>
+        <div class="review-main__controls">
+          <div class="review-decisions">
+            <button class="action-link review-decisions__button review-decisions__button--keep" type="button" data-decision="keep">Keep</button>
+            <button class="action-link review-decisions__button review-decisions__button--reject" type="button" data-decision="reject">Reject</button>
+            <button class="action-link review-decisions__button review-decisions__button--unsure" type="button" data-decision="unsure">Unsure</button>
+            <input type="text" class="review-decisions__note" data-decision-notes placeholder="Note (optional)" />
+          </div>
         </div>
-        <input type="range" min="0" max="1" step="0.01" value="0" style="width: 100%; margin-top: 10px;" data-virtual-scrub hidden />
-        <div class="analysis-launcher__actions" style="margin-top: 12px;">
-          <button class="action-link" type="button" data-decision="keep">Keep</button>
-          <button class="action-link" type="button" data-decision="unsure">Unsure</button>
-          <button class="action-link" type="button" data-decision="reject">Reject</button>
-        </div>
-        <label class="field" style="margin-top: 12px;">
-          <span>Note</span>
-          <input type="text" data-decision-notes placeholder="Optional note" />
-        </label>
-        <p class="analysis-launcher__status" data-decision-status>No decision recorded for this attempt.</p>
-        <div class="library-inline-note" style="margin-top: 12px;" data-review-progress>
-          Review is available now. Export only the clips you keep.
-        </div>
-        <div class="timeline">
-          <div class="timeline__viewport" data-timeline-viewport>
-            <div class="timeline__track" data-timeline-track>
+        <div class="review-main__timeline">
+          <div class="tl" data-timeline-viewport>
+            <div class="tl__scale">
+              {timelineScaleLabels.map((tick) => (
+                <span
+                  class={`tl__time tl__time--${tick.edge}`}
+                  style={`left:${tick.left}%;`}
+                >
+                  {tick.label}
+                </span>
+              ))}
+            </div>
+            <div class="tl__track" data-timeline-track>
+              <div class="tl__playhead" data-timeline-playhead></div>
+              <div class="tl__tooltip" data-timeline-tooltip hidden></div>
               {timelineTicks.map((tick) => (
                 <span
-                  class="timeline__tick"
+                  class="tl__tick"
                   style={`left:${tick.left}%;`}
                   aria-hidden="true"
                 ></span>
@@ -437,47 +412,36 @@ const clientBundle = JSON.stringify({
               {detections.map((item) => (
                 <button
                   type="button"
-                  class={`timeline__marker confidence-${item.confidence} ${item.id === selected?.id ? "is-current" : ""}`}
+                  class={`tl__pip confidence-${item.confidence} ${item.id === selected?.id ? "is-current" : ""}`}
                   style={`left:${markerPosition(item.timestamp_seconds)}%;`}
                   data-focus-detection={item.id}
                   data-timeline-marker={item.id}
-                  aria-label={`${item.id} at ${formatSeconds(item.timestamp_seconds)}`}
-                >
-                  <span>{item.index}</span>
-                </button>
+                  data-pip-index={item.index}
+                  data-pip-time={formatSeconds(item.timestamp_seconds)}
+                  aria-label={`Attempt ${item.index} at ${formatSeconds(item.timestamp_seconds)}`}
+                ></button>
               ))}
             </div>
           </div>
-          <div class="timeline__legend">
-            {timelineScaleLabels.map((tick) => (
-              <span
-                class={`timeline__legend-label timeline__legend-label--${tick.edge}`}
-                style={`left:${tick.left}%;`}
-              >
-                {tick.label}
-              </span>
-            ))}
-          </div>
+        </div>
+        <p class="review-main__status" data-decision-status hidden>No decision saved for this attempt.</p>
+        <div class="library-inline-note" data-review-progress hidden>
+          Review is available now. Export only the clips you keep.
         </div>
       </article>
 
-      <article class="section-card table-card">
-        <div class="section-card__header">
-          <div>
-            <h2 data-review-list-title>Attempts</h2>
-            <p class="section-note" data-review-list-note>Select an attempt and record a decision.</p>
-          </div>
-          <div class="analysis-launcher__grid" style="grid-template-columns: 180px; justify-content: end;">
-            <select data-review-filter>
-              <option value="all" selected>All attempts</option>
-              <option value="pending">Pending</option>
-              <option value="keep">Kept</option>
-              <option value="reject">Rejected</option>
-              <option value="unsure">Unsure</option>
-            </select>
-          </div>
+      <aside class="review-sidebar">
+        <div class="review-sidebar__header">
+          <h2 data-review-list-title>Attempts</h2>
+          <select class="review-sidebar__filter" data-review-filter>
+            <option value="all" selected>All</option>
+            <option value="pending">Pending</option>
+            <option value="keep">Kept</option>
+            <option value="reject">Rejected</option>
+            <option value="unsure">Unsure</option>
+          </select>
         </div>
-        <div class="table-wrap queue-table-wrap">
+        <div class="review-sidebar__list">
           <table class="queue-table">
             <thead>
               <tr>
@@ -499,12 +463,12 @@ const clientBundle = JSON.stringify({
             </tbody>
           </table>
         </div>
-        <div class="review-meta" style="margin-top: 14px;">
-          <div class="section-meta" data-detail-audio>Audio {selected ? selected.scores.audio.toFixed(2) : "0.00"}</div>
-          <div class="section-meta" data-detail-window>Window {selected ? `${formatSeconds(reviewStartFor(selected))} to ${formatSeconds(reviewEndFor(selected))}` : "0:00.000 to 0:00.000"}</div>
-          <div class="section-meta" data-detail-decision>Decision pending</div>
+        <div class="detail-bar">
+          <span data-detail-audio>Audio {selected ? selected.scores.audio.toFixed(2) : "0.00"}</span>
+          <span data-detail-window>Window {selected ? `${formatSeconds(reviewStartFor(selected))} to ${formatSeconds(reviewEndFor(selected))}` : "0:00.000 to 0:00.000"}</span>
+          <span data-detail-decision>No decision yet</span>
         </div>
-      </article>
+      </aside>
     </div>
   </section>
 
@@ -514,31 +478,31 @@ const clientBundle = JSON.stringify({
         <div class="section-card__header">
           <div>
             <h2>Exports</h2>
-            <p class="section-note">Create clip files only for attempts marked Keep.</p>
+            <p class="section-note">Export clips from the attempts you decided to keep.</p>
           </div>
-          <div class="section-meta">{session.extracted_count} exports</div>
+          <span class="counter">{session.extracted_count} exports</span>
         </div>
-        <div class="analysis-launcher__actions">
-          <button class="action-link" type="button" data-export-kept>Export kept clips</button>
+        <div class="analysis-launcher__actions export-actions">
+          <button class="action-link action-link--primary" type="button" data-export-kept>Export kept clips</button>
         </div>
-        <p class="analysis-launcher__status" data-export-status>Mark attempts as Keep, then export only those clips.</p>
+        <p class="analysis-launcher__status" data-export-status>Keep the attempts you want, then export their clips.</p>
         <div class="artifact-grid" data-export-list></div>
       </article>
       <article class="section-card">
         <div class="section-card__header">
           <div>
-            <h2>Review summary</h2>
-            <p class="section-note">Use Review to classify attempts, then export the ones you keep.</p>
+            <h2>Export summary</h2>
+            <p class="section-note">Your review decisions determine what is ready to export.</p>
           </div>
         </div>
         <div class="artifact-grid" data-export-summary>
           <article>
-            <strong>Review status</strong>
-            <span data-export-summary-counts>Review not started.</span>
+            <strong>Review progress</strong>
+            <span data-export-summary-counts>No review decisions yet.</span>
           </article>
           <article>
             <strong>Export source</strong>
-            <span>Exports are created from the review video when available.</span>
+            <span>When available, exports are created from the review video.</span>
           </article>
         </div>
         <div class="log-list" data-decision-list></div>
@@ -551,8 +515,8 @@ const clientBundle = JSON.stringify({
       <article class="section-card">
         <div class="section-card__header">
           <div>
-            <h2>Diagnostics</h2>
-            <p class="section-note">Technical files saved for this session.</p>
+            <h2>Inspect</h2>
+            <p class="section-note">Saved files and technical output from the current session.</p>
           </div>
         </div>
         <div class="artifact-grid">
@@ -567,8 +531,8 @@ const clientBundle = JSON.stringify({
       <article class="section-card">
         <div class="section-card__header">
           <div>
-            <h2>Artifact preview</h2>
-            <p class="section-note">Quick previews of saved diagnostic files.</p>
+            <h2>Preview</h2>
+            <p class="section-note">Preview the most useful saved output without leaving the app.</p>
           </div>
         </div>
         <div class="artifact-grid">
@@ -588,6 +552,8 @@ const clientBundle = JSON.stringify({
     // @ts-nocheck
     const parsed = JSON.parse(document.getElementById("workspace-data")?.textContent ?? "{}");
     let detections = parsed.detections ?? [];
+    const rangeStartValue = Number(parsed.rangeStart ?? 0);
+    const rangeSpanValue = Math.max(Number(parsed.rangeSpan ?? 1), 1);
     let current = detections[0] ?? null;
     let decisions = [];
     let reviewFilter = "all";
@@ -615,12 +581,6 @@ const clientBundle = JSON.stringify({
     const reviewListNote = document.querySelector("[data-review-list-note]");
     const reviewCounts = document.querySelector("[data-review-counts]");
     const reviewPosition = document.querySelector("[data-review-position]");
-    const virtualControls = document.querySelector("[data-virtual-controls]");
-    const virtualPlayButton = document.querySelector("[data-virtual-play]");
-    const virtualTime = document.querySelector("[data-virtual-time]");
-    const virtualScrub = document.querySelector("[data-virtual-scrub]");
-    const previousButton = document.querySelector("[data-review-prev]");
-    const nextButton = document.querySelector("[data-review-next]");
     const loopButton = document.querySelector("[data-toggle-loop]");
     const autoplayButton = document.querySelector("[data-toggle-autoplay]");
     const autoAdvanceButton = document.querySelector("[data-toggle-autoadvance]");
@@ -639,8 +599,8 @@ const clientBundle = JSON.stringify({
     const sessionDeleteButtons = Array.from(document.querySelectorAll("[data-session-delete]"));
     const sessionRenameButtons = Array.from(document.querySelectorAll("[data-session-rename]"));
     const sessionOpenNodes = Array.from(document.querySelectorAll("[data-session-open]"));
-    let sourceScrubHandler = null;
     let timelineLayoutFrame = null;
+    let playbackUiFrame = null;
 
     function setTab(index) {
       tabButtons.forEach((button, buttonIndex) => button.classList.toggle("is-active", buttonIndex === index));
@@ -727,59 +687,89 @@ const clientBundle = JSON.stringify({
       });
     }
 
-    function setTimelineNodePosition(node, left, top) {
-      node.style.setProperty("--timeline-left", `${left}px`);
-      node.style.setProperty("--timeline-top", `${top}px`);
-    }
-
     function layoutTimelineMarkers() {
       if (!timelineTrack || !timelineViewport) return;
-      const markerNodes = Array.from(timelineTrack.querySelectorAll("[data-timeline-marker]"));
-      if (!markerNodes.length) return;
-
-      const viewportWidth = timelineViewport.clientWidth;
-      if (!viewportWidth) return;
-
-      const laneTops = [18, 36, 54];
-      const markers = markerNodes.map((node) => {
-        const id = node.getAttribute("data-timeline-marker") ?? "";
-        const item = detections.find((entry) => entry.id === id);
-        const styleLeft = Number.parseFloat(node.style.left || "0");
-        const baseLeft = Number.isFinite(styleLeft) ? (styleLeft / 100) * viewportWidth : 0;
-        return {
-          id,
-          item,
-          node,
-          width: Math.max(node.offsetWidth || 34, 34),
-          baseLeft,
-          targetLeft: baseLeft,
-          targetTop: laneTops[1],
-        };
-      }).filter((entry) => entry.item);
-
-      const lanes = laneTops.map(() => -Infinity);
-      markers
-        .sort((a, b) => a.targetLeft - b.targetLeft)
-        .forEach((entry) => {
-          const gap = entry.width / 2 + 12;
-          let laneIndex = lanes.findIndex((laneEnd) => entry.targetLeft - gap >= laneEnd);
-          if (laneIndex === -1) {
-            laneIndex = lanes.indexOf(Math.min(...lanes));
-          }
-          lanes[laneIndex] = entry.targetLeft + gap;
-          entry.targetTop = laneTops[laneIndex];
-          setTimelineNodePosition(entry.node, entry.targetLeft, entry.targetTop);
-        });
-
-      markers.forEach((entry) => {
-        entry.node.hidden = false;
-        entry.node.classList.remove("is-hidden", "is-expanded", "is-clustered");
-        setTimelineNodePosition(entry.node, entry.targetLeft, entry.targetTop);
+      const pips = Array.from(timelineTrack.querySelectorAll("[data-timeline-marker]"));
+      pips.forEach((pip) => {
+        const id = pip.getAttribute("data-timeline-marker") ?? "";
+        const decision = decisionLabelFor(id);
+        pip.classList.toggle("is-kept", decision === "keep");
+        pip.classList.toggle("is-rejected", decision === "reject");
+        pip.classList.toggle("is-unsure", decision === "unsure");
+        pip.classList.toggle("is-current", id === current?.id);
       });
-      timelineTrack.style.width = "100%";
-      if (timelineViewport.scrollLeft > 0) {
-        timelineViewport.scrollLeft = 0;
+    }
+
+    const timelinePlayhead = document.querySelector("[data-timeline-playhead]");
+    const timelineTooltip = document.querySelector("[data-timeline-tooltip]");
+
+    function updateTimelinePlayhead() {
+      if (!timelinePlayhead || !reviewVideo) return;
+      const pos = ((reviewVideo.currentTime - rangeStartValue) / rangeSpanValue) * 100;
+      const clamped = Math.min(100, Math.max(0, pos));
+      timelinePlayhead.style.left = clamped + "%";
+    }
+
+    function cancelPlaybackUiLoop() {
+      if (playbackUiFrame == null) return;
+      window.cancelAnimationFrame(playbackUiFrame);
+      playbackUiFrame = null;
+    }
+
+    function syncPlaybackUi() {
+      updateTimelinePlayhead();
+    }
+
+    function tickPlaybackUi() {
+      playbackUiFrame = null;
+      syncPlaybackUi();
+      if (!reviewVideo || reviewVideo.paused || reviewVideo.ended) return;
+      playbackUiFrame = window.requestAnimationFrame(tickPlaybackUi);
+    }
+
+    function startPlaybackUiLoop() {
+      cancelPlaybackUiLoop();
+      if (!reviewVideo || reviewVideo.paused || reviewVideo.ended) {
+        syncPlaybackUi();
+        return;
       }
+      playbackUiFrame = window.requestAnimationFrame(tickPlaybackUi);
+    }
+
+    if (timelineTrack) {
+      timelineTrack.addEventListener("mouseover", (event) => {
+        const pip = event.target.closest("[data-timeline-marker]");
+        if (!pip || !timelineTooltip) return;
+        const idx = pip.getAttribute("data-pip-index") ?? "";
+        const time = pip.getAttribute("data-pip-time") ?? "";
+        const id = pip.getAttribute("data-timeline-marker") ?? "";
+        const decision = decisionLabelFor(id);
+        const tag = decision !== "pending" ? decision : "";
+        timelineTooltip.textContent = "#" + idx + "  " + time + (tag ? "  " + tag : "");
+        timelineTooltip.hidden = false;
+        const left = pip.style.left;
+        timelineTooltip.style.left = left;
+      });
+      timelineTrack.addEventListener("mouseout", (event) => {
+        const pip = event.target.closest("[data-timeline-marker]");
+        if (pip && timelineTooltip) timelineTooltip.hidden = true;
+      });
+    }
+
+    if (reviewVideo) {
+      reviewVideo.addEventListener("timeupdate", syncPlaybackUi);
+      reviewVideo.addEventListener("play", startPlaybackUiLoop);
+      reviewVideo.addEventListener("pause", () => {
+        cancelPlaybackUiLoop();
+        syncPlaybackUi();
+      });
+      reviewVideo.addEventListener("ended", () => {
+        cancelPlaybackUiLoop();
+        syncPlaybackUi();
+      });
+      reviewVideo.addEventListener("seeking", syncPlaybackUi);
+      reviewVideo.addEventListener("seeked", syncPlaybackUi);
+      reviewVideo.addEventListener("loadedmetadata", syncPlaybackUi);
     }
 
     function renderDetectionTable() {
@@ -800,22 +790,8 @@ const clientBundle = JSON.stringify({
     function updateReviewModeCopy() {
       if (reviewListTitle) reviewListTitle.textContent = "Attempts";
       if (reviewListNote) {
-        reviewListNote.textContent = "Select an attempt and record a decision.";
+        reviewListNote.textContent = "Choose an attempt, review it, then save your decision.";
       }
-    }
-
-    function updateVirtualTime() {
-      if (!virtualTime || !reviewVideo || !current) return;
-      const start = reviewStartFor(current);
-      const end = reviewEndFor(current);
-      const relative = Math.max(0, reviewVideo.currentTime - start);
-      const duration = Math.max(0.01, end - start);
-      virtualTime.textContent = `${formatSeconds(relative)} / ${formatSeconds(duration)}`;
-      if (virtualScrub) {
-        virtualScrub.max = String(duration);
-        virtualScrub.value = String(Math.min(duration, relative));
-      }
-      if (virtualPlayButton) virtualPlayButton.textContent = reviewVideo.paused ? "Play" : "Pause";
     }
 
     function playCurrentSegment() {
@@ -840,6 +816,48 @@ const clientBundle = JSON.stringify({
       return null;
     }
 
+    function selectAdjacentDetection(direction) {
+      const candidate = nextDetection(direction, false);
+      if (candidate) {
+        selectDetection(candidate.id, { autoplay: autoPlayEnabled });
+      }
+    }
+
+    function pendingDetections() {
+      return detections.filter((item) => decisionLabelFor(item.id) === "pending");
+    }
+
+    function nextPendingDetectionFrom(fromId) {
+      if (detections.length === 0) return null;
+      const pending = pendingDetections();
+      if (!pending.length) return null;
+      const startIndex = Math.max(0, detections.findIndex((item) => item.id === fromId));
+      for (let step = 1; step <= detections.length; step += 1) {
+        const candidate = detections[(startIndex + step) % detections.length];
+        if (decisionLabelFor(candidate.id) === "pending") {
+          return candidate;
+        }
+      }
+      return pending[0] ?? null;
+    }
+
+    function moveReviewForwardAfterDecision(savedDetectionId, label) {
+      const pending = pendingDetections();
+      if (!pending.length) {
+        decisionStatus && (decisionStatus.textContent = `Saved ${label} for ${savedDetectionId}. Review complete — opening Exports.`);
+        setTab(2);
+        return;
+      }
+      const nextPending = nextPendingDetectionFrom(savedDetectionId);
+      if (!nextPending) return;
+      if (reviewFilterSelect && !["all", "pending"].includes(reviewFilter)) {
+        reviewFilter = "pending";
+        reviewFilterSelect.value = "pending";
+        applyQueueFilter();
+      }
+      selectDetection(nextPending.id, { autoplay: autoPlayEnabled });
+    }
+
     function applyQueueFilter() {
       rows.forEach((row) => {
         const id = row.getAttribute("data-focus-detection") ?? "";
@@ -861,9 +879,7 @@ const clientBundle = JSON.stringify({
       }
       const start = reviewStartFor(current);
       const end = reviewEndFor(current);
-      reviewVideo.controls = false;
-      virtualControls && (virtualControls.hidden = false);
-      virtualScrub && (virtualScrub.hidden = false);
+      reviewVideo.controls = true;
       let sourceSrc = proxySrc;
       let waitingForProxy = false;
       if (parsed.session?.status === "ready_proxy_pending") {
@@ -876,16 +892,14 @@ const clientBundle = JSON.stringify({
       }
 
       if (waitingForProxy) {
+        cancelPlaybackUiLoop();
         reviewVideo.pause();
         reviewVideo.removeAttribute("src");
         reviewVideo.load();
         if (reviewPlaceholder) {
           reviewPlaceholder.hidden = false;
-          reviewPlaceholder.textContent = "The review video is still being prepared for this source format. Playback will become available automatically.";
+          reviewPlaceholder.textContent = "The review video for this file is still being prepared. Playback will appear automatically.";
         }
-        if (virtualPlayButton) virtualPlayButton.textContent = "Preparing video";
-        if (virtualScrub) virtualScrub.value = "0";
-        updateVirtualTime();
         return;
       }
 
@@ -895,7 +909,7 @@ const clientBundle = JSON.stringify({
         reviewVideo.dataset.sourceSrc = sourceSrc;
         reviewVideo.addEventListener("loadedmetadata", () => {
           reviewVideo.currentTime = start;
-          updateVirtualTime();
+          syncPlaybackUi();
           if (autoPlayEnabled) void playCurrentSegment();
         }, { once: true });
       } else {
@@ -918,11 +932,11 @@ const clientBundle = JSON.stringify({
             reviewVideo.currentTime = start;
           }
         }
-        updateVirtualTime();
+        syncPlaybackUi();
       };
       reviewVideo.addEventListener("timeupdate", sourceLoopHandler);
       updateReviewModeCopy();
-      updateVirtualTime();
+      startPlaybackUiLoop();
     }
 
     function selectDetection(id, options = {}) {
@@ -940,6 +954,7 @@ const clientBundle = JSON.stringify({
       rows.forEach((row) => row.classList.toggle("is-current", row.getAttribute("data-focus-detection") === id));
       scheduleTimelineLayout();
       syncVideoSource();
+      updateMediaSessionMetadata();
       updateReviewCounts();
       const currentDecision = decisionFor(current.id);
       if (currentDecision) {
@@ -947,8 +962,8 @@ const clientBundle = JSON.stringify({
         decisionDetailLabel && (decisionDetailLabel.textContent = `Decision ${currentDecision.label}`);
         if (decisionNotes) decisionNotes.value = currentDecision.notes ?? "";
       } else {
-        decisionStatus && (decisionStatus.textContent = "No decision recorded for this attempt.");
-        decisionDetailLabel && (decisionDetailLabel.textContent = "Decision pending");
+        decisionStatus && (decisionStatus.textContent = "No decision saved for this attempt.");
+        decisionDetailLabel && (decisionDetailLabel.textContent = "No decision yet");
         if (decisionNotes) decisionNotes.value = "";
       }
       if (options.autoplay && autoPlayEnabled) {
@@ -1012,7 +1027,7 @@ const clientBundle = JSON.stringify({
     function renderDecisions(decisions) {
       if (!decisionList) return;
       if (!decisions.length) {
-        decisionList.innerHTML = "<article><strong>No saved decisions</strong><p>Use Review to mark attempts as Keep, Reject, or Unsure.</p></article>";
+        decisionList.innerHTML = "<article><strong>No decisions yet</strong><p>Use Review to mark attempts as Keep, Reject, or Unsure.</p></article>";
         return;
       }
       decisionList.innerHTML = decisions.slice(0, 8).map((entry) => `
@@ -1021,7 +1036,7 @@ const clientBundle = JSON.stringify({
           <div class="session-listing__meta">
             <span>${entry.updatedAt}</span>
           </div>
-          <p>${entry.notes || "No note"}</p>
+          <p>${entry.notes || "No note added."}</p>
         </article>
       `).join("");
     }
@@ -1067,8 +1082,8 @@ const clientBundle = JSON.stringify({
       pickedVideoFile = pickedFileInput?.files?.[0] ?? null;
       if (pickedFileLabel) {
         pickedFileLabel.textContent = pickedVideoFile
-          ? `${pickedVideoFile.name} selected. It will be copied into the local runtime on submit.`
-          : "No picked file. Manual path stays available.";
+          ? `${pickedVideoFile.name} selected. It will be copied into the app workspace when you start the run.`
+          : "No file selected. You can still paste a path manually.";
       }
       if (input) {
         input.value = pickedVideoFile
@@ -1080,22 +1095,6 @@ const clientBundle = JSON.stringify({
       sessionNameAutoFilled = true;
     });
 
-    virtualPlayButton?.addEventListener("click", async () => {
-      if (reviewVideo.paused) {
-        await playCurrentSegment();
-      } else {
-        reviewVideo.pause();
-      }
-      updateVirtualTime();
-    });
-    previousButton?.addEventListener("click", () => {
-      const previous = nextDetection(-1, false);
-      if (previous) selectDetection(previous.id, { autoplay: autoPlayEnabled });
-    });
-    nextButton?.addEventListener("click", () => {
-      const next = nextDetection(1, false);
-      if (next) selectDetection(next.id, { autoplay: autoPlayEnabled });
-    });
     loopButton?.addEventListener("click", () => {
       loopEnabled = !loopEnabled;
       updateToggleButtons();
@@ -1109,17 +1108,30 @@ const clientBundle = JSON.stringify({
       updateToggleButtons();
     });
 
-    sourceScrubHandler = (event) => {
-      if (!reviewVideo || !current) return;
-      const start = reviewStartFor(current);
-      reviewVideo.currentTime = start + Number(event.target?.value ?? 0);
-      updateVirtualTime();
-    };
-    virtualScrub?.addEventListener("input", sourceScrubHandler);
-
     const initialTab = Number(parsed.requestedTab ?? "0");
     if (!Number.isNaN(initialTab) && initialTab >= 0) {
       setTab(initialTab);
+    }
+
+    function installMediaSessionHandlers() {
+      if (!("mediaSession" in navigator)) return;
+      try {
+        navigator.mediaSession.setActionHandler("play", () => { void playCurrentSegment(); });
+        navigator.mediaSession.setActionHandler("pause", () => { reviewVideo?.pause(); });
+        navigator.mediaSession.setActionHandler("previoustrack", () => { selectAdjacentDetection(-1); });
+        navigator.mediaSession.setActionHandler("nexttrack", () => { selectAdjacentDetection(1); });
+      } catch {}
+    }
+
+    function updateMediaSessionMetadata() {
+      if (!("mediaSession" in navigator) || !current) return;
+      try {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: `Attempt ${current.index}`,
+          artist: parsed.session?.session_name ?? parsed.session?.title ?? "DiveSensei",
+          album: "DiveSensei Review",
+        });
+      } catch {}
     }
 
     async function refreshManifest() {
@@ -1152,8 +1164,8 @@ const clientBundle = JSON.stringify({
         const response = await fetch(`/api/analysis?job=${encodeURIComponent(jobId)}`);
         const payload = await readJsonResponse(response);
         if (payload?._invalidJson) {
-          status && (status.textContent = payload.error ?? "Could not read analysis status.");
-          reviewProgress && (reviewProgress.textContent = payload.error ?? "Could not read analysis status.");
+          status && (status.textContent = payload.error ?? "Could not read the run status.");
+          reviewProgress && (reviewProgress.textContent = payload.error ?? "Could not read the run status.");
           return;
         }
         const headline = payload.phaseLabel ?? payload.phase ?? payload.status;
@@ -1178,7 +1190,7 @@ const clientBundle = JSON.stringify({
         if (payload.status === "completed" || payload.status === "failed") {
           if (payload.status === "completed") {
             await refreshManifest();
-            reviewProgress && (reviewProgress.textContent = "Review video is ready. Export clips after review if needed.");
+            reviewProgress && (reviewProgress.textContent = "Review video is ready. Finish your review, then export the clips you want.");
           }
           return;
         }
@@ -1195,19 +1207,19 @@ const clientBundle = JSON.stringify({
         while (parsed.session?.status === "ready_proxy_pending") {
           await new Promise((resolve) => setTimeout(resolve, 3000));
           await refreshManifest();
-          reviewProgress && (reviewProgress.textContent = "The review video is still being prepared. Playback will become available automatically.");
+          reviewProgress && (reviewProgress.textContent = "The review video is still being prepared. Playback will appear automatically.");
         }
-        reviewProgress && (reviewProgress.textContent = "Review video is ready. Export clips after review if needed.");
+        reviewProgress && (reviewProgress.textContent = "Review video is ready. Finish your review, then export the clips you want.");
       };
       void passivePoll();
     }
 
     form?.addEventListener("submit", async (event) => {
       event.preventDefault();
-      status && (status.textContent = "Starting analysis...");
+      status && (status.textContent = "Starting run...");
       let videoPath = input?.value ?? "";
       if (pickedVideoFile) {
-        status && (status.textContent = `Copying ${pickedVideoFile.name} into the local runtime...`);
+        status && (status.textContent = `Copying ${pickedVideoFile.name} into the workspace...`);
         const uploadBytes = await pickedVideoFile.arrayBuffer();
         const importResponse = await fetch("/api/import-video", {
           method: "POST",
@@ -1241,7 +1253,7 @@ const clientBundle = JSON.stringify({
       });
       const payload = await readJsonResponse(response);
       if (!response.ok) {
-        status && (status.textContent = payload.error ?? "Could not start analysis.");
+        status && (status.textContent = payload.error ?? "Could not start the run.");
         return;
       }
       await pollJob(payload.id);
@@ -1276,14 +1288,14 @@ const clientBundle = JSON.stringify({
         event.stopPropagation();
         const sessionId = button.getAttribute("data-session-delete");
         if (!sessionId) return;
-        const confirmed = window.confirm("Delete this session and remove its generated files? The original video will not be deleted.");
+        const confirmed = window.confirm("Delete this run and remove its generated files? The original video will not be deleted.");
         if (!confirmed) return;
         const row = button.closest(".session-listing");
         const rowButtons = Array.from(row?.querySelectorAll("button") ?? []);
         rowButtons.forEach((node) => { node.disabled = true; });
         const originalLabel = button.textContent;
         button.textContent = "Deleting...";
-        status && (status.textContent = "Deleting session...");
+        status && (status.textContent = "Deleting run...");
         const response = await fetch("/api/catalog", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1293,7 +1305,7 @@ const clientBundle = JSON.stringify({
         if (!response.ok) {
           rowButtons.forEach((node) => { node.disabled = false; });
           button.textContent = originalLabel;
-          status && (status.textContent = payload.error ?? "Could not delete the session.");
+          status && (status.textContent = payload.error ?? "Could not delete the run.");
           return;
         }
         const deletingCurrentSession = parsed.session?.id === sessionId || parsed.requestedSession === sessionId;
@@ -1301,7 +1313,7 @@ const clientBundle = JSON.stringify({
         if (row?.isConnected) {
           row.remove();
         }
-        status && (status.textContent = payload.deleted === false ? "Session was already removed." : "Session deleted.");
+        status && (status.textContent = payload.deleted === false ? "Run was already removed." : "Run deleted.");
         if (!deletingCurrentSession) {
           return;
         }
@@ -1332,7 +1344,7 @@ const clientBundle = JSON.stringify({
         });
         const payload = await readJsonResponse(response);
         if (!response.ok) {
-          status && (status.textContent = payload.error ?? "Could not rename the session.");
+          status && (status.textContent = payload.error ?? "Could not rename the run.");
           return;
         }
         const nextUrl = new URL(window.location.href);
@@ -1349,29 +1361,25 @@ const clientBundle = JSON.stringify({
 
     async function saveDecision(label) {
       if (!parsed.session?.id || !current) return;
+      const savedDetectionId = current.id;
       const response = await fetch("/api/review", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           analysisRunId: parsed.session.id,
-          detectionId: current.id,
+          detectionId: savedDetectionId,
           label,
           notes: decisionNotes?.value ?? "",
         }),
       });
       const payload = await readJsonResponse(response);
       if (!response.ok) {
-        decisionStatus && (decisionStatus.textContent = payload.error ?? "Could not save the decision.");
+        decisionStatus && (decisionStatus.textContent = payload.error ?? "Could not save your decision.");
         return;
       }
       decisionStatus && (decisionStatus.textContent = `Saved ${payload.decision.label} for ${payload.decision.detectionId}.`);
       await refreshDecisions();
-      if (autoAdvanceEnabled) {
-        const next = nextDetection(1, true) ?? nextDetection(1, false);
-        if (next && next.id !== current?.id) {
-          selectDetection(next.id, { autoplay: autoPlayEnabled });
-        }
-      }
+      moveReviewForwardAfterDecision(savedDetectionId, payload.decision.label);
     }
 
     document.querySelectorAll("[data-decision]").forEach((button) => {
@@ -1384,7 +1392,7 @@ const clientBundle = JSON.stringify({
       exportedPaths = paths ?? [];
       if (!exportList) return;
       if (!exportedPaths.length) {
-        exportList.innerHTML = "<article><strong>No exports yet.</strong><span>Use Export kept clips after review.</span></article>";
+        exportList.innerHTML = "<article><strong>No exports yet.</strong><span>Finish your review, then export the clips you want to keep.</span></article>";
         return;
       }
       exportList.innerHTML = exportedPaths.map((item) => `
@@ -1401,17 +1409,17 @@ const clientBundle = JSON.stringify({
         const response = await fetch(`/api/export?job=${encodeURIComponent(jobId)}`);
         const payload = await readJsonResponse(response);
         if (payload?._invalidJson) {
-          exportStatus && (exportStatus.textContent = payload.error ?? "Could not read export status.");
+          exportStatus && (exportStatus.textContent = payload.error ?? "Could not read the export status.");
           return;
         }
         const detail = payload.progressDetail ? ` - ${payload.progressDetail}` : "";
-        exportStatus && (exportStatus.textContent = `Export ${payload.id}: ${payload.phaseLabel}${detail}`);
+        exportStatus && (exportStatus.textContent = `Export job ${payload.id}: ${payload.phaseLabel}${detail}`);
         if (payload.status === "completed") {
           renderExportList(payload.exportedPaths ?? []);
           return;
         }
         if (payload.status === "failed") {
-          exportStatus && (exportStatus.textContent = payload.error ?? "Export failed.");
+          exportStatus && (exportStatus.textContent = payload.error ?? "The export failed.");
           return;
         }
         await new Promise((resolve) => setTimeout(resolve, 1200));
@@ -1420,7 +1428,7 @@ const clientBundle = JSON.stringify({
 
     exportButton?.addEventListener("click", async () => {
       if (!parsed.session?.id) return;
-      exportStatus && (exportStatus.textContent = "Starting export...");
+      exportStatus && (exportStatus.textContent = "Starting export job...");
       const response = await fetch("/api/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1428,7 +1436,7 @@ const clientBundle = JSON.stringify({
       });
       const payload = await readJsonResponse(response);
       if (!response.ok) {
-        exportStatus && (exportStatus.textContent = payload.error ?? "Could not start export.");
+        exportStatus && (exportStatus.textContent = payload.error ?? "Could not start the export.");
         return;
       }
       setTab(2);
@@ -1440,11 +1448,15 @@ const clientBundle = JSON.stringify({
       if (tagName === "input" || tagName === "textarea" || tagName === "select") return;
       if (event.key === " ") {
         event.preventDefault();
-        virtualPlayButton?.click();
+        if (reviewVideo?.paused) {
+          void playCurrentSegment();
+        } else {
+          reviewVideo?.pause();
+        }
       } else if (event.key === "ArrowRight") {
-        nextButton?.click();
+        selectAdjacentDetection(1);
       } else if (event.key === "ArrowLeft") {
-        previousButton?.click();
+        selectAdjacentDetection(-1);
       } else if (event.key.toLowerCase() === "k") {
         void saveDecision("keep");
       } else if (event.key.toLowerCase() === "r") {
@@ -1457,6 +1469,7 @@ const clientBundle = JSON.stringify({
     updateReviewModeCopy();
     updateToggleButtons();
     renderExportList([]);
+    installMediaSessionHandlers();
     syncVideoSource();
     renderDetectionTable();
     if (current) selectDetection(current.id, { autoplay: autoPlayEnabled });

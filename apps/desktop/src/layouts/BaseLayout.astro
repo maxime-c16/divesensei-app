@@ -1,5 +1,8 @@
 ---
 import "@/styles/global.css";
+import appTile from "@/assets/divesensei-app-tile.svg";
+import lockupDark from "@/assets/divesensei-lockup-dark.svg";
+import markMono from "@/assets/divesensei-mark-mono.svg";
 
 interface Props {
   title: string;
@@ -18,7 +21,21 @@ const {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
+    <meta name="theme-color" content="#08131d" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={appTile.src} />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={appTile.src} />
     <title>{title}</title>
+    <link rel="icon" type="image/svg+xml" href={markMono.src} />
+    <link rel="shortcut icon" href={markMono.src} />
+    <link rel="mask-icon" href={markMono.src} color="#7fdaff" />
+    <link rel="apple-touch-icon" href={appTile.src} />
+    <link rel="image_src" href={lockupDark.src} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

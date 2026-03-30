@@ -33,16 +33,25 @@
     "productName": "DiveSensei",
     "asar": false,
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "build"
     },
+    "icon": "build/icon.png",
     "files": [
       "dist/**/*",
       "electron/**/*",
       "package.json",
       "node_modules/**/*"
     ],
+    "extraResources": [
+      {
+        "from": "build/icons/256x256.png",
+        "to": "build/icons/256x256.png"
+      }
+    ],
     "mac": {
       "category": "public.app-category.sports",
+      "icon": "build/icon.png",
       "target": [
         {
           "target": "dmg",
@@ -62,6 +71,12 @@
     },
     "dmg": {
       "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "linux": {
+      "icon": "build/icons"
+    },
+    "win": {
+      "icon": "build/icon.ico"
     }
   }
 }
