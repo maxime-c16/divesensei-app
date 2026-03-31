@@ -116,7 +116,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 60px;
+  height: 84px;
   border-bottom: 1px solid var(--line);
   margin-bottom: 16px;
 }
@@ -129,7 +129,8 @@ button {
 
 .brand-lockup__image {
   display: block;
-  height: 44px;
+  height: 72px;
+  min-width: 200px;
   width: auto;
 }
 
@@ -146,11 +147,12 @@ button {
   border: 0;
   border-bottom: 2px solid transparent;
   border-radius: 0;
-  padding: 0 16px;
+  padding: 0 22px;
   background: transparent;
   color: var(--muted);
   font-family: var(--sans);
-  font-size: 13px;
+  font-size: 15px;
+  letter-spacing: 0.01em;
   font-weight: 500;
   white-space: nowrap;
   transition: color 120ms ease, border-color 120ms ease;
@@ -183,7 +185,7 @@ button {
 }
 
 .library-grid {
-  grid-template-columns: 1.4fr 0.6fr;
+  grid-template-columns: 1.2fr 0.8fr;
 }
 
 .library-grid > *,
@@ -210,7 +212,7 @@ button {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--panel);
-  padding: 16px;
+  padding: 20px;
 }
 
 .section-card__header {
@@ -218,13 +220,22 @@ button {
   justify-content: space-between;
   gap: 12px;
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
-.section-card__header h2,
+.section-card__header h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
 .section-card__header h3 {
   margin: 0;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   line-height: 1.3;
 }
@@ -232,14 +243,14 @@ button {
 .section-note {
   margin: 4px 0 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 /* ── Counters (replaces section-meta pills) ── */
 
 .counter {
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -263,6 +274,10 @@ button {
 .data-list {
   display: grid;
   gap: 12px;
+}
+
+.action-list {
+  margin-top: 16px;
 }
 
 .analysis-launcher__grid {
@@ -429,7 +444,7 @@ button {
 }
 
 .session-summary__hero strong {
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.3;
   color: var(--text);
 }
@@ -466,13 +481,13 @@ button {
 .session-summary__grid dt {
   margin: 0 0 2px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .session-summary__grid dd {
   margin: 0;
   color: var(--text);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.4;
 }
 
@@ -486,7 +501,7 @@ button {
   display: block;
   margin: 0 0 4px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .session-summary__path-block code {
@@ -494,7 +509,7 @@ button {
   overflow-wrap: anywhere;
   color: var(--text);
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.4;
 }
 
@@ -507,7 +522,7 @@ button {
 
 .session-summary__meta-row span {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .session-summary--empty {
@@ -580,7 +595,7 @@ button {
 .session-listing__summary strong {
   display: block;
   min-width: 0;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   line-height: 1.3;
   overflow-wrap: anywhere;
@@ -588,7 +603,7 @@ button {
 
 .session-listing__summary small {
   display: block;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.4;
   color: var(--muted);
   overflow-wrap: anywhere;
@@ -627,7 +642,7 @@ button {
   flex-wrap: wrap;
   gap: 8px;
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 
@@ -985,7 +1000,7 @@ tbody tr.is-current {
 /* ── Review layout (viewport-fit) ── */
 
 .panel--review {
-  height: calc(100vh - 76px);
+  height: calc(100vh - 132px);
   overflow: hidden;
 }
 
@@ -1232,6 +1247,119 @@ pre {
   margin-bottom: 8px;
 }
 
+.export-actions .action-link--primary {
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* ── Export sub-sections ── */
+
+.export-section {
+  margin-top: 16px;
+}
+
+.export-section__title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Export cards ── */
+
+.export-card {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.export-card__thumb {
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #02070b;
+}
+
+.export-card__thumb video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.export-card__time {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.export-card__path-wrap {
+  display: block;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.export-card__path {
+  display: inline-block;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  transition: transform 1.5s ease-in-out;
+  transform: translateX(0);
+}
+
+.export-card__path-wrap:hover .export-card__path {
+  transform: translateX(calc(var(--wrap-width, 200px) - 100%));
+}
+
+/* ── Export progress grid ── */
+
+.export-progress-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--line);
+}
+
+.export-progress-stat {
+  background: var(--panel);
+  padding: 14px 12px;
+  text-align: center;
+}
+
+.export-progress-stat__value {
+  display: block;
+  font-family: var(--display);
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.export-progress-stat__label {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Exports grid override ── */
+
+.exports-grid {
+  grid-template-columns: 1.1fr 0.9fr;
+}
+
 /* ── Backward-compat aliases ── */
 
 .pill {
@@ -1255,7 +1383,7 @@ pre {
 #panel-0.is-active,
 #panel-2.is-active,
 #panel-3.is-active {
-  max-height: calc(100vh - 76px);
+  max-height: calc(100vh - 100px);
   overflow-y: auto;
 }
 
@@ -1355,7 +1483,10 @@ pre {
     margin-bottom: 10px;
   }
 
-  .section-card__header h2,
+  .section-card__header h2 {
+    font-size: 17px;
+  }
+
   .section-card__header h3 {
     font-size: 14px;
   }
@@ -1574,6 +1705,14 @@ pre {
   .detail-bar {
     font-size: 11px;
     gap: 8px;
+  }
+
+  .export-progress-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .export-card {
+    grid-template-columns: 60px minmax(0, 1fr);
   }
 
   [data-review-progress] {

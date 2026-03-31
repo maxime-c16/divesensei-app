@@ -1,7 +1,9 @@
 ---
+import fs from "node:fs";
 import path from "node:path";
 import brandLockupDark from "@/assets/divesensei-lockup-dark.svg";
 import {
+  formatDurationLabel,
   formatSeconds,
   getUiData,
   mediaUrl,
@@ -10,6 +12,7 @@ import {
   sessionIsReviewReady,
   sessionStatusLabel,
 } from "@/lib/ui-data";
+import { exportJobsRoot } from "@/lib/runtime-config";
 
 interface ThemeConfig {
   id: string;
@@ -118,11 +121,6 @@ const hasActiveSession = hasSession && Boolean(session.id);
 const sessionDurationSeconds = Number(session.session_duration_seconds ?? session.timestamp_range.last ?? 0);
 const analysisRuntimeSeconds = Number(session.telemetry.total_runtime_seconds ?? 0);
 const sourceVideoLabel = session.source_video_path ? path.basename(session.source_video_path) : "No video selected";
-const sourceAvailabilityLabel = session.source_availability === "missing"
-  ? "Source missing"
-  : session.source_availability === "relink-required"
-    ? "Relink required"
-    : "Source available";
 const topAttemptSummary = highest
   ? `${formatSeconds(highest.timestamp_seconds)} · ${highest.confidence} confidence`
   : "Analysis not run yet";
@@ -133,6 +131,28 @@ const nextActionLabel = !hasActiveSession
     : sessionReadyNow
       ? "Open Review, confirm the attempts you want, then export the clips you keep."
       : "Wait for the run to finish, then open Review.";
+const recentSessions = library.sessions.slice(0, 5).map(item => ({
+  id: item.id,
+  session_name: item.session_name ?? item.title,
+  title: item.title,
+  candidate_count: item.candidate_count,
+  extracted_count: item.extracted_count,
+  updated_at: item.updated_at,
+}));
+const initialExportedPaths: string[] = (() => {
+  if (!session.id) return [];
+  try {
+    if (!fs.existsSync(exportJobsRoot)) return [];
+    const files = fs.readdirSync(exportJobsRoot).filter(f => f.endsWith(".json")).sort().reverse();
+    for (const file of files) {
+      const job = JSON.parse(fs.readFileSync(path.join(exportJobsRoot, file), "utf-8"));
+      if (job.analysisRunId === session.id && job.status === "completed" && Array.isArray(job.exportedPaths) && job.exportedPaths.length > 0) {
+        return job.exportedPaths;
+      }
+    }
+  } catch {}
+  return [];
+})();
 const clientBundle = JSON.stringify({
   hasSession,
   session,
@@ -145,6 +165,8 @@ const clientBundle = JSON.stringify({
   requestedTab,
   requestedSession,
   requestedJob,
+  recentSessions,
+  initialExportedPaths,
 });
 ---
 
@@ -251,7 +273,7 @@ const clientBundle = JSON.stringify({
                 <div class="session-listing__stats">
                   <span>{item.candidate_count} attempts</span>
                   <span>{item.extracted_count} exports</span>
-                  <span>{formatSeconds(item.timestamp_range.last)}</span>
+                  <span>Duration {formatDurationLabel(item.timestamp_range.last)}</span>
                 </div>
               </div>
               <div class="session-listing__actions">
@@ -290,7 +312,7 @@ const clientBundle = JSON.stringify({
                 </div>
                 <div>
                   <dt>Video length</dt>
-                  <dd>{formatSeconds(sessionDurationSeconds)}</dd>
+                  <dd>{formatDurationLabel(sessionDurationSeconds)}</dd>
                 </div>
                 <div>
                   <dt>Analysis time</dt>
@@ -316,10 +338,6 @@ const clientBundle = JSON.stringify({
               <div class="session-summary__path-block">
                 <span>Video path</span>
                 <code>{session.source_video_path}</code>
-              </div>
-              <div class="session-summary__meta-row">
-                <span>{sourceAvailabilityLabel}</span>
-                <span>Output {path.basename(session.output_dir)}</span>
               </div>
             </div>
             <div class="action-list">
@@ -478,7 +496,7 @@ const clientBundle = JSON.stringify({
         <div class="section-card__header">
           <div>
             <h2>Exports</h2>
-            <p class="section-note">Export clips from the attempts you decided to keep.</p>
+            <p class="section-note">Clips you marked as Keep will appear here. Export them when ready.</p>
           </div>
           <span class="counter">{session.extracted_count} exports</span>
         </div>
@@ -486,26 +504,47 @@ const clientBundle = JSON.stringify({
           <button class="action-link action-link--primary" type="button" data-export-kept>Export kept clips</button>
         </div>
         <p class="analysis-launcher__status" data-export-status>Keep the attempts you want, then export their clips.</p>
-        <div class="artifact-grid" data-export-list></div>
+        <div class="export-section" data-export-pending-section>
+          <h3 class="export-section__title">Ready to export</h3>
+          <div class="artifact-grid" data-export-pending-list></div>
+        </div>
+        <div class="export-section" data-export-done-section>
+          <h3 class="export-section__title">Exported clips</h3>
+          <div class="artifact-grid" data-export-list></div>
+        </div>
       </article>
       <article class="section-card">
         <div class="section-card__header">
           <div>
-            <h2>Export summary</h2>
-            <p class="section-note">Your review decisions determine what is ready to export.</p>
+            <h2>Export progress</h2>
+            <p class="section-note">Overview of your review and export status.</p>
           </div>
         </div>
-        <div class="artifact-grid" data-export-summary>
-          <article>
-            <strong>Review progress</strong>
-            <span data-export-summary-counts>No review decisions yet.</span>
-          </article>
-          <article>
-            <strong>Export source</strong>
-            <span>When available, exports are created from the review video.</span>
-          </article>
+        <div class="export-progress-grid" data-export-progress>
+          <div class="export-progress-stat">
+            <span class="export-progress-stat__value" data-progress-kept>0</span>
+            <span class="export-progress-stat__label">Kept</span>
+          </div>
+          <div class="export-progress-stat">
+            <span class="export-progress-stat__value" data-progress-rejected>0</span>
+            <span class="export-progress-stat__label">Rejected</span>
+          </div>
+          <div class="export-progress-stat">
+            <span class="export-progress-stat__value" data-progress-exported>0</span>
+            <span class="export-progress-stat__label">Exported</span>
+          </div>
+          <div class="export-progress-stat">
+            <span class="export-progress-stat__value" data-progress-pending>0</span>
+            <span class="export-progress-stat__label">Pending</span>
+          </div>
         </div>
-        <div class="log-list" data-decision-list></div>
+        <div class="section-card__header" style="margin-top: 20px;">
+          <div>
+            <h2>Recent dives</h2>
+            <p class="section-note">Sessions you opened recently.</p>
+          </div>
+        </div>
+        <div class="artifact-grid" data-recent-sessions></div>
       </article>
     </div>
   </section>
@@ -593,7 +632,12 @@ const clientBundle = JSON.stringify({
     const exportButton = document.querySelector("[data-export-kept]");
     const exportStatus = document.querySelector("[data-export-status]");
     const exportList = document.querySelector("[data-export-list]");
-    const exportSummaryCounts = document.querySelector("[data-export-summary-counts]");
+    const exportPendingList = document.querySelector("[data-export-pending-list]");
+    const progressKept = document.querySelector("[data-progress-kept]");
+    const progressRejected = document.querySelector("[data-progress-rejected]");
+    const progressExported = document.querySelector("[data-progress-exported]");
+    const progressPending = document.querySelector("[data-progress-pending]");
+    const recentSessionsList = document.querySelector("[data-recent-sessions]");
     const sessionTotal = document.querySelector("[data-session-total]");
     const sessionList = document.querySelector(".session-list");
     const sessionDeleteButtons = Array.from(document.querySelectorAll("[data-session-delete]"));
@@ -605,12 +649,16 @@ const clientBundle = JSON.stringify({
     function setTab(index) {
       tabButtons.forEach((button, buttonIndex) => button.classList.toggle("is-active", buttonIndex === index));
       panels.forEach((panel, panelIndex) => panel.classList.toggle("is-active", panelIndex === index));
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", String(index));
+      history.replaceState(null, "", url);
     }
 
     function formatSeconds(value) {
       const minutes = Math.floor(value / 60);
       const seconds = value - minutes * 60;
-      return `${minutes}:${seconds.toFixed(3).padStart(6, "0")}`;
+      if (minutes > 0) return `${minutes}m ${seconds.toFixed(1).padStart(4, "0")}s`;
+      return `${seconds.toFixed(1)}s`;
     }
 
     function reviewStartFor(item) {
@@ -645,9 +693,6 @@ const clientBundle = JSON.stringify({
       if (reviewCounts) {
         reviewCounts.textContent = `${pendingCount} pending • ${keepCount} kept • ${rejectCount} rejected • ${unsureCount} unsure`;
       }
-      if (exportSummaryCounts) {
-        exportSummaryCounts.textContent = `${keepCount} kept • ${rejectCount} rejected • ${unsureCount} unsure • ${pendingCount} pending`;
-      }
       const currentIndex = current ? detections.findIndex((item) => item.id === current.id) + 1 : 0;
       if (reviewPosition) {
         reviewPosition.textContent = `Attempt ${currentIndex} of ${detections.length}`;
@@ -655,6 +700,11 @@ const clientBundle = JSON.stringify({
       if (exportButton) {
         exportButton.disabled = keepCount === 0;
       }
+      if (progressKept) progressKept.textContent = String(keepCount);
+      if (progressRejected) progressRejected.textContent = String(rejectCount);
+      if (progressExported) progressExported.textContent = String(exportedPaths.length);
+      if (progressPending) progressPending.textContent = String(pendingCount);
+      renderExportPendingList();
     }
 
     function updateToggleButtons() {
@@ -1388,19 +1438,71 @@ const clientBundle = JSON.stringify({
       });
     });
 
+    function renderExportPendingList() {
+      if (!exportPendingList) return;
+      const keptItems = detections.filter((item) => decisionLabelFor(item.id) === "keep");
+      const exportedFileNames = new Set(exportedPaths.map((p) => {
+        const name = p.split("/").pop() ?? "";
+        return name.replace(/\.[^.]+$/, "");
+      }));
+      const pending = keptItems.filter((item) => {
+        return !exportedFileNames.has(item.id);
+      });
+      if (!pending.length) {
+        exportPendingList.innerHTML = "<article><span>No clips pending export. Mark attempts as Keep in Review first.</span></article>";
+        return;
+      }
+      exportPendingList.innerHTML = pending.map((item) => `
+        <article class="export-card">
+          <strong>Attempt ${item.index}</strong>
+          <span class="export-card__time">${formatSeconds(item.timestamp_seconds)} · ${item.confidence} confidence</span>
+        </article>
+      `).join("");
+    }
+
     function renderExportList(paths) {
       exportedPaths = paths ?? [];
+      updateReviewCounts();
       if (!exportList) return;
       if (!exportedPaths.length) {
-        exportList.innerHTML = "<article><strong>No exports yet.</strong><span>Finish your review, then export the clips you want to keep.</span></article>";
+        exportList.innerHTML = "<article><span>No exported clips yet.</span></article>";
         return;
       }
       exportList.innerHTML = exportedPaths.map((item) => `
-        <a href="/api/media?path=${encodeURIComponent(item)}" target="_blank">
-          <strong>${item.split("/").pop()}</strong>
-          <span>${item}</span>
+        <a href="/api/media?path=${encodeURIComponent(item)}" target="_blank" class="export-card">
+          <div class="export-card__thumb">
+            <video src="/api/media?path=${encodeURIComponent(item)}" preload="metadata" muted></video>
+          </div>
+          <div>
+            <strong>${item.split("/").pop()}</strong>
+            <span class="export-card__path-wrap"><span class="export-card__path">${item}</span></span>
+          </div>
         </a>
       `).join("");
+      exportList.querySelectorAll(".export-card__path-wrap").forEach((wrap) => {
+        wrap.style.setProperty("--wrap-width", wrap.offsetWidth + "px");
+      });
+    }
+
+    function renderRecentSessions() {
+      if (!recentSessionsList) return;
+      const recent = parsed.recentSessions ?? [];
+      if (!recent.length) {
+        recentSessionsList.innerHTML = "<article><span>No recent sessions.</span></article>";
+        return;
+      }
+      recentSessionsList.innerHTML = recent.map((item) => `
+        <article style="cursor: pointer;" data-focus-recent-session="${item.id}">
+          <strong>${item.session_name ?? item.title}</strong>
+          <span>${item.candidate_count} attempts · ${item.extracted_count} exports</span>
+        </article>
+      `).join("");
+      recentSessionsList.querySelectorAll("[data-focus-recent-session]").forEach((node) => {
+        node.addEventListener("click", () => {
+          const sessionId = node.getAttribute("data-focus-recent-session");
+          if (sessionId) window.location.href = "/?session=" + encodeURIComponent(sessionId);
+        });
+      });
     }
 
     async function pollExportJob(jobId) {
@@ -1468,7 +1570,8 @@ const clientBundle = JSON.stringify({
 
     updateReviewModeCopy();
     updateToggleButtons();
-    renderExportList([]);
+    renderExportList(parsed.initialExportedPaths ?? []);
+    renderRecentSessions();
     installMediaSessionHandlers();
     syncVideoSource();
     renderDetectionTable();

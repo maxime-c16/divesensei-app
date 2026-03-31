@@ -177,7 +177,18 @@ export function getUiData(selectedSessionId?: string): UiDataBundle {
 export function formatSeconds(value: number): string {
   const minutes = Math.floor(value / 60);
   const seconds = value - minutes * 60;
-  return `${minutes}:${seconds.toFixed(3).padStart(6, "0")}`;
+  if (minutes > 0) return `${minutes}m ${seconds.toFixed(1).padStart(4, "0")}s`;
+  return `${seconds.toFixed(1)}s`;
+}
+
+export function formatDurationLabel(value: number): string {
+  if (value <= 0) return "0s";
+  const hours = Math.floor(value / 3600);
+  const minutes = Math.floor((value % 3600) / 60);
+  const seconds = Math.round(value % 60);
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
 }
 
 export function mediaUrl(filePath: string | null | undefined): string {
