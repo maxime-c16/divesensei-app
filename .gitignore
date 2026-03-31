@@ -17,6 +17,8 @@ apps/desktop/node_modules/
 apps/desktop/dist/
 apps/desktop/release/
 apps/desktop/.astro/
+apps/mobile/node_modules/
+apps/mobile/tsconfig.tsbuildinfo
 
 # Runtime outputs
 outputs/

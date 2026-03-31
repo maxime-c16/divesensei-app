@@ -1,3 +1,5 @@
+import type { Plugin } from "@capacitor/core";
+
 export type ISODateString = string;
 export type URLString = string;
 
@@ -402,7 +404,7 @@ export interface ExportsUpdatedEvent {
  * - No native filesystem paths are exposed to the web layer.
  * - JS interacts only through opaque IDs, manifests, lightweight metadata, and playable URLs.
  */
-export interface DiveSenseiMediaPlugin {
+export interface DiveSenseiMediaPlugin extends Plugin {
   pickSourceVideo(input: PickSourceVideoRequest): Promise<PickSourceVideoResponse>;
   getSourceAvailability(input: GetSourceAvailabilityRequest): Promise<GetSourceAvailabilityResponse>;
   repairSource(input: RepairSourceRequest): Promise<RepairSourceResponse>;
