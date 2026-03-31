@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { getSessionExportState } from "@/lib/export-state";
 import { resolveCatalogManifestPaths } from "@/lib/session-catalog";
 import type { DebugLogEntry, LibraryIndex, SessionManifest, UiDataBundle } from "@/types/ui";
 import { outputsRoot, repoRoot } from "@/lib/runtime-config";
@@ -70,10 +71,14 @@ function discoverManifestPaths(root: string): string[] {
 
 function buildLibraryFromManifests(manifests: SessionManifest[]): LibraryIndex {
   const sessions = manifests
-    .map((manifest) => ({
-      ...manifest.session,
-      manifest_path: path.join(manifest.session.output_dir, "ui_session_manifest.json"),
-    }))
+    .map((manifest) => {
+      const exportState = getSessionExportState(manifest.session.output_dir);
+      return {
+        ...manifest.session,
+        extracted_count: exportState.exportedCount,
+        manifest_path: path.join(manifest.session.output_dir, "ui_session_manifest.json"),
+      };
+    })
     .sort((a, b) => fileMtimeMs(b.manifest_path) - fileMtimeMs(a.manifest_path));
 
   return {
@@ -160,7 +165,19 @@ export function getUiData(selectedSessionId?: string): UiDataBundle {
     ? [...catalogManifestPaths, requestedFallbackPath]
     : catalogManifestPaths;
   const discoveredManifests = manifestPaths.map((manifestPath) => readJsonFile<SessionManifest>(manifestPath)).filter((manifest): manifest is SessionManifest => manifest !== null);
-  const manifest = discoveredManifests.length > 0 ? pickPrimaryManifest(discoveredManifests, selectedSessionId) : fallbackManifest;
+  const manifest = discoveredManifests.length > 0
+    ? (() => {
+        const selectedManifest = pickPrimaryManifest(discoveredManifests, selectedSessionId);
+        const exportState = getSessionExportState(selectedManifest.session.output_dir);
+        return {
+          ...selectedManifest,
+          session: {
+            ...selectedManifest.session,
+            extracted_count: exportState.exportedCount,
+          },
+        };
+      })()
+    : fallbackManifest;
   const library = discoveredManifests.length > 0 ? buildLibraryFromManifests(discoveredManifests) : buildEmptyLibrary();
   return {
     library,

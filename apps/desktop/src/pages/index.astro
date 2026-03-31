@@ -1,14 +1,16 @@
 ---
 import DesignWorkspace from "@/components/DesignWorkspace.astro";
+import { getWorkspaceCopy } from "@/lib/copy";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 
+const copy = getWorkspaceCopy();
 const theme = {
   id: "meet",
   name: "DiveSensei",
   route: "/",
   tagline: "Dive review",
   subtitle: "Review attempts quickly, keep the ones you want, then export the clips you need.",
-  tabs: ["Sessions", "Review", "Exports", "Inspect"],
+  tabs: copy.tabs,
 } as const;
 
 Astro.response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate");

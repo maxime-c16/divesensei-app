@@ -1,7 +1,8 @@
 ---
-import fs from "node:fs";
 import path from "node:path";
 import brandLockupDark from "@/assets/divesensei-lockup-dark.svg";
+import { getWorkspaceCopy } from "@/lib/copy";
+import { getSessionExportState } from "@/lib/export-state";
 import {
   formatDurationLabel,
   formatSeconds,
@@ -12,7 +13,6 @@ import {
   sessionIsReviewReady,
   sessionStatusLabel,
 } from "@/lib/ui-data";
-import { exportJobsRoot } from "@/lib/runtime-config";
 
 interface ThemeConfig {
   id: string;
@@ -24,6 +24,7 @@ interface ThemeConfig {
 }
 
 const { theme } = Astro.props as { theme: ThemeConfig };
+const copy = getWorkspaceCopy();
 const requestedSession = Astro.url.searchParams.get("session") ?? undefined;
 const requestedTab = Astro.url.searchParams.get("tab");
 const requestedJob = Astro.url.searchParams.get("job");
@@ -125,12 +126,12 @@ const topAttemptSummary = highest
   ? `${formatSeconds(highest.timestamp_seconds)} · ${highest.confidence} confidence`
   : "Analysis not run yet";
 const nextActionLabel = !hasActiveSession
-  ? "Choose a video, keep the default detector, and start a run."
+  ? copy.sessions.defaultAction
   : detections.length === 0
-    ? "This session is ready, but no attempts have been found yet."
+    ? copy.sessions.noAttemptsFound
     : sessionReadyNow
-      ? "Open Review, confirm the attempts you want, then export the clips you keep."
-      : "Wait for the run to finish, then open Review.";
+      ? copy.sessions.nextActionReady
+      : copy.sessions.nextActionPending;
 const recentSessions = library.sessions.slice(0, 5).map(item => ({
   id: item.id,
   session_name: item.session_name ?? item.title,
@@ -139,21 +140,9 @@ const recentSessions = library.sessions.slice(0, 5).map(item => ({
   extracted_count: item.extracted_count,
   updated_at: item.updated_at,
 }));
-const initialExportedPaths: string[] = (() => {
-  if (!session.id) return [];
-  try {
-    if (!fs.existsSync(exportJobsRoot)) return [];
-    const files = fs.readdirSync(exportJobsRoot).filter(f => f.endsWith(".json")).sort().reverse();
-    for (const file of files) {
-      const job = JSON.parse(fs.readFileSync(path.join(exportJobsRoot, file), "utf-8"));
-      if (job.analysisRunId === session.id && job.status === "completed" && Array.isArray(job.exportedPaths) && job.exportedPaths.length > 0) {
-        return job.exportedPaths;
-      }
-    }
-  } catch {}
-  return [];
-})();
+const initialExportedPaths: string[] = hasActiveSession ? getSessionExportState(session.output_dir).exportedPaths : [];
 const clientBundle = JSON.stringify({
+  copy,
   hasSession,
   session,
   detections,
@@ -194,8 +183,8 @@ const clientBundle = JSON.stringify({
       <article class="section-card">
         <div class="section-card__header">
           <div>
-            <h2>Sessions</h2>
-            <p class="section-note">Start a new run or reopen one you already have.</p>
+            <h2>{copy.sessions.heading}</h2>
+            <p class="section-note">{copy.sessions.subtitle}</p>
           </div>
           <span class="counter" data-session-total>{library.session_count} total</span>
         </div>
@@ -207,13 +196,13 @@ const clientBundle = JSON.stringify({
         <form class="analysis-launcher" data-analysis-form>
           <div class="section-card__header">
             <div>
-              <h3>New run</h3>
-              <p class="section-note">Choose a source, pick a detector, and start a new run.</p>
+              <h3>{copy.sessions.newRunHeading}</h3>
+              <p class="section-note">{copy.sessions.newRunSubtitle}</p>
             </div>
           </div>
           <div class="analysis-launcher__grid">
             <label class="field">
-              <span>Session name</span>
+              <span>{copy.fields.sessionName}</span>
               <input
                 type="text"
                 name="sessionName"
@@ -224,11 +213,11 @@ const clientBundle = JSON.stringify({
               />
             </label>
             <label class="field">
-              <span>Video file</span>
+              <span>{copy.fields.videoFile}</span>
               <div class="analysis-picker">
                 <input type="text" name="videoPath" value="" data-analysis-path autocomplete="off" placeholder="/absolute/path/to/video.mov" />
                 <div class="analysis-picker__controls">
-                  <button type="button" class="action-link analysis-picker__button" data-analysis-pick>Choose file</button>
+                  <button type="button" class="action-link analysis-picker__button" data-analysis-pick>{copy.actions.chooseFile}</button>
                   <span class="analysis-picker__label" data-analysis-file-label>No file selected. You can still paste a path manually.</span>
                 </div>
                 <input
@@ -240,14 +229,14 @@ const clientBundle = JSON.stringify({
               </div>
             </label>
             <label class="field">
-              <span>Session type</span>
+              <span>{copy.fields.sessionType}</span>
               <select name="profile" data-analysis-profile>
                 <option value="long-session" selected>Training session</option>
                 <option value="reviewed">Reviewed run</option>
               </select>
             </label>
             <label class="field">
-              <span>Detection method</span>
+              <span>{copy.fields.detector}</span>
               <select name="detectorId" data-analysis-detector>
                 <option value="audio_v2_pcen_classifier" selected>Standard</option>
                 <option value="audio_v1_heuristic">Legacy audio</option>
@@ -256,9 +245,9 @@ const clientBundle = JSON.stringify({
             </label>
           </div>
           <div class="analysis-launcher__actions launcher-actions">
-            <button type="submit" class="action-link action-link--primary">Analyze video</button>
+            <button type="submit" class="action-link action-link--primary">{copy.actions.startAnalysis}</button>
           </div>
-          <p class="analysis-launcher__status" data-analysis-status>Ready when you are.</p>
+          <p class="analysis-launcher__status" data-analysis-status>{copy.sessions.idleStatus}</p>
         </form>
         <div class="session-list">
           {library.sessions.map((item) => (
@@ -272,14 +261,14 @@ const clientBundle = JSON.stringify({
                 </div>
                 <div class="session-listing__stats">
                   <span>{item.candidate_count} attempts</span>
-                  <span>{item.extracted_count} exports</span>
+                  <span data-session-export-count={item.id}>{item.extracted_count} exports</span>
                   <span>Duration {formatDurationLabel(item.timestamp_range.last)}</span>
                 </div>
               </div>
               <div class="session-listing__actions">
-                <button type="button" class="action-link" data-session-open={item.id}>Open</button>
-                <button type="button" class="action-link" data-session-rename={item.id} data-session-current-name={item.session_name ?? item.title}>Rename</button>
-                <button type="button" class="action-link session-delete" data-session-delete={item.id}>Delete</button>
+                <button type="button" class="action-link" data-session-open={item.id}>{copy.actions.open}</button>
+                <button type="button" class="action-link" data-session-rename={item.id} data-session-current-name={item.session_name ?? item.title}>{copy.actions.rename}</button>
+                <button type="button" class="action-link session-delete" data-session-delete={item.id}>{copy.actions.delete}</button>
               </div>
             </article>
           ))}
@@ -289,8 +278,8 @@ const clientBundle = JSON.stringify({
       <article class="section-card">
         <div class="section-card__header">
           <div>
-            <h2>Current session</h2>
-            <p class="section-note">{hasActiveSession ? sessionDisplayName : "No session selected"}</p>
+            <h2>{copy.sessions.currentSessionHeading}</h2>
+            <p class="section-note">{hasActiveSession ? sessionDisplayName : copy.sessions.noSessionSelected}</p>
           </div>
         </div>
         {hasActiveSession ? (
@@ -324,7 +313,7 @@ const clientBundle = JSON.stringify({
                 </div>
                 <div>
                   <dt>Exports</dt>
-                  <dd>{session.extracted_count}</dd>
+                  <dd data-current-export-count>{session.extracted_count}</dd>
                 </div>
                 <div>
                   <dt>Best candidate</dt>
@@ -341,28 +330,28 @@ const clientBundle = JSON.stringify({
               </div>
             </div>
             <div class="action-list">
-              <button class="action-link" type="button" data-open-tab="1">Open review</button>
-              <button class="action-link" type="button" data-open-tab="3">Open Inspect</button>
+              <button class="action-link" type="button" data-open-tab="1">{copy.actions.openReview}</button>
+              <button class="action-link" type="button" data-open-tab="3">{copy.actions.openDiagnostics}</button>
             </div>
           </>
         ) : (
           <div class="session-summary session-summary--empty">
             <div class="session-summary__hero">
-              <strong>No session selected</strong>
+              <strong>{copy.sessions.noSessionSelected}</strong>
               <span>Ready to start</span>
             </div>
-            <p class="session-summary__note">Start with the form on the left. This panel will fill in once your first run is created.</p>
+            <p class="session-summary__note">{copy.sessions.emptySessionNote}</p>
             <div class="session-summary__empty-grid">
               <article>
-                <strong>1. Choose a video</strong>
+                <strong>1. {copy.sessions.chooseVideoStep}</strong>
                 <p>Choose a file or paste an absolute path.</p>
               </article>
               <article>
-                <strong>2. Start the run</strong>
+                <strong>2. {copy.sessions.startRunStep}</strong>
                 <p>DiveSensei finds likely attempts and prepares them for review.</p>
               </article>
               <article>
-                <strong>3. Review and export</strong>
+                <strong>3. {copy.sessions.reviewExportStep}</strong>
                 <p>Open the review tab, keep the right attempts, then export only those clips.</p>
               </article>
             </div>
@@ -399,10 +388,10 @@ const clientBundle = JSON.stringify({
         </div>
         <div class="review-main__controls">
           <div class="review-decisions">
-            <button class="action-link review-decisions__button review-decisions__button--keep" type="button" data-decision="keep">Keep</button>
-            <button class="action-link review-decisions__button review-decisions__button--reject" type="button" data-decision="reject">Reject</button>
-            <button class="action-link review-decisions__button review-decisions__button--unsure" type="button" data-decision="unsure">Unsure</button>
-            <input type="text" class="review-decisions__note" data-decision-notes placeholder="Note (optional)" />
+            <button class="action-link review-decisions__button review-decisions__button--keep" type="button" data-decision="keep">{copy.actions.keep}</button>
+            <button class="action-link review-decisions__button review-decisions__button--reject" type="button" data-decision="reject">{copy.actions.reject}</button>
+            <button class="action-link review-decisions__button review-decisions__button--unsure" type="button" data-decision="unsure">{copy.actions.unsure}</button>
+            <input type="text" class="review-decisions__note" data-decision-notes placeholder={copy.review.notePlaceholder} />
           </div>
         </div>
         <div class="review-main__timeline">
@@ -442,7 +431,7 @@ const clientBundle = JSON.stringify({
             </div>
           </div>
         </div>
-        <p class="review-main__status" data-decision-status hidden>No decision saved for this attempt.</p>
+        <p class="review-main__status" data-decision-status hidden>{copy.review.noDecisionYet}</p>
         <div class="library-inline-note" data-review-progress hidden>
           Review is available now. Export only the clips you keep.
         </div>
@@ -450,13 +439,13 @@ const clientBundle = JSON.stringify({
 
       <aside class="review-sidebar">
         <div class="review-sidebar__header">
-          <h2 data-review-list-title>Attempts</h2>
+          <h2 data-review-list-title>{copy.review.attemptsHeading}</h2>
           <select class="review-sidebar__filter" data-review-filter>
-            <option value="all" selected>All</option>
-            <option value="pending">Pending</option>
-            <option value="keep">Kept</option>
-            <option value="reject">Rejected</option>
-            <option value="unsure">Unsure</option>
+            <option value="all" selected>{copy.review.allFilter}</option>
+            <option value="pending">{copy.review.pendingFilter}</option>
+            <option value="keep">{copy.review.keptFilter}</option>
+            <option value="reject">{copy.review.rejectedFilter}</option>
+            <option value="unsure">{copy.review.unsureFilter}</option>
           </select>
         </div>
         <div class="review-sidebar__list">
@@ -495,29 +484,29 @@ const clientBundle = JSON.stringify({
       <article class="section-card">
         <div class="section-card__header">
           <div>
-            <h2>Exports</h2>
-            <p class="section-note">Clips you marked as Keep will appear here. Export them when ready.</p>
+            <h2>{copy.exports.heading}</h2>
+            <p class="section-note">{copy.exports.subtitle}</p>
           </div>
-          <span class="counter">{session.extracted_count} exports</span>
+          <span class="counter" data-export-total-count>{session.extracted_count} exports</span>
         </div>
         <div class="analysis-launcher__actions export-actions">
-          <button class="action-link action-link--primary" type="button" data-export-kept>Export kept clips</button>
+          <button class="action-link action-link--primary" type="button" data-export-kept>{copy.actions.exportKeptClips}</button>
         </div>
-        <p class="analysis-launcher__status" data-export-status>Keep the attempts you want, then export their clips.</p>
+        <p class="analysis-launcher__status" data-export-status>{copy.exports.idleStatus}</p>
         <div class="export-section" data-export-pending-section>
-          <h3 class="export-section__title">Ready to export</h3>
+          <h3 class="export-section__title">{copy.exports.readyHeading}</h3>
           <div class="artifact-grid" data-export-pending-list></div>
         </div>
         <div class="export-section" data-export-done-section>
-          <h3 class="export-section__title">Exported clips</h3>
+          <h3 class="export-section__title">{copy.exports.exportedHeading}</h3>
           <div class="artifact-grid" data-export-list></div>
         </div>
       </article>
       <article class="section-card">
         <div class="section-card__header">
           <div>
-            <h2>Export progress</h2>
-            <p class="section-note">Overview of your review and export status.</p>
+            <h2>{copy.exports.progressHeading}</h2>
+            <p class="section-note">{copy.exports.progressSubtitle}</p>
           </div>
         </div>
         <div class="export-progress-grid" data-export-progress>
@@ -540,8 +529,8 @@ const clientBundle = JSON.stringify({
         </div>
         <div class="section-card__header" style="margin-top: 20px;">
           <div>
-            <h2>Recent dives</h2>
-            <p class="section-note">Sessions you opened recently.</p>
+            <h2>{copy.exports.recentSessionsHeading}</h2>
+            <p class="section-note">{copy.exports.recentSessionsSubtitle}</p>
           </div>
         </div>
         <div class="artifact-grid" data-recent-sessions></div>
@@ -554,8 +543,8 @@ const clientBundle = JSON.stringify({
       <article class="section-card">
         <div class="section-card__header">
           <div>
-            <h2>Inspect</h2>
-            <p class="section-note">Saved files and technical output from the current session.</p>
+            <h2>{copy.diagnostics.heading}</h2>
+            <p class="section-note">{copy.diagnostics.subtitle}</p>
           </div>
         </div>
         <div class="artifact-grid">
@@ -570,8 +559,8 @@ const clientBundle = JSON.stringify({
       <article class="section-card">
         <div class="section-card__header">
           <div>
-            <h2>Preview</h2>
-            <p class="section-note">Preview the most useful saved output without leaving the app.</p>
+            <h2>{copy.diagnostics.previewHeading}</h2>
+            <p class="section-note">{copy.diagnostics.previewSubtitle}</p>
           </div>
         </div>
         <div class="artifact-grid">
@@ -590,6 +579,7 @@ const clientBundle = JSON.stringify({
   <script is:inline>
     // @ts-nocheck
     const parsed = JSON.parse(document.getElementById("workspace-data")?.textContent ?? "{}");
+    const uiCopy = parsed.copy ?? {};
     let detections = parsed.detections ?? [];
     const rangeStartValue = Number(parsed.rangeStart ?? 0);
     const rangeSpanValue = Math.max(Number(parsed.rangeSpan ?? 1), 1);
@@ -633,6 +623,8 @@ const clientBundle = JSON.stringify({
     const exportStatus = document.querySelector("[data-export-status]");
     const exportList = document.querySelector("[data-export-list]");
     const exportPendingList = document.querySelector("[data-export-pending-list]");
+    const exportTotalCount = document.querySelector("[data-export-total-count]");
+    const currentExportCount = document.querySelector("[data-current-export-count]");
     const progressKept = document.querySelector("[data-progress-kept]");
     const progressRejected = document.querySelector("[data-progress-rejected]");
     const progressExported = document.querySelector("[data-progress-exported]");
@@ -840,7 +832,7 @@ const clientBundle = JSON.stringify({
     function updateReviewModeCopy() {
       if (reviewListTitle) reviewListTitle.textContent = "Attempts";
       if (reviewListNote) {
-        reviewListNote.textContent = "Choose an attempt, review it, then save your decision.";
+        reviewListNote.textContent = uiCopy.messages?.reviewListHint ?? "Choose an attempt, review it, then save your decision.";
       }
     }
 
@@ -1012,8 +1004,8 @@ const clientBundle = JSON.stringify({
         decisionDetailLabel && (decisionDetailLabel.textContent = `Decision ${currentDecision.label}`);
         if (decisionNotes) decisionNotes.value = currentDecision.notes ?? "";
       } else {
-        decisionStatus && (decisionStatus.textContent = "No decision saved for this attempt.");
-        decisionDetailLabel && (decisionDetailLabel.textContent = "No decision yet");
+        decisionStatus && (decisionStatus.textContent = uiCopy.messages?.noDecisionSaved ?? "No decision saved for this attempt.");
+        decisionDetailLabel && (decisionDetailLabel.textContent = uiCopy.messages?.noDecisionDetail ?? "No decision yet");
         if (decisionNotes) decisionNotes.value = "";
       }
       if (options.autoplay && autoPlayEnabled) {
@@ -1077,7 +1069,7 @@ const clientBundle = JSON.stringify({
     function renderDecisions(decisions) {
       if (!decisionList) return;
       if (!decisions.length) {
-        decisionList.innerHTML = "<article><strong>No decisions yet</strong><p>Use Review to mark attempts as Keep, Reject, or Unsure.</p></article>";
+        decisionList.innerHTML = `<article><strong>${uiCopy.messages?.noDecisionsYet ?? "No decisions yet"}</strong><p>Use Review to mark attempts as Keep, Reject, or Unsure.</p></article>`;
         return;
       }
       decisionList.innerHTML = decisions.slice(0, 8).map((entry) => `
@@ -1086,7 +1078,7 @@ const clientBundle = JSON.stringify({
           <div class="session-listing__meta">
             <span>${entry.updatedAt}</span>
           </div>
-          <p>${entry.notes || "No note added."}</p>
+          <p>${entry.notes || (uiCopy.messages?.noNoteAdded ?? "No note added.")}</p>
         </article>
       `).join("");
     }
@@ -1132,8 +1124,8 @@ const clientBundle = JSON.stringify({
       pickedVideoFile = pickedFileInput?.files?.[0] ?? null;
       if (pickedFileLabel) {
         pickedFileLabel.textContent = pickedVideoFile
-          ? `${pickedVideoFile.name} selected. It will be copied into the app workspace when you start the run.`
-          : "No file selected. You can still paste a path manually.";
+          ? `${pickedVideoFile.name} ${uiCopy.messages?.fileSelectedSuffix ?? "selected. It will be copied into the local runtime when you start the analysis."}`
+          : (uiCopy.messages?.filePickerIdle ?? "No file selected. You can still paste a path manually.");
       }
       if (input) {
         input.value = pickedVideoFile
@@ -1449,7 +1441,7 @@ const clientBundle = JSON.stringify({
         return !exportedFileNames.has(item.id);
       });
       if (!pending.length) {
-        exportPendingList.innerHTML = "<article><span>No clips pending export. Mark attempts as Keep in Review first.</span></article>";
+        exportPendingList.innerHTML = `<article><span>${uiCopy.messages?.noPendingExports ?? "No clips are waiting for export. Mark clips as Keep in Review first."}</span></article>`;
         return;
       }
       exportPendingList.innerHTML = pending.map((item) => `
@@ -1465,7 +1457,7 @@ const clientBundle = JSON.stringify({
       updateReviewCounts();
       if (!exportList) return;
       if (!exportedPaths.length) {
-        exportList.innerHTML = "<article><span>No exported clips yet.</span></article>";
+        exportList.innerHTML = `<article><span>${uiCopy.messages?.noExportedClips ?? "No exported clips yet."}</span></article>`;
         return;
       }
       exportList.innerHTML = exportedPaths.map((item) => `
@@ -1488,7 +1480,7 @@ const clientBundle = JSON.stringify({
       if (!recentSessionsList) return;
       const recent = parsed.recentSessions ?? [];
       if (!recent.length) {
-        recentSessionsList.innerHTML = "<article><span>No recent sessions.</span></article>";
+        recentSessionsList.innerHTML = `<article><span>${uiCopy.messages?.noRecentSessions ?? "No recent sessions."}</span></article>`;
         return;
       }
       recentSessionsList.innerHTML = recent.map((item) => `
@@ -1505,6 +1497,30 @@ const clientBundle = JSON.stringify({
       });
     }
 
+    async function refreshExportState() {
+      if (!parsed.session?.id) return;
+      const response = await fetch(`/api/export?analysisRunId=${encodeURIComponent(parsed.session.id)}`, { cache: "no-store" });
+      const payload = await readJsonResponse(response);
+      if (!response.ok || payload?._invalidJson) {
+        exportStatus && (exportStatus.textContent = payload.error ?? "Could not refresh exported clips.");
+        return;
+      }
+      const exportedCount = Number(payload.exportedCount ?? payload.exportedPaths?.length ?? 0);
+      parsed.session.extracted_count = exportedCount;
+      exportedPaths = payload.exportedPaths ?? [];
+      const sessionExportNode = sessionList?.querySelector(`[data-session-export-count="${parsed.session.id}"]`);
+      if (currentExportCount) currentExportCount.textContent = String(exportedCount);
+      if (exportTotalCount) exportTotalCount.textContent = `${exportedCount} exports`;
+      if (sessionExportNode) sessionExportNode.textContent = `${exportedCount} exports`;
+      if (Array.isArray(parsed.recentSessions)) {
+        parsed.recentSessions = parsed.recentSessions.map((item) =>
+          item.id === parsed.session.id ? { ...item, extracted_count: exportedCount } : item
+        );
+        renderRecentSessions();
+      }
+      renderExportList(exportedPaths);
+    }
+
     async function pollExportJob(jobId) {
       exportJobId = jobId;
       while (true) {
@@ -1517,7 +1533,7 @@ const clientBundle = JSON.stringify({
         const detail = payload.progressDetail ? ` - ${payload.progressDetail}` : "";
         exportStatus && (exportStatus.textContent = `Export job ${payload.id}: ${payload.phaseLabel}${detail}`);
         if (payload.status === "completed") {
-          renderExportList(payload.exportedPaths ?? []);
+          await refreshExportState();
           return;
         }
         if (payload.status === "failed") {
@@ -1572,6 +1588,9 @@ const clientBundle = JSON.stringify({
     updateToggleButtons();
     renderExportList(parsed.initialExportedPaths ?? []);
     renderRecentSessions();
+    if (parsed.session?.id) {
+      void refreshExportState();
+    }
     installMediaSessionHandlers();
     syncVideoSource();
     renderDetectionTable();

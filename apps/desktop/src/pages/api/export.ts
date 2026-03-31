@@ -1,11 +1,31 @@
 import type { APIRoute } from "astro";
+import { getSessionExportState } from "@/lib/export-state";
+import { readManifest } from "@/lib/session-catalog-core";
 import { getManifestPathForAnalysisRun, listReviewDecisions } from "@/lib/session-catalog";
 import { getExportJob, startExportJob } from "@/lib/export-jobs";
 import { exportJobsRoot } from "@/lib/runtime-config";
 
 export const GET: APIRoute = async ({ url }) => {
   const jobId = url.searchParams.get("job");
+  const analysisRunId = url.searchParams.get("analysisRunId");
   if (!jobId) {
+    if (analysisRunId) {
+      const manifestPath = getManifestPathForAnalysisRun(analysisRunId);
+      if (!manifestPath) {
+        return Response.json({ error: "Session manifest not found." }, { status: 404 });
+      }
+      const manifest = readManifest(manifestPath);
+      if (!manifest) {
+        return Response.json({ error: "Session manifest could not be read." }, { status: 404 });
+      }
+      const exportState = getSessionExportState(manifest.session.output_dir);
+      return Response.json({
+        analysisRunId,
+        exportedPaths: exportState.exportedPaths,
+        exportedDetectionIds: exportState.exportedDetectionIds,
+        exportedCount: exportState.exportedCount,
+      });
+    }
     return Response.json({ jobsRoot: exportJobsRoot });
   }
 
