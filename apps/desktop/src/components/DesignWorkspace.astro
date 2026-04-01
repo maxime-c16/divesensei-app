@@ -1280,7 +1280,7 @@ const clientBundle = JSON.stringify({
       }).catch(() => {});
       const nextUrl = new URL(window.location.href);
       nextUrl.searchParams.set("session", sessionId);
-      nextUrl.searchParams.set("tab", String(getActiveTabIndex()));
+      nextUrl.searchParams.set("tab", "1");
       nextUrl.searchParams.delete("job");
       window.location.assign(nextUrl.toString());
     }
