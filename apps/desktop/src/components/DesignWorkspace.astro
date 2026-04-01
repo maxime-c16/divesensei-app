@@ -26,7 +26,7 @@ const requestedTab = Astro.url.searchParams.get("tab");
 const requestedJob = Astro.url.searchParams.get("job");
 const activeTabIndex = Number.parseInt(requestedTab ?? "0", 10);
 const initialTabIndex = Number.isNaN(activeTabIndex) ? 0 : Math.max(0, Math.min(theme.tabs.length - 1, activeTabIndex));
-const { library, manifest, selectedSessionId, artifactsPreview } = getUiData(requestedSession);
+const { library, manifest, selectedSessionId } = getUiData(requestedSession);
 const hasSession = library.session_count > 0;
 const session = manifest.session;
 const detections = manifest.detections.map((item) => ({
@@ -125,14 +125,14 @@ const sourceAvailabilityLabel = session.source_availability === "missing"
     : "Source available";
 const topAttemptSummary = highest
   ? `${formatSeconds(highest.timestamp_seconds)} · ${highest.confidence} confidence`
-  : "Analysis not run yet";
+  : "Analysis not started";
 const nextActionLabel = !hasActiveSession
-  ? "Choose a video, keep the default detector, and start a run."
+  ? "Choose a video, keep the default detector, and start analysis."
   : detections.length === 0
     ? "This session is ready, but no attempts have been found yet."
     : sessionReadyNow
       ? "Open Review, confirm the attempts you want, then export the clips you keep."
-      : "Wait for the run to finish, then open Review.";
+      : "Wait for analysis to finish, then open Review.";
 const clientBundle = JSON.stringify({
   hasSession,
   session,
@@ -172,10 +172,10 @@ const clientBundle = JSON.stringify({
       <article class="section-card">
         <div class="section-card__header">
           <div>
-            <h2>Sessions</h2>
-            <p class="section-note">Start a new run or reopen one you already have.</p>
+            <h2>New session</h2>
+            <p class="section-note">Choose a video, pick a detector, and start analysis.</p>
           </div>
-          <span class="counter" data-session-total>{library.session_count} total</span>
+          <button class="action-link" type="button" data-open-tab="3">Open library</button>
         </div>
         {sessionReadyNow && session.status === "ready_proxy_pending" && (
           <div class="library-inline-note">
@@ -183,12 +183,6 @@ const clientBundle = JSON.stringify({
           </div>
         )}
         <form class="analysis-launcher" data-analysis-form>
-          <div class="section-card__header">
-            <div>
-              <h3>New run</h3>
-              <p class="section-note">Choose a source, pick a detector, and start a new run.</p>
-            </div>
-          </div>
           <div class="analysis-launcher__grid">
             <label class="field">
               <span>Session name</span>
@@ -221,7 +215,7 @@ const clientBundle = JSON.stringify({
               <span>Session type</span>
               <select name="profile" data-analysis-profile>
                 <option value="long-session" selected>Training session</option>
-                <option value="reviewed">Reviewed run</option>
+                <option value="reviewed">Reviewed session</option>
               </select>
             </label>
             <label class="field">
@@ -234,122 +228,43 @@ const clientBundle = JSON.stringify({
             </label>
           </div>
           <div class="analysis-launcher__actions launcher-actions">
-            <button type="submit" class="action-link action-link--primary">Analyze video</button>
+            <button type="submit" class="action-link action-link--primary">Start analysis</button>
           </div>
           <p class="analysis-launcher__status" data-analysis-status>Ready when you are.</p>
         </form>
-        <div class="session-list">
-          {library.sessions.map((item) => (
-            <article class={`session-listing ${item.id === selectedSessionId ? "is-current" : ""}`} data-session-row={item.id}>
-              <div class="session-listing__main">
-                <div class="session-listing__summary">
-                  <strong>{item.session_name ?? item.title}</strong>
-                  <small>{path.basename(item.source_video_path)}</small>
-                  <small>Updated {formatSessionStamp(item.updated_at ?? item.created_at)}</small>
-                  <small class="session-listing__status">{sessionStatusLabel(item.status)}</small>
-                </div>
-                <div class="session-listing__stats">
-                  <span>{item.candidate_count} attempts</span>
-                  <span>{item.extracted_count} exports</span>
-                  <span>{formatSeconds(item.timestamp_range.last)}</span>
-                </div>
-              </div>
-              <div class="session-listing__actions">
-                <button type="button" class="action-link" data-session-open={item.id}>Open</button>
-                <button type="button" class="action-link" data-session-rename={item.id} data-session-current-name={item.session_name ?? item.title}>Rename</button>
-                <button type="button" class="action-link session-delete" data-session-delete={item.id}>Delete</button>
-              </div>
-            </article>
-          ))}
-        </div>
       </article>
 
       <article class="section-card">
         <div class="section-card__header">
           <div>
-            <h2>Current session</h2>
-            <p class="section-note">{hasActiveSession ? sessionDisplayName : "No session selected"}</p>
+            <h2>What happens next</h2>
+            <p class="section-note">Create first, review second, export last.</p>
           </div>
         </div>
-        {hasActiveSession ? (
-          <>
-            <div class="session-summary">
-              <div class="session-summary__hero">
-                <strong>{sourceVideoLabel}</strong>
-                <span>{sessionStatusLabel(session.status)}</span>
-              </div>
-              <p class="session-summary__note">{nextActionLabel}</p>
-              <dl class="session-summary__grid">
-                <div>
-                  <dt>Detector</dt>
-                  <dd>{detectorLabelFor(session.detector_id)}</dd>
-                </div>
-                <div>
-                  <dt>Profile</dt>
-                  <dd>{profileLabelFor(session.profile)}</dd>
-                </div>
-                <div>
-                  <dt>Video length</dt>
-                  <dd>{formatSeconds(sessionDurationSeconds)}</dd>
-                </div>
-                <div>
-                  <dt>Analysis time</dt>
-                  <dd>{analysisRuntimeSeconds > 0 ? `${analysisRuntimeSeconds.toFixed(2)}s` : "Pending"}</dd>
-                </div>
-                <div>
-                  <dt>Attempts found</dt>
-                  <dd>{detections.length}</dd>
-                </div>
-                <div>
-                  <dt>Exports</dt>
-                  <dd>{session.extracted_count}</dd>
-                </div>
-                <div>
-                  <dt>Best candidate</dt>
-                  <dd>{topAttemptSummary}</dd>
-                </div>
-                <div>
-                  <dt>Updated</dt>
-                  <dd>{formatSessionStamp(session.updated_at)}</dd>
-                </div>
-              </dl>
-              <div class="session-summary__path-block">
-                <span>Video path</span>
-                <code>{session.source_video_path}</code>
-              </div>
-              <div class="session-summary__meta-row">
-                <span>{sourceAvailabilityLabel}</span>
-                <span>Output {path.basename(session.output_dir)}</span>
-              </div>
-            </div>
-            <div class="action-list">
-              <button class="action-link" type="button" data-open-tab="1">Open review</button>
-              <button class="action-link" type="button" data-open-tab="3">Open Inspect</button>
-            </div>
-          </>
-        ) : (
-          <div class="session-summary session-summary--empty">
-            <div class="session-summary__hero">
-              <strong>No session selected</strong>
-              <span>Ready to start</span>
-            </div>
-            <p class="session-summary__note">Start with the form on the left. This panel will fill in once your first run is created.</p>
-            <div class="session-summary__empty-grid">
-              <article>
-                <strong>1. Choose a video</strong>
-                <p>Choose a file or paste an absolute path.</p>
-              </article>
-              <article>
-                <strong>2. Start the run</strong>
-                <p>DiveSensei finds likely attempts and prepares them for review.</p>
-              </article>
-              <article>
-                <strong>3. Review and export</strong>
-                <p>Open the review tab, keep the right attempts, then export only those clips.</p>
-              </article>
-            </div>
+        <div class="session-summary session-summary--empty">
+          <div class="session-summary__empty-grid">
+            <article>
+              <strong>1. Choose a video</strong>
+              <p>Pick a file, or paste a full path if the video is already on disk.</p>
+            </article>
+            <article>
+              <strong>2. Start analysis</strong>
+              <p>DiveSensei scans the full session and prepares reviewable attempts.</p>
+            </article>
+            <article>
+              <strong>3. Open Library</strong>
+              <p>Use the Library tab to reopen older sessions, rename them, or remove them.</p>
+            </article>
+            <article>
+              <strong>4. Review and export</strong>
+              <p>Confirm the attempts you want, then export only the clips you keep.</p>
+            </article>
           </div>
-        )}
+          <div class="action-list">
+            <button class="action-link" type="button" data-open-tab="3">Browse library</button>
+            <button class="action-link" type="button" data-open-tab="1" disabled={!hasActiveSession}>Open review</button>
+          </div>
+        </div>
       </article>
     </div>
   </section>
@@ -515,34 +430,114 @@ const clientBundle = JSON.stringify({
       <article class="section-card">
         <div class="section-card__header">
           <div>
-            <h2>Inspect</h2>
-            <p class="section-note">Saved files and technical output from the current session.</p>
+            <h2>Library</h2>
+            <p class="section-note">Reopen, rename, or delete previous analysis sessions.</p>
           </div>
+          <span class="counter" data-session-total>{library.session_count} sessions</span>
         </div>
-        <div class="artifact-grid">
-          {Object.entries(manifest.artifacts).filter(([, value]) => Boolean(value)).map(([key, value]) => (
-            <a href={mediaUrl(value)} target="_blank">
-              <strong>{key}</strong>
-              <span>{value}</span>
-            </a>
-          ))}
+        <div class="session-list session-list--library">
+          {library.sessions.length > 0 ? (
+            library.sessions.map((item) => (
+              <article class={`session-listing ${item.id === selectedSessionId ? "is-current" : ""}`} data-session-row={item.id}>
+                <div class="session-listing__main">
+                  <div class="session-listing__summary">
+                    <strong>{item.session_name ?? item.title}</strong>
+                    <small>{path.basename(item.source_video_path)}</small>
+                    <small>Updated {formatSessionStamp(item.updated_at ?? item.created_at)}</small>
+                    <small class="session-listing__status">{sessionStatusLabel(item.status)}</small>
+                  </div>
+                  <div class="session-listing__stats">
+                    <span>{item.candidate_count} attempts</span>
+                    <span>{item.extracted_count} exports</span>
+                    <span>{formatSeconds(item.timestamp_range.last)}</span>
+                  </div>
+                </div>
+                <div class="session-listing__actions">
+                  <button type="button" class="action-link" data-session-open={item.id}>Open</button>
+                  <button type="button" class="action-link" data-session-rename={item.id} data-session-current-name={item.session_name ?? item.title}>Rename</button>
+                  <button type="button" class="action-link session-delete" data-session-delete={item.id}>Delete</button>
+                </div>
+              </article>
+            ))
+          ) : (
+            <div class="session-summary session-summary--empty">
+              <p class="session-summary__note">No saved sessions yet. Start from the Create tab to add your first one.</p>
+            </div>
+          )}
         </div>
       </article>
       <article class="section-card">
         <div class="section-card__header">
           <div>
-            <h2>Preview</h2>
-            <p class="section-note">Preview the most useful saved output without leaving the app.</p>
+            <h2>Selected session</h2>
+            <p class="section-note">{hasActiveSession ? sessionDisplayName : "No session selected"}</p>
           </div>
         </div>
-        <div class="artifact-grid">
-          {Object.entries(artifactsPreview).filter(([, value]) => value && value !== "Artifact unavailable in current workspace.").map(([key, value]) => (
-            <article>
-              <strong>{key}</strong>
-              <pre>{value}</pre>
-            </article>
-          ))}
-        </div>
+        {hasActiveSession ? (
+          <>
+            <div class="session-summary">
+              <div class="session-summary__hero">
+                <strong>{sourceVideoLabel}</strong>
+                <span>{sessionStatusLabel(session.status)}</span>
+              </div>
+              <p class="session-summary__note">{nextActionLabel}</p>
+              <dl class="session-summary__grid">
+                <div>
+                  <dt>Detector</dt>
+                  <dd>{detectorLabelFor(session.detector_id)}</dd>
+                </div>
+                <div>
+                  <dt>Profile</dt>
+                  <dd>{profileLabelFor(session.profile)}</dd>
+                </div>
+                <div>
+                  <dt>Video length</dt>
+                  <dd>{formatSeconds(sessionDurationSeconds)}</dd>
+                </div>
+                <div>
+                  <dt>Analysis time</dt>
+                  <dd>{analysisRuntimeSeconds > 0 ? `${analysisRuntimeSeconds.toFixed(2)}s` : "Pending"}</dd>
+                </div>
+                <div>
+                  <dt>Attempts found</dt>
+                  <dd>{detections.length}</dd>
+                </div>
+                <div>
+                  <dt>Exports</dt>
+                  <dd>{session.extracted_count}</dd>
+                </div>
+                <div>
+                  <dt>Best candidate</dt>
+                  <dd>{topAttemptSummary}</dd>
+                </div>
+                <div>
+                  <dt>Updated</dt>
+                  <dd>{formatSessionStamp(session.updated_at)}</dd>
+                </div>
+              </dl>
+              <div class="session-summary__path-block">
+                <span>Video path</span>
+                <code>{session.source_video_path}</code>
+              </div>
+              <div class="session-summary__meta-row">
+                <span>{sourceAvailabilityLabel}</span>
+                <span>Output {path.basename(session.output_dir)}</span>
+              </div>
+            </div>
+            <div class="action-list">
+              <button class="action-link" type="button" data-open-tab="1">Open review</button>
+              <button class="action-link" type="button" data-open-tab="2">Open exports</button>
+            </div>
+          </>
+        ) : (
+          <div class="session-summary session-summary--empty">
+            <div class="session-summary__hero">
+              <strong>No session selected</strong>
+              <span>Library is empty</span>
+            </div>
+            <p class="session-summary__note">Create a session first, or open one from the list on the left.</p>
+          </div>
+        )}
       </article>
     </div>
   </section>
@@ -563,6 +558,7 @@ const clientBundle = JSON.stringify({
     let sourceLoopHandler = null;
     let exportJobId = null;
     let exportedPaths = [];
+    let currentTabIndex = Number(parsed.requestedTab ?? "0");
 
     const tabButtons = Array.from(document.querySelectorAll("[data-tab-trigger]"));
     const panels = Array.from(document.querySelectorAll("[data-tab-panel]"));
@@ -602,9 +598,25 @@ const clientBundle = JSON.stringify({
     let timelineLayoutFrame = null;
     let playbackUiFrame = null;
 
+    function syncTabInUrl(index, mode = "replace") {
+      const nextUrl = new URL(window.location.href);
+      nextUrl.searchParams.set("tab", String(index));
+      if (mode === "push") {
+        window.history.pushState({}, "", nextUrl.toString());
+        return;
+      }
+      window.history.replaceState({}, "", nextUrl.toString());
+    }
+
+    function getActiveTabIndex() {
+      return Number.isInteger(currentTabIndex) ? currentTabIndex : 0;
+    }
+
     function setTab(index) {
+      currentTabIndex = index;
       tabButtons.forEach((button, buttonIndex) => button.classList.toggle("is-active", buttonIndex === index));
       panels.forEach((panel, panelIndex) => panel.classList.toggle("is-active", panelIndex === index));
+      syncTabInUrl(index);
     }
 
     function formatSeconds(value) {
@@ -1020,7 +1032,7 @@ const clientBundle = JSON.stringify({
         }
       });
       if (sessionTotal) {
-        sessionTotal.textContent = `${sessions.length} total`;
+        sessionTotal.textContent = `${sessions.length} sessions`;
       }
     }
 
@@ -1082,7 +1094,7 @@ const clientBundle = JSON.stringify({
       pickedVideoFile = pickedFileInput?.files?.[0] ?? null;
       if (pickedFileLabel) {
         pickedFileLabel.textContent = pickedVideoFile
-          ? `${pickedVideoFile.name} selected. It will be copied into the app workspace when you start the run.`
+          ? `${pickedVideoFile.name} selected. It will be copied into the app workspace when you start analysis.`
           : "No file selected. You can still paste a path manually.";
       }
       if (input) {
@@ -1164,8 +1176,8 @@ const clientBundle = JSON.stringify({
         const response = await fetch(`/api/analysis?job=${encodeURIComponent(jobId)}`);
         const payload = await readJsonResponse(response);
         if (payload?._invalidJson) {
-          status && (status.textContent = payload.error ?? "Could not read the run status.");
-          reviewProgress && (reviewProgress.textContent = payload.error ?? "Could not read the run status.");
+          status && (status.textContent = payload.error ?? "Could not read the analysis status.");
+          reviewProgress && (reviewProgress.textContent = payload.error ?? "Could not read the analysis status.");
           return;
         }
         const headline = payload.phaseLabel ?? payload.phase ?? payload.status;
@@ -1173,12 +1185,13 @@ const clientBundle = JSON.stringify({
         status && (status.textContent = `${headline}${detail}`);
         reviewProgress && (reviewProgress.textContent = `${headline}${detail}`);
         if (!redirectedToReview && (payload.phase === "review-ready" || payload.phase === "building-review-proxy" || payload.phase === "finalizing" || payload.status === "completed")) {
-          const alreadyOnTargetReview = parsed.requestedSession === payload.sessionId && String(parsed.requestedTab ?? "0") === "1";
+          const targetTab = getActiveTabIndex();
+          const alreadyOnTargetSession = parsed.requestedSession === payload.sessionId && String(parsed.requestedTab ?? "0") === String(targetTab);
           redirectedToReview = true;
-          if (!alreadyOnTargetReview) {
+          if (!alreadyOnTargetSession) {
             const nextUrl = new URL(window.location.href);
             nextUrl.searchParams.set("session", payload.sessionId);
-            nextUrl.searchParams.set("tab", "1");
+            nextUrl.searchParams.set("tab", String(targetTab));
             nextUrl.searchParams.set("job", payload.id);
             window.location.replace(nextUrl.toString());
             return;
@@ -1216,7 +1229,7 @@ const clientBundle = JSON.stringify({
 
     form?.addEventListener("submit", async (event) => {
       event.preventDefault();
-      status && (status.textContent = "Starting run...");
+      status && (status.textContent = "Starting analysis...");
       let videoPath = input?.value ?? "";
       if (pickedVideoFile) {
         status && (status.textContent = `Copying ${pickedVideoFile.name} into the workspace...`);
@@ -1253,7 +1266,7 @@ const clientBundle = JSON.stringify({
       });
       const payload = await readJsonResponse(response);
       if (!response.ok) {
-        status && (status.textContent = payload.error ?? "Could not start the run.");
+        status && (status.textContent = payload.error ?? "Could not start analysis.");
         return;
       }
       await pollJob(payload.id);
@@ -1267,7 +1280,7 @@ const clientBundle = JSON.stringify({
       }).catch(() => {});
       const nextUrl = new URL(window.location.href);
       nextUrl.searchParams.set("session", sessionId);
-      nextUrl.searchParams.set("tab", "1");
+      nextUrl.searchParams.set("tab", String(getActiveTabIndex()));
       nextUrl.searchParams.delete("job");
       window.location.assign(nextUrl.toString());
     }
@@ -1288,14 +1301,14 @@ const clientBundle = JSON.stringify({
         event.stopPropagation();
         const sessionId = button.getAttribute("data-session-delete");
         if (!sessionId) return;
-        const confirmed = window.confirm("Delete this run and remove its generated files? The original video will not be deleted.");
+        const confirmed = window.confirm("Delete this session and remove its generated files? The original video will not be deleted.");
         if (!confirmed) return;
         const row = button.closest(".session-listing");
         const rowButtons = Array.from(row?.querySelectorAll("button") ?? []);
         rowButtons.forEach((node) => { node.disabled = true; });
         const originalLabel = button.textContent;
         button.textContent = "Deleting...";
-        status && (status.textContent = "Deleting run...");
+        status && (status.textContent = "Deleting session...");
         const response = await fetch("/api/catalog", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1305,7 +1318,7 @@ const clientBundle = JSON.stringify({
         if (!response.ok) {
           rowButtons.forEach((node) => { node.disabled = false; });
           button.textContent = originalLabel;
-          status && (status.textContent = payload.error ?? "Could not delete the run.");
+          status && (status.textContent = payload.error ?? "Could not delete the session.");
           return;
         }
         const deletingCurrentSession = parsed.session?.id === sessionId || parsed.requestedSession === sessionId;
@@ -1313,13 +1326,13 @@ const clientBundle = JSON.stringify({
         if (row?.isConnected) {
           row.remove();
         }
-        status && (status.textContent = payload.deleted === false ? "Run was already removed." : "Run deleted.");
+        status && (status.textContent = payload.deleted === false ? "Session was already removed." : "Session deleted.");
         if (!deletingCurrentSession) {
           return;
         }
         const nextUrl = new URL(window.location.href);
         nextUrl.searchParams.delete("session");
-        nextUrl.searchParams.set("tab", "0");
+        nextUrl.searchParams.set("tab", String(Math.max(0, Math.min(getActiveTabIndex(), tabButtons.length - 1))));
         nextUrl.searchParams.delete("job");
         nextUrl.searchParams.set("refresh", String(Date.now()));
         window.location.replace(nextUrl.toString());
@@ -1344,7 +1357,7 @@ const clientBundle = JSON.stringify({
         });
         const payload = await readJsonResponse(response);
         if (!response.ok) {
-          status && (status.textContent = payload.error ?? "Could not rename the run.");
+          status && (status.textContent = payload.error ?? "Could not rename the session.");
           return;
         }
         const nextUrl = new URL(window.location.href);
@@ -1353,7 +1366,7 @@ const clientBundle = JSON.stringify({
           return;
         }
         nextUrl.searchParams.delete("session");
-        nextUrl.searchParams.set("tab", "0");
+        nextUrl.searchParams.set("tab", String(getActiveTabIndex()));
         nextUrl.searchParams.delete("job");
         window.location.assign(nextUrl.toString());
       });

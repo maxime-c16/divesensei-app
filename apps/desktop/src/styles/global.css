@@ -1250,7 +1250,7 @@ pre {
   flex-wrap: wrap;
 }
 
-/* ── Viewport-fit panels (Sessions, Exports, Inspect) ── */
+/* ── Viewport-fit panels (Create, Exports, Library) ── */
 
 #panel-0.is-active,
 #panel-2.is-active,
@@ -1293,7 +1293,7 @@ pre {
   }
 
   body {
-    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
   }
 
   .workspace-header {
@@ -1307,24 +1307,28 @@ pre {
 
   .header-nav {
     position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
     z-index: 40;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 0;
-    padding: 0 4px calc(env(safe-area-inset-bottom, 0px));
-    border-top: 1px solid var(--line);
+    gap: 4px;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
+    border: 1px solid var(--line-strong);
+    border-radius: 14px;
     background: var(--panel-strong);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
+    backdrop-filter: blur(10px);
     align-self: auto;
   }
 
   .tab {
     justify-content: center;
-    min-height: 48px;
-    padding: 8px 4px;
+    min-height: 54px;
+    padding: 10px 6px;
     border-bottom: 0;
+    border-radius: 10px;
     font-size: 12px;
   }
 
@@ -1597,7 +1601,7 @@ pre {
   }
 
   body {
-    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(102px + env(safe-area-inset-bottom, 0px));
   }
 
   .brand-lockup__image {
@@ -1605,7 +1609,8 @@ pre {
   }
 
   .tab {
-    min-height: 52px;
+    min-height: 58px;
+    padding-inline: 4px;
     font-size: 11px;
   }
 
