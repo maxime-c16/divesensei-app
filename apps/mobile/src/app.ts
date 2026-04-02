@@ -172,23 +172,38 @@ function formatError(error: unknown): string {
 }
 
 export async function bootApp(): Promise<void> {
-  await addDiveSenseiListener(DiveSenseiMediaEvents.JobProgress, (payload) => {
-    appendEvent("jobProgress", payload);
-    void refreshSessions().then(render);
-  });
-  await addDiveSenseiListener(DiveSenseiMediaEvents.SessionUpdated, (payload) => {
-    appendEvent("sessionUpdated", payload);
-    void refreshSessions().then(render);
-  });
-  await addDiveSenseiListener(DiveSenseiMediaEvents.ReviewProxyUpdated, (payload) => {
-    appendEvent("reviewProxyUpdated", payload);
-  });
-  await addDiveSenseiListener(DiveSenseiMediaEvents.ExportsUpdated, (payload) => {
-    appendEvent("exportsUpdated", payload);
-  });
+  try {
+    const listenerResults = await Promise.allSettled([
+      addDiveSenseiListener(DiveSenseiMediaEvents.JobProgress, (payload) => {
+        appendEvent("jobProgress", payload);
+        void refreshSessions().then(render);
+      }),
+      addDiveSenseiListener(DiveSenseiMediaEvents.SessionUpdated, (payload) => {
+        appendEvent("sessionUpdated", payload);
+        void refreshSessions().then(render);
+      }),
+      addDiveSenseiListener(DiveSenseiMediaEvents.ReviewProxyUpdated, (payload) => {
+        appendEvent("reviewProxyUpdated", payload);
+      }),
+      addDiveSenseiListener(DiveSenseiMediaEvents.ExportsUpdated, (payload) => {
+        appendEvent("exportsUpdated", payload);
+      }),
+    ]);
 
-  const nativeVersion = typeof DiveSenseiMedia.listSessions === "function";
-  appendEvent("bridgeReady", { nativeVersion });
-  await refreshSessions();
+    const listenerFailures = listenerResults
+      .filter((result): result is PromiseRejectedResult => result.status === "rejected")
+      .map((result) => formatError(result.reason));
+
+    if (listenerFailures.length > 0) {
+      appendEvent("bridgeListenerWarning", { listenerFailures });
+    }
+
+    const nativeVersion = typeof DiveSenseiMedia.listSessions === "function";
+    appendEvent("bridgeReady", { nativeVersion });
+    await refreshSessions();
+  } catch (error) {
+    state.lastError = formatError(error);
+  }
+
   await render();
 }
