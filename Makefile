@@ -4,6 +4,8 @@ PYTHON ?= python3
 VENV ?= .venv
 DESKTOP_DIR ?= apps/desktop
 DESKTOP_DIR_ABS := $(abspath $(DESKTOP_DIR))
+MOBILE_DIR ?= apps/mobile
+MOBILE_DIR_ABS := $(abspath $(MOBILE_DIR))
 RUN_DIR ?= .run
 LOCK_DIR ?= $(RUN_DIR)/locks
 APP_NAME ?= divesensei-desktop
@@ -19,10 +21,19 @@ BUN ?= $(shell command -v bun 2>/dev/null || printf '%s' "$(HOME)/.bun/bin/bun")
 NODE ?= $(shell command -v node)
 NPM ?= $(shell command -v npm)
 CURL ?= curl
+DEVELOPER_DIR ?= /Applications/Xcode.app/Contents/Developer
+CAP_SYNC_ENV = RUBYOPT='-EUTF-8:UTF-8' LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
+IOS_SCHEME ?= App
+IOS_WORKSPACE ?= $(MOBILE_DIR_ABS)/ios/App/App.xcworkspace
+IOS_SIMULATOR_ID ?= 10E4E9DA-CA56-45C7-B846-3A63D534BAF1
+IOS_APP_BUNDLE ?= /Users/$(USER)/Library/Developer/Xcode/DerivedData/App-fprmnnhpsvflfgcrzusflztskrms/Build/Products/Debug-iphonesimulator/App.app
+IOS_BUNDLE_ID ?= com.divesensei.mobile
 
 .PHONY: help venv install compile smoke-help desktop-setup desktop-check desktop-build \
-	electron-dev electron-start electron-prepare status wait up down restart re logs \
-	clean clean-runtime clean-build clean-python clean-app
+	electron-dev electron-start electron-prepare mobile-setup mobile-build mobile-sync-ios \
+	mobile-open-ios mobile-xcode-build mobile-sim-install mobile-sim-launch mobile-sim-reinstall \
+	mobile-sim-screenshot mobile-review-reset status wait up down restart re logs clean \
+	clean-runtime clean-build clean-python clean-app
 
 help:
 	@printf "Targets:\n"
@@ -33,6 +44,16 @@ help:
 	@printf "  make desktop-setup  Install Bun dependencies for the Astro app\n"
 	@printf "  make desktop-check  Run Astro type/config checks\n"
 	@printf "  make desktop-build  Build the Astro desktop app\n"
+	@printf "  make mobile-setup   Install Bun dependencies for the Capacitor mobile app\n"
+	@printf "  make mobile-build   Build the mobile web bundle\n"
+	@printf "  make mobile-sync-ios Sync the Capacitor iOS project\n"
+	@printf "  make mobile-open-ios Open the iOS workspace in Xcode\n"
+	@printf "  make mobile-xcode-build Build the iOS app for the configured simulator\n"
+	@printf "  make mobile-sim-install Install the built app on the configured simulator\n"
+	@printf "  make mobile-sim-launch Launch the app on the configured simulator\n"
+	@printf "  make mobile-sim-reinstall Rebuild, install, and relaunch the app on the simulator\n"
+	@printf "  make mobile-sim-screenshot Capture a simulator screenshot to /tmp/divesensei-sim.png\n"
+	@printf "  make mobile-review-reset Clear simulator decision state for the selected session\n"
 	@printf "  make up             Build and start the desktop app preview server in the background\n"
 	@printf "  make down           Stop the background app server\n"
 	@printf "  make re             Restart the background app server\n"
@@ -120,6 +141,50 @@ electron-start: desktop-build
 
 electron-prepare: desktop-build
 	cd "$(DESKTOP_DIR_ABS)" && "$(BUN)" run electron:prepare
+
+mobile-setup:
+	@set -euo pipefail; \
+	test -x "$(BUN)" || { echo "bun not found at $(BUN)"; exit 1; }; \
+	cd "$(MOBILE_DIR_ABS)" && "$(BUN)" install
+
+mobile-build: mobile-setup
+	cd "$(MOBILE_DIR_ABS)" && "$(BUN)" run build
+
+mobile-sync-ios: mobile-build
+	cd "$(MOBILE_DIR_ABS)" && env $(CAP_SYNC_ENV) npx cap sync ios
+
+mobile-open-ios: mobile-sync-ios
+	cd "$(MOBILE_DIR_ABS)" && env $(CAP_SYNC_ENV) npx cap open ios
+
+mobile-xcode-build: mobile-sync-ios
+	DEVELOPER_DIR="$(DEVELOPER_DIR)" xcodebuild \
+		-workspace "$(IOS_WORKSPACE)" \
+		-scheme "$(IOS_SCHEME)" \
+		-configuration Debug \
+		-destination 'id=$(IOS_SIMULATOR_ID)' \
+		build
+
+mobile-sim-install:
+	xcrun simctl install "$(IOS_SIMULATOR_ID)" "$(IOS_APP_BUNDLE)"
+
+mobile-sim-launch:
+	xcrun simctl launch "$(IOS_SIMULATOR_ID)" "$(IOS_BUNDLE_ID)"
+
+mobile-sim-reinstall: mobile-xcode-build
+	xcrun simctl terminate "$(IOS_SIMULATOR_ID)" "$(IOS_BUNDLE_ID)" || true
+	xcrun simctl install "$(IOS_SIMULATOR_ID)" "$(IOS_APP_BUNDLE)"
+	xcrun simctl launch "$(IOS_SIMULATOR_ID)" "$(IOS_BUNDLE_ID)"
+
+mobile-sim-screenshot:
+	xcrun simctl io "$(IOS_SIMULATOR_ID)" screenshot /tmp/divesensei-sim.png
+	@printf "Saved /tmp/divesensei-sim.png\n"
+
+mobile-review-reset:
+	@set -euo pipefail; \
+	test -n "$${SESSION_ID:-}" || { echo "Set SESSION_ID=<session-id> to clear review decisions"; exit 1; }; \
+	container="$$(xcrun simctl get_app_container "$(IOS_SIMULATOR_ID)" "$(IOS_BUNDLE_ID)" data)"; \
+	printf '[]' > "$$container/Library/Application Support/DiveSenseiMobile/decisions/$${SESSION_ID}.json"; \
+	printf "Cleared review decisions for %s\n" "$${SESSION_ID}"
 
 status: | $(RUN_DIR)
 	@set -euo pipefail; \

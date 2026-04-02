@@ -989,7 +989,7 @@ button {
   padding: 8px 8px 7px;
   display: grid;
   justify-items: center;
-  gap: 5px;
+  gap: 4px;
 }
 
 .thumb-nav__item.is-active {
@@ -997,12 +997,22 @@ button {
   background: rgba(255, 255, 255, 0.03);
 }
 
-.thumb-nav__indicator {
+.thumb-nav__icon {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+}
+
+.thumb-nav__icon svg {
   width: 18px;
-  height: 2px;
-  border-radius: 0;
-  background: currentColor;
-  opacity: 0.35;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.92;
 }
 
 .thumb-nav__label {

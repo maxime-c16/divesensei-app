@@ -15,10 +15,46 @@ const host = new MobileReviewHostService();
 let activeReviewWorkspace: ReviewWorkspace | null = null;
 
 const tabs = [
-  { id: "create", label: "Create" },
-  { id: "review", label: "Review" },
-  { id: "exports", label: "Exports" },
-  { id: "library", label: "Library" },
+  {
+    id: "create",
+    label: "Create",
+    icon: `
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 4.5v15M4.5 12h15" />
+      </svg>
+    `,
+  },
+  {
+    id: "review",
+    label: "Review",
+    icon: `
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4.5 17.25V6.75c0-.69.56-1.25 1.25-1.25h12.5c.69 0 1.25.56 1.25 1.25v10.5c0 .69-.56 1.25-1.25 1.25H5.75c-.69 0-1.25-.56-1.25-1.25Z" />
+        <path d="M10.25 9 15 12l-4.75 3V9Z" />
+      </svg>
+    `,
+  },
+  {
+    id: "exports",
+    label: "Exports",
+    icon: `
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 4.5v10.75" />
+        <path d="m8.25 11.75 3.75 3.75 3.75-3.75" />
+        <path d="M5.25 18.25h13.5" />
+      </svg>
+    `,
+  },
+  {
+    id: "library",
+    label: "Library",
+    icon: `
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 5.5h11.5c.55 0 1 .45 1 1v11.25c0 .55-.45 1-1 1H6.5c-.55 0-1-.45-1-1V6.5c0-.55.45-1 1-1Z" />
+        <path d="M8.25 9.25h7.5M8.25 12h7.5M8.25 14.75h5.25" />
+      </svg>
+    `,
+  },
 ] as const;
 
 type MobileTab = (typeof tabs)[number]["id"];
@@ -488,7 +524,7 @@ function appShell(): string {
             type="button"
             data-set-tab="${tab.id}"
           >
-            <span class="thumb-nav__indicator" aria-hidden="true"></span>
+            <span class="thumb-nav__icon" aria-hidden="true">${tab.icon}</span>
             <span class="thumb-nav__label">${escapeHtml(tab.label)}</span>
           </button>
         `).join("")}
