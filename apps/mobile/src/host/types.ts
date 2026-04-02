@@ -1,4 +1,5 @@
 import type {
+  ClearDecisionResponse,
   CreateSessionRequest,
   CreateSessionResponse,
   DecisionRecord,
@@ -23,5 +24,6 @@ export interface ReviewHostService {
   getSessionManifest(sessionId: SessionId): Promise<SessionManifest>;
   listDecisions(sessionId: SessionId): Promise<DecisionRecord[]>;
   saveDecision(sessionId: SessionId, detectionId: string, label: ReviewDecisionLabel, notes?: string): Promise<DecisionRecord>;
+  clearDecision(sessionId: SessionId, detectionId: string): Promise<ClearDecisionResponse>;
   getReviewProxy(sessionId: SessionId): Promise<GetReviewProxyResponse>;
 }

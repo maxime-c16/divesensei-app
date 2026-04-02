@@ -22,6 +22,10 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>DiveSensei saves reviewed clips and related media back to your photo library when you choose export actions.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>DiveSensei needs access to your photo library so you can pick source dive videos for analysis and review.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

@@ -293,6 +293,15 @@ export interface SaveDecisionResponse {
   decision: DecisionRecord;
 }
 
+export interface ClearDecisionRequest {
+  sessionId: SessionId;
+  detectionId: DetectionId;
+}
+
+export interface ClearDecisionResponse {
+  cleared: boolean;
+}
+
 export interface ListDecisionsRequest {
   sessionId: SessionId;
 }
@@ -420,6 +429,7 @@ export interface DiveSenseiMediaPlugin extends Plugin {
   getSessionManifest(input: GetSessionManifestRequest): Promise<GetSessionManifestResponse>;
 
   saveDecision(input: SaveDecisionRequest): Promise<SaveDecisionResponse>;
+  clearDecision(input: ClearDecisionRequest): Promise<ClearDecisionResponse>;
   listDecisions(input: ListDecisionsRequest): Promise<ListDecisionsResponse>;
 
   getReviewProxy(input: GetReviewProxyRequest): Promise<GetReviewProxyResponse>;

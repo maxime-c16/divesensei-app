@@ -62,6 +62,10 @@ export class MobileReviewHostService implements ReviewHostService {
     return response.decision;
   }
 
+  clearDecision(sessionId: SessionId, detectionId: string) {
+    return DiveSenseiMedia.clearDecision({ sessionId, detectionId });
+  }
+
   getReviewProxy(sessionId: SessionId): Promise<GetReviewProxyResponse> {
     return DiveSenseiMedia.getReviewProxy({ sessionId });
   }

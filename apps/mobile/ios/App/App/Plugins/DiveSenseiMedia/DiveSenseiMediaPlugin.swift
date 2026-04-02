@@ -21,6 +21,7 @@ public final class DiveSenseiMediaPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "cancelJob", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getSessionManifest", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "saveDecision", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "clearDecision", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "listDecisions", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getReviewProxy", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startExport", returnType: CAPPluginReturnPromise),
@@ -28,7 +29,9 @@ public final class DiveSenseiMediaPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "deleteSession", returnType: CAPPluginReturnPromise)
     ]
 
-    private lazy var store = try! MobilePersistenceStore()
+    private lazy var storeResult: Result<MobilePersistenceStore, Error> = {
+        Result { try MobilePersistenceStore() }
+    }()
     private let jobStore = MobileJobStore()
     private var activePicker: SourceVideoPickerController?
 
@@ -38,27 +41,37 @@ public final class DiveSenseiMediaPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        let picker = SourceVideoPickerController(store: store) { [weak self] result in
-            self?.activePicker = nil
-            switch result {
-            case .success(let source):
-                if let source {
-                    call.resolve([
-                        "cancelled": false,
-                        "source": source.asSummaryPayload().asDictionary
-                    ])
-                } else {
-                    call.resolve(["cancelled": true])
+        do {
+            let store = try requireStore()
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                let picker = SourceVideoPickerController(store: store) { [weak self] result in
+                    self?.activePicker = nil
+                    switch result {
+                    case .success(let source):
+                        if let source {
+                            call.resolve([
+                                "cancelled": false,
+                                "source": source.asSummaryPayload().asDictionary
+                            ])
+                        } else {
+                            call.resolve(["cancelled": true])
+                        }
+                    case .failure(let error as DiveSenseiPluginError):
+                        call.reject(error.message, error.code)
+                    case .failure(let error):
+                        call.reject(error.localizedDescription, "pick_source_failed")
+                    }
                 }
-            case .failure(let error as DiveSenseiPluginError):
-                call.reject(error.message, error.code)
-            case .failure(let error):
-                call.reject(error.localizedDescription, "pick_source_failed")
-            }
-        }
 
-        activePicker = picker
-        picker.present(from: presenter)
+                self.activePicker = picker
+                picker.present(from: presenter)
+            }
+        } catch let error as DiveSenseiPluginError {
+            call.reject(error.message, error.code)
+        } catch {
+            call.reject(error.localizedDescription, "store_unavailable")
+        }
     }
 
     @objc public func getSourceAvailability(_ call: CAPPluginCall) {
@@ -68,7 +81,7 @@ public final class DiveSenseiMediaPlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         do {
-            let response = try store.sourceAvailability(sourceRef: sourceRef)
+            let response = try requireStore().sourceAvailability(sourceRef: sourceRef)
             call.resolve(response.asDictionary)
         } catch let error as DiveSenseiPluginError {
             call.reject(error.message, error.code)
@@ -88,42 +101,52 @@ public final class DiveSenseiMediaPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        let picker = SourceVideoPickerController(store: store) { [weak self] result in
-            guard let self else { return }
-            self.activePicker = nil
+        do {
+            let store = try requireStore()
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                let picker = SourceVideoPickerController(store: store) { [weak self] result in
+                    guard let self else { return }
+                    self.activePicker = nil
 
-            switch result {
-            case .success(let source):
-                guard let source else {
-                    call.resolve([
-                        "repaired": false,
-                        "availability": SourceAvailability.missing.rawValue
-                    ])
-                    return
+                    switch result {
+                    case .success(let source):
+                        guard let source else {
+                            call.resolve([
+                                "repaired": false,
+                                "availability": SourceAvailability.missing.rawValue
+                            ])
+                            return
+                        }
+
+                        do {
+                            let response = try store.repairSessionSource(sessionId: sessionId, source: source)
+                            self.notifyListeners("DiveSenseiMedia.sessionUpdated", data: [
+                                "sessionId": sessionId,
+                                "status": SessionStatus.created.rawValue,
+                                "updatedAt": response.updatedAt
+                            ])
+                            call.resolve(response.asDictionary)
+                        } catch let error as DiveSenseiPluginError {
+                            call.reject(error.message, error.code)
+                        } catch {
+                            call.reject(error.localizedDescription, "repair_source_failed")
+                        }
+                    case .failure(let error as DiveSenseiPluginError):
+                        call.reject(error.message, error.code)
+                    case .failure(let error):
+                        call.reject(error.localizedDescription, "repair_source_failed")
+                    }
                 }
 
-                do {
-                    let response = try self.store.repairSessionSource(sessionId: sessionId, source: source)
-                    self.notifyListeners("DiveSenseiMedia.sessionUpdated", data: [
-                        "sessionId": sessionId,
-                        "status": SessionStatus.created.rawValue,
-                        "updatedAt": response.updatedAt
-                    ])
-                    call.resolve(response.asDictionary)
-                } catch let error as DiveSenseiPluginError {
-                    call.reject(error.message, error.code)
-                } catch {
-                    call.reject(error.localizedDescription, "repair_source_failed")
-                }
-            case .failure(let error as DiveSenseiPluginError):
-                call.reject(error.message, error.code)
-            case .failure(let error):
-                call.reject(error.localizedDescription, "repair_source_failed")
+                self.activePicker = picker
+                picker.present(from: presenter)
             }
+        } catch let error as DiveSenseiPluginError {
+            call.reject(error.message, error.code)
+        } catch {
+            call.reject(error.localizedDescription, "store_unavailable")
         }
-
-        activePicker = picker
-        picker.present(from: presenter)
     }
 
     @objc public func createSession(_ call: CAPPluginCall) {
@@ -141,7 +164,7 @@ public final class DiveSenseiMediaPlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         do {
-            let response = try store.createSession(
+            let response = try requireStore().createSession(
                 sourceRef: sourceRef,
                 sessionName: call.getString("sessionName"),
                 profile: profile,
@@ -162,7 +185,7 @@ public final class DiveSenseiMediaPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc public func listSessions(_ call: CAPPluginCall) {
         do {
-            let sessions = try store.listSessions()
+            let sessions = try requireStore().listSessions()
             call.resolve(["sessions": sessions.map(\.jsonObject)])
         } catch let error as DiveSenseiPluginError {
             call.reject(error.message, error.code)
@@ -178,6 +201,7 @@ public final class DiveSenseiMediaPlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         do {
+            let store = try requireStore()
             _ = try store.requireSession(sessionId: sessionId)
             let now = DateTimestamp.isoNow()
             let job = jobStore.createAnalysisJob(sessionId: sessionId, startedAt: now)
@@ -194,7 +218,8 @@ public final class DiveSenseiMediaPlugin: CAPPlugin, CAPBridgedPlugin {
                 guard let self else { return }
                 let completedAt = DateTimestamp.isoNow()
                 do {
-                    _ = try self.store.promoteSessionToReviewReady(sessionId: sessionId, updatedAt: completedAt)
+                    let store = try self.requireStore()
+                    _ = try store.promoteSessionToReviewReady(sessionId: sessionId, updatedAt: completedAt)
                     let completedJob = self.jobStore.completeJob(
                         jobId: job.jobId,
                         phase: .reviewReady,
@@ -270,7 +295,7 @@ public final class DiveSenseiMediaPlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         do {
-            let manifest = try store.getSessionManifest(sessionId: sessionId)
+            let manifest = try requireStore().getSessionManifest(sessionId: sessionId)
             call.resolve(["manifest": manifest.jsonObject])
         } catch let error as DiveSenseiPluginError {
             call.reject(error.message, error.code)
@@ -294,6 +319,7 @@ public final class DiveSenseiMediaPlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         do {
+            let store = try requireStore()
             let decision = try store.saveDecision(
                 sessionId: sessionId,
                 detectionId: detectionId,
@@ -322,12 +348,40 @@ public final class DiveSenseiMediaPlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         do {
-            let decisions = try store.listDecisions(sessionId: sessionId)
+            let decisions = try requireStore().listDecisions(sessionId: sessionId)
             call.resolve(["decisions": decisions.map(\.jsonObject)])
         } catch let error as DiveSenseiPluginError {
             call.reject(error.message, error.code)
         } catch {
             call.reject(error.localizedDescription, "list_decisions_failed")
+        }
+    }
+
+    @objc public func clearDecision(_ call: CAPPluginCall) {
+        guard let sessionId = call.getString("sessionId"), !sessionId.isEmpty else {
+            call.reject("sessionId is required.", "invalid_session_id")
+            return
+        }
+        guard let detectionId = call.getString("detectionId"), !detectionId.isEmpty else {
+            call.reject("detectionId is required.", "invalid_detection_id")
+            return
+        }
+
+        do {
+            let store = try requireStore()
+            let cleared = try store.clearDecision(sessionId: sessionId, detectionId: detectionId)
+            if let session = try? store.requireSession(sessionId: sessionId) {
+                notifyListeners("DiveSenseiMedia.sessionUpdated", data: [
+                    "sessionId": session.sessionId,
+                    "status": session.status.rawValue,
+                    "updatedAt": session.updatedAt
+                ])
+            }
+            call.resolve(["cleared": cleared])
+        } catch let error as DiveSenseiPluginError {
+            call.reject(error.message, error.code)
+        } catch {
+            call.reject(error.localizedDescription, "clear_decision_failed")
         }
     }
 
@@ -337,18 +391,26 @@ public final class DiveSenseiMediaPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        store.getOrCreateReviewProxy(sessionId: sessionId, bridge: bridge) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let proxy):
-                    self.notifyListeners("DiveSenseiMedia.reviewProxyUpdated", data: proxy.asDictionary)
-                    call.resolve(["proxy": proxy.jsonObject])
-                case .failure(let error as DiveSenseiPluginError):
-                    call.reject(error.message, error.code)
-                case .failure(let error):
-                    call.reject(error.localizedDescription, "review_proxy_failed")
+        do {
+            let store = try requireStore()
+            store.getOrCreateReviewProxy(sessionId: sessionId, bridge: bridge) { [weak self] result in
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    switch result {
+                    case .success(let proxy):
+                        self.notifyListeners("DiveSenseiMedia.reviewProxyUpdated", data: proxy.asDictionary)
+                        call.resolve(["proxy": proxy.jsonObject])
+                    case .failure(let error as DiveSenseiPluginError):
+                        call.reject(error.message, error.code)
+                    case .failure(let error):
+                        call.reject(error.localizedDescription, "review_proxy_failed")
+                    }
                 }
             }
+        } catch let error as DiveSenseiPluginError {
+            call.reject(error.message, error.code)
+        } catch {
+            call.reject(error.localizedDescription, "store_unavailable")
         }
     }
 
@@ -367,12 +429,26 @@ public final class DiveSenseiMediaPlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         do {
-            let deleted = try store.deleteSession(sessionId: sessionId, deleteExports: call.getBool("deleteExports") ?? false)
+            let deleted = try requireStore().deleteSession(
+                sessionId: sessionId,
+                deleteExports: call.getBool("deleteExports") ?? false
+            )
             call.resolve(["deleted": deleted])
         } catch let error as DiveSenseiPluginError {
             call.reject(error.message, error.code)
         } catch {
             call.reject(error.localizedDescription, "delete_session_failed")
+        }
+    }
+
+    private func requireStore() throws -> MobilePersistenceStore {
+        do {
+            return try storeResult.get()
+        } catch {
+            throw DiveSenseiPluginError(
+                code: "store_unavailable",
+                message: "Native persistence store is unavailable: \(error.localizedDescription)"
+            )
         }
     }
 }
@@ -806,6 +882,9 @@ private final class MobilePersistenceStore {
     private let reviewProxiesURL: URL
     private let sourcesURL: URL
     private let sessionsURL: URL
+    private let reviewExportLock = NSLock()
+    private var activeReviewExports: [String: AVAssetExportSession] = [:]
+    private var pendingReviewExportSessionIds: Set<String> = []
 
     init() throws {
         guard let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
@@ -1060,6 +1139,33 @@ private final class MobilePersistenceStore {
         return decision
     }
 
+    func clearDecision(sessionId: String, detectionId: String) throws -> Bool {
+        var sessions = try loadSessions()
+        guard var session = sessions[sessionId] else {
+            throw DiveSenseiPluginError(code: "session_not_found", message: "Session was not found.")
+        }
+
+        let now = DateTimestamp.isoNow()
+        var decisions = try listDecisions(sessionId: sessionId)
+        let originalCount = decisions.count
+        decisions.removeAll { $0.detectionId == detectionId }
+
+        guard decisions.count != originalCount else {
+            return false
+        }
+
+        try write(decisions, to: decisionFileURL(sessionId: sessionId))
+
+        session.keptCount = decisions.filter { $0.label == .keep }.count
+        session.rejectCount = decisions.filter { $0.label == .reject }.count
+        session.unsureCount = decisions.filter { $0.label == .unsure }.count
+        session.updatedAt = now
+        sessions[sessionId] = session
+        try write(sessions, to: sessionsURL)
+        try refreshManifest(for: session)
+        return true
+    }
+
     func listDecisions(sessionId: String) throws -> [StoredDecisionRecord] {
         _ = try requireSession(sessionId: sessionId)
         let url = decisionFileURL(sessionId: sessionId)
@@ -1085,12 +1191,38 @@ private final class MobilePersistenceStore {
             guard availability == .available else {
                 throw DiveSenseiPluginError(code: availability.rawValue, message: "Source is not currently playable.")
             }
+            NSLog("[DiveSenseiMedia] getOrCreateReviewProxy session=%@ source=%@ availability=%@", sessionId, source.sourceRef, availability.rawValue)
 
-            let proxyURL = reviewProxiesURL.appendingPathComponent("\(sessionId).mov")
-            if fileManager.fileExists(atPath: proxyURL.path) {
-                let payload = try reviewProxyPayload(session: session, source: source, proxyURL: proxyURL, bridge: bridge)
+            let existingMP4 = reviewProxyURL(sessionId: sessionId, fileType: .mp4)
+            let existingMOV = reviewProxyURL(sessionId: sessionId, fileType: .mov)
+            let tempMP4 = reviewProxyTemporaryURL(sessionId: sessionId, fileType: .mp4)
+            let tempMOV = reviewProxyTemporaryURL(sessionId: sessionId, fileType: .mov)
+            if isUsableReviewProxy(at: existingMP4) {
+                NSLog("[DiveSenseiMedia] review proxy ready from existing mp4 %@", existingMP4.path)
+                let payload = try reviewProxyPayload(session: session, source: source, proxyURL: existingMP4, bridge: bridge)
                 completion(.success(payload))
                 return
+            }
+            if fileManager.fileExists(atPath: existingMP4.path) {
+                try? fileManager.removeItem(at: existingMP4)
+            }
+            if isUsableReviewProxy(at: existingMOV) {
+                NSLog("[DiveSenseiMedia] review proxy ready from existing mov %@", existingMOV.path)
+                let payload = try reviewProxyPayload(session: session, source: source, proxyURL: existingMOV, bridge: bridge)
+                completion(.success(payload))
+                return
+            }
+            if fileManager.fileExists(atPath: existingMOV.path) {
+                try? fileManager.removeItem(at: existingMOV)
+            }
+            if !beginReviewExportReservation(for: sessionId) {
+                NSLog("[DiveSenseiMedia] review proxy pending existing export session=%@ tempMP4=%d tempMOV=%d", sessionId, fileManager.fileExists(atPath: tempMP4.path), fileManager.fileExists(atPath: tempMOV.path))
+                completion(.success(reviewProxyPendingPayload(session: session, source: source)))
+                return
+            }
+            if fileManager.fileExists(atPath: tempMP4.path) || fileManager.fileExists(atPath: tempMOV.path) {
+                NSLog("[DiveSenseiMedia] clearing stale temp review proxy session=%@ tempMP4=%d tempMOV=%d", sessionId, fileManager.fileExists(atPath: tempMP4.path), fileManager.fileExists(atPath: tempMOV.path))
+                removeStaleReviewProxyTemps(sessionId: sessionId)
             }
 
             guard source.origin == .photos, let assetIdentifier = source.assetLocalIdentifier, let asset = fetchAsset(localIdentifier: assetIdentifier) else {
@@ -1101,52 +1233,59 @@ private final class MobilePersistenceStore {
             options.deliveryMode = .automatic
             options.isNetworkAccessAllowed = true
             options.version = .original
-
             PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
                 do {
                     guard let avAsset else {
+                        self.releaseReviewExportReservation(for: sessionId)
                         throw DiveSenseiPluginError(code: "asset_unavailable", message: "Photos could not resolve the selected video asset.")
                     }
 
-                    if let urlAsset = avAsset as? AVURLAsset {
-                        if self.fileManager.fileExists(atPath: proxyURL.path) {
-                            try? self.fileManager.removeItem(at: proxyURL)
-                        }
-                        try self.fileManager.copyItem(at: urlAsset.url, to: proxyURL)
-                        let payload = try self.reviewProxyPayload(session: session, source: source, proxyURL: proxyURL, bridge: bridge)
-                        completion(.success(payload))
-                        return
-                    }
-
-                    guard let exportSession = AVAssetExportSession(asset: avAsset, presetName: AVAssetExportPresetPassthrough) else {
+                    let presetName = self.preferredReviewProxyPreset(for: avAsset)
+                    guard let exportSession = AVAssetExportSession(asset: avAsset, presetName: presetName) else {
+                        self.releaseReviewExportReservation(for: sessionId)
                         throw DiveSenseiPluginError(code: "proxy_export_failed", message: "Unable to create a review proxy export session.")
                     }
 
-                    if self.fileManager.fileExists(atPath: proxyURL.path) {
-                        try? self.fileManager.removeItem(at: proxyURL)
-                    }
+                    let outputFileType = self.preferredReviewProxyFileType(for: exportSession)
+                    let proxyURL = self.reviewProxyURL(sessionId: sessionId, fileType: outputFileType)
+                    let tempProxyURL = self.reviewProxyTemporaryURL(sessionId: sessionId, fileType: outputFileType)
+                    NSLog("[DiveSenseiMedia] starting export session=%@ preset=%@ outputType=%@ temp=%@ final=%@", sessionId, presetName, outputFileType.rawValue, tempProxyURL.path, proxyURL.path)
+                    self.removeStaleReviewProxyFiles(sessionId: sessionId)
 
-                    exportSession.outputURL = proxyURL
-                    exportSession.outputFileType = .mov
+                    exportSession.outputURL = tempProxyURL
+                    exportSession.outputFileType = outputFileType
                     exportSession.shouldOptimizeForNetworkUse = true
+                    self.setActiveReviewExport(exportSession, for: sessionId)
+                    completion(.success(self.reviewProxyPendingPayload(session: session, source: source)))
                     exportSession.exportAsynchronously {
+                        self.clearActiveReviewExport(for: sessionId)
+                        self.releaseReviewExportReservation(for: sessionId)
                         switch exportSession.status {
                         case .completed:
                             do {
-                                let payload = try self.reviewProxyPayload(session: session, source: source, proxyURL: proxyURL, bridge: bridge)
-                                completion(.success(payload))
+                                NSLog("[DiveSenseiMedia] export completed session=%@ tempExists=%d", sessionId, self.fileManager.fileExists(atPath: tempProxyURL.path))
+                                if self.fileManager.fileExists(atPath: proxyURL.path) {
+                                    try? self.fileManager.removeItem(at: proxyURL)
+                                }
+                                try self.fileManager.moveItem(at: tempProxyURL, to: proxyURL)
+                                NSLog("[DiveSenseiMedia] export moved session=%@ finalExists=%d size=%lld", sessionId, self.fileManager.fileExists(atPath: proxyURL.path), self.fileSize(at: proxyURL))
                             } catch {
-                                completion(.failure(error))
+                                NSLog("[DiveSenseiMedia] export move failed session=%@ error=%@", sessionId, String(describing: error))
+                                try? self.fileManager.removeItem(at: tempProxyURL)
                             }
                         case .failed:
-                            completion(.failure(exportSession.error ?? DiveSenseiPluginError(code: "proxy_export_failed", message: "Review proxy export failed.")))
+                            NSLog("[DiveSenseiMedia] export failed session=%@ error=%@", sessionId, String(describing: exportSession.error))
+                            try? self.fileManager.removeItem(at: tempProxyURL)
                         case .cancelled:
-                            completion(.failure(DiveSenseiPluginError(code: "proxy_export_cancelled", message: "Review proxy export was cancelled.")))
+                            NSLog("[DiveSenseiMedia] export cancelled session=%@", sessionId)
+                            try? self.fileManager.removeItem(at: tempProxyURL)
                         default:
-                            completion(.failure(DiveSenseiPluginError(code: "proxy_export_failed", message: "Review proxy export did not complete.")))
+                            NSLog("[DiveSenseiMedia] export ended unexpectedly session=%@ status=%ld error=%@", sessionId, exportSession.status.rawValue, String(describing: exportSession.error))
+                            try? self.fileManager.removeItem(at: tempProxyURL)
                         }
                     }
                 } catch {
+                    self.releaseReviewExportReservation(for: sessionId)
                     completion(.failure(error))
                 }
             }
@@ -1164,7 +1303,7 @@ private final class MobilePersistenceStore {
         try write(sessions, to: sessionsURL)
         try? fileManager.removeItem(at: manifestFileURL(fileName: session.manifestFileName))
         try? fileManager.removeItem(at: decisionFileURL(sessionId: sessionId))
-        try? fileManager.removeItem(at: reviewProxiesURL.appendingPathComponent("\(sessionId).mov"))
+        removeStaleReviewProxyFiles(sessionId: sessionId)
         if deleteExports {
             // No-op for now.
         }
@@ -1191,6 +1330,150 @@ private final class MobilePersistenceStore {
         manifest.session.candidate_count = session.candidateCount
         manifest.session.extracted_count = session.keptCount
         try write(manifest, to: manifestURL)
+    }
+
+    private func reviewProxyURL(sessionId: String, fileType: AVFileType) -> URL {
+        let pathExtension = fileType == .mp4 ? "mp4" : "mov"
+        return reviewProxiesURL.appendingPathComponent("\(sessionId).review-v2.\(pathExtension)")
+    }
+
+    private func reviewProxyTemporaryURL(sessionId: String, fileType: AVFileType) -> URL {
+        let pathExtension = fileType == .mp4 ? "mp4" : "mov"
+        return reviewProxiesURL.appendingPathComponent("\(sessionId).review-v2.exporting.\(pathExtension)")
+    }
+
+    private func removeStaleReviewProxyFiles(sessionId: String) {
+        let prefixes = [
+            "\(sessionId).mp4",
+            "\(sessionId).mov",
+            "\(sessionId).exporting.mp4",
+            "\(sessionId).exporting.mov",
+            "\(sessionId).review-v2.mp4",
+            "\(sessionId).review-v2.mov",
+            "\(sessionId).review-v2.exporting.mp4",
+            "\(sessionId).review-v2.exporting.mov"
+        ]
+        if let fileURLs = try? fileManager.contentsOfDirectory(at: reviewProxiesURL, includingPropertiesForKeys: nil) {
+            for fileURL in fileURLs where prefixes.contains(where: { fileURL.lastPathComponent.hasPrefix($0) }) {
+                try? fileManager.removeItem(at: fileURL)
+            }
+        }
+    }
+
+    private func removeStaleReviewProxyTemps(sessionId: String) {
+        let prefixes = [
+            "\(sessionId).exporting.mp4",
+            "\(sessionId).exporting.mov",
+            "\(sessionId).review-v2.exporting.mp4",
+            "\(sessionId).review-v2.exporting.mov"
+        ]
+        if let fileURLs = try? fileManager.contentsOfDirectory(at: reviewProxiesURL, includingPropertiesForKeys: nil) {
+            for fileURL in fileURLs where prefixes.contains(where: { fileURL.lastPathComponent.hasPrefix($0) }) {
+                try? fileManager.removeItem(at: fileURL)
+            }
+        }
+    }
+
+    private func isUsableReviewProxy(at url: URL) -> Bool {
+        guard fileManager.fileExists(atPath: url.path) else {
+            return false
+        }
+        guard let attributes = try? fileManager.attributesOfItem(atPath: url.path),
+              let sizeNumber = attributes[.size] as? NSNumber,
+              sizeNumber.int64Value > 65_536 else {
+            return false
+        }
+        let asset = AVURLAsset(url: url)
+        return asset.isPlayable
+    }
+
+    private func fileSize(at url: URL) -> Int64 {
+        guard let attributes = try? fileManager.attributesOfItem(atPath: url.path),
+              let sizeNumber = attributes[.size] as? NSNumber else {
+            return -1
+        }
+        return sizeNumber.int64Value
+    }
+
+    private func reviewProxyPendingPayload(session: StoredSessionRecord, source: StoredSourceRecord) -> ReviewProxyRecordPayload {
+        ReviewProxyRecordPayload(
+            sessionId: session.sessionId,
+            status: .pending,
+            url: nil,
+            durationSeconds: source.durationSeconds,
+            updatedAt: DateTimestamp.isoNow(),
+            playerBackend: .htmlVideo
+        )
+    }
+
+    private func setActiveReviewExport(_ session: AVAssetExportSession, for sessionId: String) {
+        reviewExportLock.lock()
+        activeReviewExports[sessionId] = session
+        reviewExportLock.unlock()
+    }
+
+    private func clearActiveReviewExport(for sessionId: String) {
+        reviewExportLock.lock()
+        activeReviewExports.removeValue(forKey: sessionId)
+        reviewExportLock.unlock()
+    }
+
+    private func activeReviewExport(for sessionId: String) -> AVAssetExportSession? {
+        reviewExportLock.lock()
+        defer { reviewExportLock.unlock() }
+        return activeReviewExports[sessionId]
+    }
+
+    private func reserveReviewExport(for sessionId: String) {
+        reviewExportLock.lock()
+        pendingReviewExportSessionIds.insert(sessionId)
+        reviewExportLock.unlock()
+    }
+
+    private func releaseReviewExportReservation(for sessionId: String) {
+        reviewExportLock.lock()
+        pendingReviewExportSessionIds.remove(sessionId)
+        reviewExportLock.unlock()
+    }
+
+    private func isReviewExportPending(for sessionId: String) -> Bool {
+        reviewExportLock.lock()
+        defer { reviewExportLock.unlock() }
+        return pendingReviewExportSessionIds.contains(sessionId) || activeReviewExports[sessionId] != nil
+    }
+
+    private func beginReviewExportReservation(for sessionId: String) -> Bool {
+        reviewExportLock.lock()
+        defer { reviewExportLock.unlock() }
+        if pendingReviewExportSessionIds.contains(sessionId) || activeReviewExports[sessionId] != nil {
+            return false
+        }
+        pendingReviewExportSessionIds.insert(sessionId)
+        return true
+    }
+
+    private func preferredReviewProxyPreset(for asset: AVAsset) -> String {
+        let compatiblePresets = AVAssetExportSession.exportPresets(compatibleWith: asset)
+        if compatiblePresets.contains(AVAssetExportPreset1280x720) {
+            return AVAssetExportPreset1280x720
+        }
+        if compatiblePresets.contains(AVAssetExportPresetMediumQuality) {
+            return AVAssetExportPresetMediumQuality
+        }
+        if compatiblePresets.contains(AVAssetExportPresetHighestQuality) {
+            return AVAssetExportPresetHighestQuality
+        }
+        return compatiblePresets.first ?? AVAssetExportPresetHighestQuality
+    }
+
+    private func preferredReviewProxyFileType(for exportSession: AVAssetExportSession) -> AVFileType {
+        if exportSession.supportedFileTypes.contains(.mp4) {
+            return .mp4
+        }
+        if exportSession.supportedFileTypes.contains(.mov) {
+            return .mov
+        }
+        return exportSession.supportedFileTypes.first ?? .mov
     }
 
     private func buildManifest(
@@ -1326,6 +1609,27 @@ private final class MobilePersistenceStore {
             updatedAt: DateTimestamp.isoNow(),
             playerBackend: .htmlVideo
         )
+    }
+
+    private func materializeDirectReviewProxy(
+        from sourceURL: URL,
+        session: StoredSessionRecord,
+        source: StoredSourceRecord,
+        bridge: CAPBridgeProtocol?
+    ) throws -> ReviewProxyRecordPayload {
+        let tempURL = reviewProxiesURL.appendingPathComponent("\(session.sessionId).copying.mov")
+        let finalURL = reviewProxyURL(sessionId: session.sessionId, fileType: .mov)
+        removeStaleReviewProxyFiles(sessionId: session.sessionId)
+        if fileManager.fileExists(atPath: tempURL.path) {
+            try? fileManager.removeItem(at: tempURL)
+        }
+        try fileManager.copyItem(at: sourceURL, to: tempURL)
+        if fileManager.fileExists(atPath: finalURL.path) {
+            try? fileManager.removeItem(at: finalURL)
+        }
+        try fileManager.moveItem(at: tempURL, to: finalURL)
+        NSLog("[DiveSenseiMedia] direct review proxy ready session=%@ final=%@ size=%lld", session.sessionId, finalURL.path, fileSize(at: finalURL))
+        return try reviewProxyPayload(session: session, source: source, proxyURL: finalURL, bridge: bridge)
     }
 
     private func fetchAsset(localIdentifier: String) -> PHAsset? {

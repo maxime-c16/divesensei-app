@@ -2,6 +2,8 @@ import { WebPlugin, registerPlugin } from "@capacitor/core";
 import type {
   CancelJobRequest,
   CancelJobResponse,
+  ClearDecisionRequest,
+  ClearDecisionResponse,
   CreateSessionRequest,
   CreateSessionResponse,
   DecisionRecord,
@@ -371,7 +373,19 @@ class DiveSenseiMediaWeb extends WebPlugin implements DiveSenseiMediaPlugin {
     };
     const next = [...existing.filter((item) => item.detectionId !== input.detectionId), decision];
     this.decisions.set(input.sessionId, next);
+    this.updateSessionDecisionCounts(input.sessionId, next, now);
     return { decision };
+  }
+
+  async clearDecision(input: ClearDecisionRequest): Promise<ClearDecisionResponse> {
+    const existing = this.decisions.get(input.sessionId) ?? [];
+    const next = existing.filter((item) => item.detectionId !== input.detectionId);
+    const cleared = next.length !== existing.length;
+    this.decisions.set(input.sessionId, next);
+    if (cleared) {
+      this.updateSessionDecisionCounts(input.sessionId, next, nowIso());
+    }
+    return { cleared };
   }
 
   async listDecisions(input: ListDecisionsRequest): Promise<ListDecisionsResponse> {
@@ -441,6 +455,23 @@ class DiveSenseiMediaWeb extends WebPlugin implements DiveSenseiMediaPlugin {
       this.exports.delete(input.sessionId);
     }
     return { deleted };
+  }
+
+  private updateSessionDecisionCounts(sessionId: SessionId, decisions: DecisionRecord[], updatedAt: string): void {
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+    this.sessions.set(sessionId, {
+      ...session,
+      keptCount: decisions.filter((item) => item.label === "keep").length,
+      rejectCount: decisions.filter((item) => item.label === "reject").length,
+      unsureCount: decisions.filter((item) => item.label === "unsure").length,
+      updatedAt,
+    });
+    this.notifyListeners(DiveSenseiMediaEvents.SessionUpdated, {
+      sessionId,
+      status: session.status,
+      updatedAt,
+    } satisfies SessionUpdatedEvent);
   }
 }
 
