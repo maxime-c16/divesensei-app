@@ -34,6 +34,7 @@ export interface AnalysisJobRecord {
   exitCode?: number;
   error?: string;
   logTail: string[];
+  logMtimeMs?: number;
 }
 
 const jobs = new Map<string, AnalysisJobRecord>();
@@ -65,9 +66,12 @@ function applySnapshot(record: AnalysisJobRecord, snapshot: ProgressSnapshot): v
 function parseProgressLog(record: AnalysisJobRecord): void {
   const logPath = path.join(record.outputDir, "session_pipeline.log.jsonl");
   if (!fs.existsSync(logPath)) return;
+  const logStat = fs.statSync(logPath);
+  if (record.logMtimeMs === logStat.mtimeMs && record.logTail.length > 0) return;
 
   const lines = fs.readFileSync(logPath, "utf-8").split("\n").filter(Boolean);
   record.logTail = lines.slice(-40);
+  record.logMtimeMs = logStat.mtimeMs;
 
   let lastSnapshot: ProgressSnapshot | null = null;
   for (const line of lines) {

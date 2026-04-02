@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { resolveCatalogManifestPaths } from "@/lib/session-catalog";
+import { getManifestPathForAnalysisRun, listCatalogSessions } from "@/lib/session-catalog";
 import type { DebugLogEntry, LibraryIndex, SessionManifest, UiDataBundle } from "@/types/ui";
 import { outputsRoot, repoRoot } from "@/lib/runtime-config";
 
@@ -68,13 +68,29 @@ function discoverManifestPaths(root: string): string[] {
   return Array.from(new Set(candidates));
 }
 
-function buildLibraryFromManifests(manifests: SessionManifest[]): LibraryIndex {
-  const sessions = manifests
-    .map((manifest) => ({
-      ...manifest.session,
-      manifest_path: path.join(manifest.session.output_dir, "ui_session_manifest.json"),
-    }))
-    .sort((a, b) => fileMtimeMs(b.manifest_path) - fileMtimeMs(a.manifest_path));
+function buildLibraryFromCatalog(): LibraryIndex {
+  const sessions = listCatalogSessions().map((session) => ({
+    id: session.sessionId,
+    title: session.title,
+    session_name: session.sessionName ?? session.title,
+    profile: session.profile,
+    status: session.status,
+    created_at: session.createdAt,
+    updated_at: session.updatedAt,
+    source_availability: session.sourceAvailability,
+    candidate_count: session.candidateCount,
+    extracted_count: session.extractedCount,
+    source_video_path: session.sourceVideoPath,
+    output_dir: session.outputDir,
+    manifest_path: session.manifestPath,
+    timestamp_range: { first: 0, last: 0 },
+    telemetry: {
+      detector_seconds: 0,
+      extract_seconds: 0,
+      total_runtime_seconds: 0,
+      peak_rss_kb: 0,
+    },
+  }));
 
   return {
     schema_version: "1.0.0",
@@ -142,26 +158,23 @@ function pickPrimaryManifest(manifests: SessionManifest[], selectedSessionId?: s
 }
 
 export function getUiData(selectedSessionId?: string): UiDataBundle {
+  const library = buildLibraryFromCatalog();
+  const selectedManifestPath = selectedSessionId
+    ? getManifestPathForAnalysisRun(selectedSessionId)
+    : library.sessions[0]?.manifest_path ?? null;
   const discoveredManifestPaths = discoverManifestPaths(repoRoot);
-  const catalogManifestPaths = resolveCatalogManifestPaths(discoveredManifestPaths);
-  const catalogPathSet = new Set(catalogManifestPaths);
-  const requestedFallbackPath = selectedSessionId
-    ? discoveredManifestPaths.find((manifestPath) => {
-        const manifest = readJsonFile<SessionManifest>(manifestPath);
-        if (!manifest) return false;
-        return (
-          manifest.session.id === selectedSessionId ||
-          path.basename(manifest.session.output_dir) === selectedSessionId ||
-          manifest.session.title === selectedSessionId
-        );
-      })
-    : undefined;
-  const manifestPaths = requestedFallbackPath && !catalogPathSet.has(requestedFallbackPath)
-    ? [...catalogManifestPaths, requestedFallbackPath]
-    : catalogManifestPaths;
-  const discoveredManifests = manifestPaths.map((manifestPath) => readJsonFile<SessionManifest>(manifestPath)).filter((manifest): manifest is SessionManifest => manifest !== null);
-  const manifest = discoveredManifests.length > 0 ? pickPrimaryManifest(discoveredManifests, selectedSessionId) : fallbackManifest;
-  const library = discoveredManifests.length > 0 ? buildLibraryFromManifests(discoveredManifests) : buildEmptyLibrary();
+  const fallbackManifestPaths = selectedManifestPath
+    ? [selectedManifestPath]
+    : discoveredManifestPaths;
+  const discoveredManifests = fallbackManifestPaths
+    .map((manifestPath) => readJsonFile<SessionManifest>(manifestPath))
+    .filter((manifest): manifest is SessionManifest => manifest !== null);
+  const manifestPool = discoveredManifests.length > 0
+    ? discoveredManifests
+    : discoveredManifestPaths
+        .map((manifestPath) => readJsonFile<SessionManifest>(manifestPath))
+        .filter((item): item is SessionManifest => item !== null);
+  const manifest = manifestPool.length > 0 ? pickPrimaryManifest(manifestPool, selectedSessionId) : fallbackManifest;
   return {
     library,
     manifest,

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import type { SessionManifest } from "@/types/ui";
-import { ensureRuntimeDirs, exportJobStatePath } from "@/lib/runtime-config";
+import { ensureRuntimeDirs, exportJobStatePath, exportJobsRoot } from "@/lib/runtime-config";
 
 export type ExportJobStatus = "queued" | "running" | "completed" | "failed";
 export type ExportJobPhase = "queued" | "preparing" | "exporting" | "completed" | "failed";
@@ -49,6 +49,40 @@ export function getExportJob(jobId: string): ExportJobRecord | null {
   const record = JSON.parse(fs.readFileSync(persistedPath, "utf-8")) as ExportJobRecord;
   jobs.set(jobId, record);
   return record;
+}
+
+export function listExportedPathsForAnalysisRun(analysisRunId: string): string[] {
+  ensureRuntimeDirs();
+  const records = fs.readdirSync(exportJobsRoot)
+    .filter((entry) => entry.endsWith(".json"))
+    .map((entry) => {
+      const filePath = path.join(exportJobsRoot, entry);
+      try {
+        return JSON.parse(fs.readFileSync(filePath, "utf-8")) as ExportJobRecord;
+      } catch {
+        return null;
+      }
+    })
+    .filter((record): record is ExportJobRecord =>
+      Boolean(record) && record.analysisRunId === analysisRunId && record.status === "completed" && record.exportedPaths.length > 0
+    )
+    .sort((left, right) => {
+      const leftTime = Date.parse(left.finishedAt ?? left.createdAt ?? "") || 0;
+      const rightTime = Date.parse(right.finishedAt ?? right.createdAt ?? "") || 0;
+      return rightTime - leftTime;
+    });
+
+  const dedupedByName = new Map<string, string>();
+  for (const record of records) {
+    for (const exportedPath of record.exportedPaths) {
+      const basename = path.basename(exportedPath);
+      if (!dedupedByName.has(basename)) {
+        dedupedByName.set(basename, exportedPath);
+      }
+    }
+  }
+
+  return Array.from(dedupedByName.values());
 }
 
 export function startExportJob(analysisRunId: string, manifestPath: string, detectionIds: string[]): ExportJobRecord {

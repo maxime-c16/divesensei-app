@@ -10,6 +10,7 @@ import {
   sessionIsReviewReady,
   sessionStatusLabel,
 } from "@/lib/ui-data";
+import { listExportedPathsForAnalysisRun } from "@/lib/export-jobs";
 
 interface ThemeConfig {
   id: string;
@@ -133,6 +134,7 @@ const nextActionLabel = !hasActiveSession
     : sessionReadyNow
       ? "Open Review, confirm the attempts you want, then export the clips you keep."
       : "Wait for analysis to finish, then open Review.";
+const initialExportedPaths = hasActiveSession ? listExportedPathsForAnalysisRun(session.id) : [];
 const clientBundle = JSON.stringify({
   hasSession,
   session,
@@ -141,6 +143,7 @@ const clientBundle = JSON.stringify({
   sourceVideoUrl,
   rangeStart,
   rangeSpan,
+  initialExportedPaths,
   initialReviewPending: initialReviewPlaceholderVisible,
   requestedTab,
   requestedSession,
@@ -272,12 +275,6 @@ const clientBundle = JSON.stringify({
   <section class={`panel panel--review shell ${initialTabIndex === 1 ? "is-active" : ""}`} id="panel-1" data-tab-panel>
     <div class="review-layout">
       <article class="review-main">
-        <div class="review-main__top">
-          <span data-review-current>Attempt {selected?.index ?? 0}</span>
-          <span data-review-counts>{detections.length} waiting</span>
-          <span data-review-position>{selected ? `${selected.index} of ${detections.length}` : "0 of 0"}</span>
-          <span data-review-time>{selected ? formatSeconds(selected.timestamp_seconds) : "0:00.000"}</span>
-        </div>
         <div class="review-main__video">
           <div class="player-stage__frame">
             <video
@@ -343,6 +340,17 @@ const clientBundle = JSON.stringify({
         <div class="library-inline-note" data-review-progress hidden>
           Review is available now. Export only the clips you keep.
         </div>
+        <section class="review-complete-toast" data-review-complete hidden>
+          <div class="review-complete-toast__body">
+            <strong data-review-complete-title>Review complete</strong>
+            <p data-review-complete-copy>You have finished the queue. Open Exports to create clips from the attempts you kept, or stay here and keep browsing.</p>
+          </div>
+          <div class="review-complete-toast__actions">
+            <button class="action-link action-link--primary" type="button" data-review-complete-export>Open exports</button>
+            <button class="action-link" type="button" data-review-complete-stay>Keep reviewing</button>
+          </div>
+          <div class="review-complete-toast__timer" aria-hidden="true"></div>
+        </section>
       </article>
 
       <aside class="review-sidebar">
@@ -350,7 +358,7 @@ const clientBundle = JSON.stringify({
           <h2 data-review-list-title>Attempts</h2>
           <select class="review-sidebar__filter" data-review-filter>
             <option value="all" selected>All</option>
-            <option value="pending">Pending</option>
+            <option value="pending">To review</option>
             <option value="keep">Kept</option>
             <option value="reject">Rejected</option>
             <option value="unsure">Unsure</option>
@@ -393,34 +401,48 @@ const clientBundle = JSON.stringify({
         <div class="section-card__header">
           <div>
             <h2>Exports</h2>
-            <p class="section-note">Export clips from the attempts you decided to keep.</p>
           </div>
           <span class="counter">{session.extracted_count} exports</span>
         </div>
         <div class="analysis-launcher__actions export-actions">
           <button class="action-link action-link--primary" type="button" data-export-kept>Export kept clips</button>
         </div>
-        <p class="analysis-launcher__status" data-export-status>Keep the attempts you want, then export their clips.</p>
+        <p class="analysis-launcher__status" data-export-status>Ready when you are.</p>
         <div class="artifact-grid" data-export-list></div>
       </article>
       <article class="section-card">
         <div class="section-card__header">
           <div>
-            <h2>Export summary</h2>
-            <p class="section-note">Your review decisions determine what is ready to export.</p>
+            <h2>Before you export</h2>
           </div>
         </div>
-        <div class="artifact-grid" data-export-summary>
-          <article>
-            <strong>Review progress</strong>
-            <span data-export-summary-counts>No review decisions yet.</span>
+        <div class="export-insights__stats">
+          <article class="export-insights__stat">
+            <strong data-export-stat-ready>0</strong>
+            <span>Ready</span>
           </article>
-          <article>
-            <strong>Export source</strong>
-            <span>When available, exports are created from the review video.</span>
+          <article class="export-insights__stat">
+            <strong data-export-stat-exported>0</strong>
+            <span>Exported</span>
+          </article>
+          <article class="export-insights__stat">
+            <strong data-export-stat-review>0</strong>
+            <span>To review</span>
           </article>
         </div>
-        <div class="log-list" data-decision-list></div>
+        <div class="export-insights__callout">
+          <strong data-export-callout-title>Nothing selected yet</strong>
+          <p data-export-callout-copy>Review your session and mark the dives you want to keep. They will appear on the left when they are ready to export.</p>
+          <button class="action-link" type="button" data-export-callout-action data-open-tab="1">Open review</button>
+        </div>
+        <div class="export-insights__list">
+          <div class="section-card__header section-card__header--subtle">
+            <div>
+              <h3 data-export-focus-title>Still to review</h3>
+            </div>
+          </div>
+          <div class="export-insights__items" data-decision-list></div>
+        </div>
       </article>
     </div>
   </section>
@@ -557,13 +579,15 @@ const clientBundle = JSON.stringify({
     let autoAdvanceEnabled = true;
     let sourceLoopHandler = null;
     let exportJobId = null;
-    let exportedPaths = [];
+    let exportedPaths = Array.isArray(parsed.initialExportedPaths) ? parsed.initialExportedPaths : [];
     let currentTabIndex = Number(parsed.requestedTab ?? "0");
+    let reviewCompleteNoticeDismissed = false;
+    let reviewCompleteNoticeTimer = null;
+    let timelineScrubbing = false;
+    let timelinePointerId = null;
 
     const tabButtons = Array.from(document.querySelectorAll("[data-tab-trigger]"));
     const panels = Array.from(document.querySelectorAll("[data-tab-panel]"));
-    const currentLabel = document.querySelector("[data-review-current]");
-    const timeLabel = document.querySelector("[data-review-time]");
     const reviewLabel = document.querySelector("[data-review-label]");
     const reviewVideo = document.querySelector("[data-review-video]");
     const reviewPlaceholder = document.querySelector("[data-review-placeholder]");
@@ -575,21 +599,30 @@ const clientBundle = JSON.stringify({
     const reviewProgress = document.querySelector("[data-review-progress]");
     const reviewListTitle = document.querySelector("[data-review-list-title]");
     const reviewListNote = document.querySelector("[data-review-list-note]");
-    const reviewCounts = document.querySelector("[data-review-counts]");
-    const reviewPosition = document.querySelector("[data-review-position]");
     const loopButton = document.querySelector("[data-toggle-loop]");
     const autoplayButton = document.querySelector("[data-toggle-autoplay]");
     const autoAdvanceButton = document.querySelector("[data-toggle-autoadvance]");
     const reviewFilterSelect = document.querySelector("[data-review-filter]");
     const decisionStatus = document.querySelector("[data-decision-status]");
     const decisionNotes = document.querySelector("[data-decision-notes]");
+    const reviewCompleteNotice = document.querySelector("[data-review-complete]");
+    const reviewCompleteTitle = document.querySelector("[data-review-complete-title]");
+    const reviewCompleteCopy = document.querySelector("[data-review-complete-copy]");
+    const reviewCompleteExportButton = document.querySelector("[data-review-complete-export]");
+    const reviewCompleteStayButton = document.querySelector("[data-review-complete-stay]");
     const timelineViewport = document.querySelector("[data-timeline-viewport]");
     const timelineTrack = document.querySelector("[data-timeline-track]");
     const decisionList = document.querySelector("[data-decision-list]");
     const exportButton = document.querySelector("[data-export-kept]");
     const exportStatus = document.querySelector("[data-export-status]");
     const exportList = document.querySelector("[data-export-list]");
-    const exportSummaryCounts = document.querySelector("[data-export-summary-counts]");
+    const exportStatReady = document.querySelector("[data-export-stat-ready]");
+    const exportStatExported = document.querySelector("[data-export-stat-exported]");
+    const exportStatReview = document.querySelector("[data-export-stat-review]");
+    const exportFocusTitle = document.querySelector("[data-export-focus-title]");
+    const exportCalloutTitle = document.querySelector("[data-export-callout-title]");
+    const exportCalloutCopy = document.querySelector("[data-export-callout-copy]");
+    const exportCalloutAction = document.querySelector("[data-export-callout-action]");
     const sessionTotal = document.querySelector("[data-session-total]");
     const sessionList = document.querySelector(".session-list");
     const sessionDeleteButtons = Array.from(document.querySelectorAll("[data-session-delete]"));
@@ -649,24 +682,101 @@ const clientBundle = JSON.stringify({
       return decisionFor(detectionId)?.label ?? "pending";
     }
 
+    function isUnresolvedDecision(label) {
+      return label === "pending" || label === "unsure";
+    }
+
+    function pendingDecisionCount() {
+      return detections.filter((item) => decisionLabelFor(item.id) === "pending").length;
+    }
+
+    function unresolvedDecisionCount() {
+      return unresolvedDetections().length;
+    }
+
+    function dismissReviewCompleteNotice() {
+      if (reviewCompleteNoticeTimer != null) {
+        window.clearTimeout(reviewCompleteNoticeTimer);
+        reviewCompleteNoticeTimer = null;
+      }
+      reviewCompleteNoticeDismissed = true;
+      if (reviewCompleteNotice) {
+        reviewCompleteNotice.hidden = true;
+      }
+    }
+
+    function keptDetections() {
+      return detections.filter((item) => decisionLabelFor(item.id) === "keep");
+    }
+
+    function syncCurrentDecisionUi() {
+      if (!current) return;
+      const currentDecision = decisionFor(current.id);
+      if (currentDecision) {
+        decisionStatus && (decisionStatus.textContent = `Saved ${currentDecision.label} for ${currentDecision.detectionId}.`);
+        decisionDetailLabel && (decisionDetailLabel.textContent = `Decision ${currentDecision.label}`);
+        if (decisionNotes) decisionNotes.value = currentDecision.notes ?? "";
+        return;
+      }
+      decisionStatus && (decisionStatus.textContent = "No decision saved for this attempt.");
+      decisionDetailLabel && (decisionDetailLabel.textContent = "No decision yet");
+      if (decisionNotes) decisionNotes.value = "";
+    }
+
+    function updateReviewCompleteNotice() {
+      if (!reviewCompleteNotice) return;
+      const unresolvedCount = unresolvedDecisionCount();
+      const keepCount = detections.filter((item) => decisionLabelFor(item.id) === "keep").length;
+      if (unresolvedCount > 0 || detections.length === 0) {
+        if (reviewCompleteNoticeTimer != null) {
+          window.clearTimeout(reviewCompleteNoticeTimer);
+          reviewCompleteNoticeTimer = null;
+        }
+        reviewCompleteNotice.hidden = true;
+        reviewCompleteNoticeDismissed = false;
+        return;
+      }
+      if (reviewCompleteNoticeDismissed) {
+        reviewCompleteNotice.hidden = true;
+        return;
+      }
+      reviewCompleteNotice.hidden = false;
+      reviewCompleteNotice.classList.remove("is-timed");
+      void reviewCompleteNotice.offsetWidth;
+      reviewCompleteNotice.classList.add("is-timed");
+      if (reviewCompleteTitle) {
+        reviewCompleteTitle.textContent = keepCount > 0 ? "Review complete" : "Queue complete";
+      }
+      if (reviewCompleteCopy) {
+        reviewCompleteCopy.textContent = keepCount > 0
+          ? `You finished reviewing every attempt. ${keepCount} clip${keepCount === 1 ? "" : "s"} ${keepCount === 1 ? "is" : "are"} ready to export.`
+          : "You finished reviewing every attempt. Nothing is marked Keep yet, so there is nothing to export right now.";
+      }
+      if (reviewCompleteExportButton) {
+        reviewCompleteExportButton.disabled = keepCount === 0;
+      }
+      if (reviewCompleteNoticeTimer != null) {
+        window.clearTimeout(reviewCompleteNoticeTimer);
+      }
+      reviewCompleteNoticeTimer = window.setTimeout(() => {
+        dismissReviewCompleteNotice();
+      }, 5500);
+    }
+
     function updateReviewCounts() {
-      const keepCount = decisions.filter((entry) => entry.label === "keep").length;
-      const rejectCount = decisions.filter((entry) => entry.label === "reject").length;
-      const unsureCount = decisions.filter((entry) => entry.label === "unsure").length;
-      const pendingCount = Math.max(0, detections.length - decisions.length);
-      if (reviewCounts) {
-        reviewCounts.textContent = `${pendingCount} pending • ${keepCount} kept • ${rejectCount} rejected • ${unsureCount} unsure`;
-      }
-      if (exportSummaryCounts) {
-        exportSummaryCounts.textContent = `${keepCount} kept • ${rejectCount} rejected • ${unsureCount} unsure • ${pendingCount} pending`;
-      }
-      const currentIndex = current ? detections.findIndex((item) => item.id === current.id) + 1 : 0;
-      if (reviewPosition) {
-        reviewPosition.textContent = `Attempt ${currentIndex} of ${detections.length}`;
-      }
+      const keepCount = detections.filter((item) => decisionLabelFor(item.id) === "keep").length;
+      const unsureCount = detections.filter((item) => decisionLabelFor(item.id) === "unsure").length;
+      const pendingCount = pendingDecisionCount();
+      const unresolvedCount = pendingCount + unsureCount;
+      const exportedCount = exportedPaths.length;
+      const readyToExportCount = Math.max(0, keepCount - exportedCount);
+      if (exportStatReady) exportStatReady.textContent = String(readyToExportCount);
+      if (exportStatExported) exportStatExported.textContent = String(exportedCount);
+      if (exportStatReview) exportStatReview.textContent = String(unresolvedCount);
       if (exportButton) {
         exportButton.disabled = keepCount === 0;
       }
+      updateReviewCompleteNotice();
     }
 
     function updateToggleButtons() {
@@ -749,7 +859,87 @@ const clientBundle = JSON.stringify({
     }
 
     if (timelineTrack) {
+      const timelineTimeFromClientX = (clientX) => {
+        const rect = timelineTrack.getBoundingClientRect();
+        if (rect.width <= 0) return rangeStartValue;
+        const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+        return rangeStartValue + ratio * rangeSpanValue;
+      };
+
+      const closestDetectionForTime = (targetTime) => {
+        if (!detections.length) return null;
+        return detections.reduce((closest, item) => {
+          if (!closest) return item;
+          return Math.abs(item.timestamp_seconds - targetTime) < Math.abs(closest.timestamp_seconds - targetTime) ? item : closest;
+        }, null);
+      };
+
+      const showTimelineTooltipAt = (timeValue, clientX) => {
+        if (!timelineTooltip) return;
+        const rect = timelineTrack.getBoundingClientRect();
+        const ratio = rect.width <= 0 ? 0 : Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+        timelineTooltip.textContent = formatSeconds(timeValue);
+        timelineTooltip.hidden = false;
+        timelineTooltip.style.left = `${ratio * 100}%`;
+      };
+
+      const commitTimelineScrub = (clientX) => {
+        const targetTime = timelineTimeFromClientX(clientX);
+        const nextDetection = closestDetectionForTime(targetTime);
+        if (!nextDetection) return;
+        selectDetection(nextDetection.id, { autoplay: false });
+        if (reviewVideo) {
+          const start = reviewStartFor(nextDetection);
+          const end = Math.max(start + 0.05, reviewEndFor(nextDetection));
+          reviewVideo.currentTime = Math.min(end - 0.05, Math.max(start, targetTime));
+          syncPlaybackUi();
+        }
+      };
+
+      const finishTimelineScrub = (clientX) => {
+        timelineScrubbing = false;
+        if (timelinePointerId != null && timelineTrack.hasPointerCapture?.(timelinePointerId)) {
+          timelineTrack.releasePointerCapture(timelinePointerId);
+        }
+        timelinePointerId = null;
+        commitTimelineScrub(clientX);
+        if (timelineTooltip) timelineTooltip.hidden = true;
+      };
+
+      timelineTrack.addEventListener("pointerdown", (event) => {
+        if (event.target.closest("[data-timeline-marker]")) return;
+        timelineScrubbing = true;
+        timelinePointerId = event.pointerId;
+        timelineTrack.setPointerCapture?.(event.pointerId);
+        showTimelineTooltipAt(timelineTimeFromClientX(event.clientX), event.clientX);
+        commitTimelineScrub(event.clientX);
+        event.preventDefault();
+      });
+
+      timelineTrack.addEventListener("pointermove", (event) => {
+        if (!timelineScrubbing) return;
+        const targetTime = timelineTimeFromClientX(event.clientX);
+        showTimelineTooltipAt(targetTime, event.clientX);
+        if (timelinePlayhead) {
+          const normalized = ((targetTime - rangeStartValue) / rangeSpanValue) * 100;
+          timelinePlayhead.style.left = `${Math.min(100, Math.max(0, normalized))}%`;
+        }
+      });
+
+      timelineTrack.addEventListener("pointerup", (event) => {
+        if (!timelineScrubbing) return;
+        finishTimelineScrub(event.clientX);
+      });
+
+      timelineTrack.addEventListener("pointercancel", () => {
+        timelineScrubbing = false;
+        timelinePointerId = null;
+        if (timelineTooltip) timelineTooltip.hidden = true;
+        syncPlaybackUi();
+      });
+
       timelineTrack.addEventListener("mouseover", (event) => {
+        if (timelineScrubbing) return;
         const pip = event.target.closest("[data-timeline-marker]");
         if (!pip || !timelineTooltip) return;
         const idx = pip.getAttribute("data-pip-index") ?? "";
@@ -763,6 +953,7 @@ const clientBundle = JSON.stringify({
         timelineTooltip.style.left = left;
       });
       timelineTrack.addEventListener("mouseout", (event) => {
+        if (timelineScrubbing) return;
         const pip = event.target.closest("[data-timeline-marker]");
         if (pip && timelineTooltip) timelineTooltip.hidden = true;
       });
@@ -821,7 +1012,7 @@ const clientBundle = JSON.stringify({
       const startIndex = Math.max(0, detections.findIndex((item) => item.id === current.id));
       for (let step = 1; step <= detections.length; step += 1) {
         const candidate = detections[(startIndex + step * direction + detections.length) % detections.length];
-        if (!preferPending || decisionLabelFor(candidate.id) === "pending") {
+        if (!preferPending || isUnresolvedDecision(decisionLabelFor(candidate.id))) {
           return candidate;
         }
       }
@@ -835,39 +1026,41 @@ const clientBundle = JSON.stringify({
       }
     }
 
-    function pendingDetections() {
-      return detections.filter((item) => decisionLabelFor(item.id) === "pending");
+    function unresolvedDetections() {
+      return detections.filter((item) => isUnresolvedDecision(decisionLabelFor(item.id)));
     }
 
-    function nextPendingDetectionFrom(fromId) {
+    function nextReviewQueueDetectionFrom(fromId) {
       if (detections.length === 0) return null;
-      const pending = pendingDetections();
-      if (!pending.length) return null;
+      const unresolved = unresolvedDetections();
+      if (!unresolved.length) return null;
       const startIndex = Math.max(0, detections.findIndex((item) => item.id === fromId));
       for (let step = 1; step <= detections.length; step += 1) {
         const candidate = detections[(startIndex + step) % detections.length];
-        if (decisionLabelFor(candidate.id) === "pending") {
+        if (isUnresolvedDecision(decisionLabelFor(candidate.id))) {
           return candidate;
         }
       }
-      return pending[0] ?? null;
+      return unresolved[0] ?? null;
     }
 
     function moveReviewForwardAfterDecision(savedDetectionId, label) {
-      const pending = pendingDetections();
-      if (!pending.length) {
-        decisionStatus && (decisionStatus.textContent = `Saved ${label} for ${savedDetectionId}. Review complete — opening Exports.`);
-        setTab(2);
+      const unresolved = unresolvedDetections();
+      if (!unresolved.length) {
+        reviewCompleteNoticeDismissed = false;
+        decisionStatus && (decisionStatus.textContent = `Saved ${label} for ${savedDetectionId}. Review complete.`);
+        updateReviewCounts();
         return;
       }
-      const nextPending = nextPendingDetectionFrom(savedDetectionId);
-      if (!nextPending) return;
+      const nextQueueItem = nextReviewQueueDetectionFrom(savedDetectionId);
+      if (!nextQueueItem) return;
       if (reviewFilterSelect && !["all", "pending"].includes(reviewFilter)) {
         reviewFilter = "pending";
         reviewFilterSelect.value = "pending";
         applyQueueFilter();
       }
-      selectDetection(nextPending.id, { autoplay: autoPlayEnabled });
+      decisionStatus && (decisionStatus.textContent = `Saved ${label} for ${savedDetectionId}. ${unresolved.length} still in review.`);
+      selectDetection(nextQueueItem.id, { autoplay: autoPlayEnabled });
     }
 
     function applyQueueFilter() {
@@ -876,7 +1069,7 @@ const clientBundle = JSON.stringify({
         const detection = detections.find((item) => item.id === id);
         const decision = decisionLabelFor(id);
         const haystack = `${id} ${decision} ${detection?.confidence ?? ""}`.toLowerCase();
-        const matchesFilter = reviewFilter === "all" || (reviewFilter === "pending" ? decision === "pending" : decision === reviewFilter);
+        const matchesFilter = reviewFilter === "all" || (reviewFilter === "pending" ? isUnresolvedDecision(decision) : decision === reviewFilter);
         row.hidden = !matchesFilter;
       });
     }
@@ -954,8 +1147,6 @@ const clientBundle = JSON.stringify({
     function selectDetection(id, options = {}) {
       current = detections.find((item) => item.id === id) ?? current;
       if (!current) return;
-      currentLabel && (currentLabel.textContent = `Attempt ${current.index}`);
-      timeLabel && (timeLabel.textContent = formatSeconds(current.timestamp_seconds));
       reviewLabel && (reviewLabel.textContent = `${formatSeconds(reviewStartFor(current))} to ${formatSeconds(reviewEndFor(current))} · ${parsed.session?.source_video_path ?? ""}`);
       audioLabel && (audioLabel.textContent = `Audio ${current.scores.audio.toFixed(2)}`);
       windowLabel && (windowLabel.textContent = `Window ${formatSeconds(reviewStartFor(current))} to ${formatSeconds(reviewEndFor(current))}`);
@@ -968,16 +1159,7 @@ const clientBundle = JSON.stringify({
       syncVideoSource();
       updateMediaSessionMetadata();
       updateReviewCounts();
-      const currentDecision = decisionFor(current.id);
-      if (currentDecision) {
-        decisionStatus && (decisionStatus.textContent = `Saved ${currentDecision.label} for ${currentDecision.detectionId}.`);
-        decisionDetailLabel && (decisionDetailLabel.textContent = `Decision ${currentDecision.label}`);
-        if (decisionNotes) decisionNotes.value = currentDecision.notes ?? "";
-      } else {
-        decisionStatus && (decisionStatus.textContent = "No decision saved for this attempt.");
-        decisionDetailLabel && (decisionDetailLabel.textContent = "No decision yet");
-        if (decisionNotes) decisionNotes.value = "";
-      }
+      syncCurrentDecisionUi();
       if (options.autoplay && autoPlayEnabled) {
         window.setTimeout(() => { void playCurrentSegment(); }, 40);
       }
@@ -994,6 +1176,15 @@ const clientBundle = JSON.stringify({
     reviewFilterSelect?.addEventListener("change", (event) => {
       reviewFilter = String(event.target?.value ?? "all");
       applyQueueFilter();
+    });
+
+    reviewCompleteExportButton?.addEventListener("click", () => {
+      dismissReviewCompleteNotice();
+      setTab(2);
+    });
+
+    reviewCompleteStayButton?.addEventListener("click", () => {
+      dismissReviewCompleteNotice();
     });
 
     const form = document.querySelector("[data-analysis-form]");
@@ -1036,21 +1227,66 @@ const clientBundle = JSON.stringify({
       }
     }
 
-    function renderDecisions(decisions) {
+    function renderExportInsights() {
       if (!decisionList) return;
-      if (!decisions.length) {
-        decisionList.innerHTML = "<article><strong>No decisions yet</strong><p>Use Review to mark attempts as Keep, Reject, or Unsure.</p></article>";
+      const keepCount = keptDetections().length;
+      const exportedCount = exportedPaths.length;
+      const unresolved = unresolvedDetections();
+      const readyCount = Math.max(0, keepCount - exportedCount);
+
+      if (unresolved.length > 0) {
+        if (exportCalloutTitle) exportCalloutTitle.textContent = "Finish review first";
+        if (exportCalloutCopy) {
+          exportCalloutCopy.textContent = `${unresolved.length} attempt${unresolved.length === 1 ? "" : "s"} still need a decision before this session is fully wrapped up.`;
+        }
+        if (exportCalloutAction) {
+          exportCalloutAction.hidden = false;
+          exportCalloutAction.textContent = "Open review";
+        }
+        if (exportFocusTitle) exportFocusTitle.textContent = "Still to review";
+        decisionList.innerHTML = unresolved.slice(0, 6).map((item) => `
+          <article class="export-focus-card">
+            <strong>Dive ${item.index}</strong>
+            <span>Splash at ${formatSeconds(item.timestamp_seconds)}</span>
+            <em>${decisionLabelFor(item.id) === "unsure" ? "Unsure" : "No decision yet"}</em>
+          </article>
+        `).join("");
         return;
       }
-      decisionList.innerHTML = decisions.slice(0, 8).map((entry) => `
-        <article>
-          <strong>${entry.detectionId} · ${entry.label}</strong>
-          <div class="session-listing__meta">
-            <span>${entry.updatedAt}</span>
-          </div>
-          <p>${entry.notes || "No note added."}</p>
+
+      if (keepCount > 0 && readyCount > 0) {
+        if (exportCalloutTitle) exportCalloutTitle.textContent = "Ready to export";
+        if (exportCalloutCopy) {
+          exportCalloutCopy.textContent = `${readyCount} dive${readyCount === 1 ? "" : "s"} ${readyCount === 1 ? "is" : "are"} ready on the left. Export them whenever you are ready.`;
+        }
+        if (exportCalloutAction) exportCalloutAction.hidden = true;
+      } else if (keepCount > 0 && exportedCount > 0) {
+        if (exportCalloutTitle) exportCalloutTitle.textContent = "Everything is exported";
+        if (exportCalloutCopy) {
+          exportCalloutCopy.textContent = `${exportedCount} dive${exportedCount === 1 ? "" : "s"} ${exportedCount === 1 ? "has" : "have"} already been exported. You can reopen Review any time if you want to change a choice.`;
+        }
+        if (exportCalloutAction) {
+          exportCalloutAction.hidden = false;
+          exportCalloutAction.textContent = "Open review";
+        }
+      } else {
+        if (exportCalloutTitle) exportCalloutTitle.textContent = "Nothing selected yet";
+        if (exportCalloutCopy) {
+          exportCalloutCopy.textContent = "Nothing is marked to keep yet. Open Review if you want to change a decision before exporting.";
+        }
+        if (exportCalloutAction) {
+          exportCalloutAction.hidden = false;
+          exportCalloutAction.textContent = "Open review";
+        }
+      }
+
+      if (exportFocusTitle) exportFocusTitle.textContent = "Session status";
+      decisionList.innerHTML = `
+        <article class="export-focus-card export-focus-card--quiet">
+          <strong>${keepCount > 0 ? `${keepCount} dive${keepCount === 1 ? "" : "s"} selected` : "No dives selected"}</strong>
+          <span>${exportedCount > 0 ? `${exportedCount} already exported.` : "Selected dives and exports stay grouped on the left."}</span>
         </article>
-      `).join("");
+      `;
     }
 
     async function readJsonResponse(response) {
@@ -1075,10 +1311,11 @@ const clientBundle = JSON.stringify({
       const response = await fetch(`/api/review?analysisRunId=${encodeURIComponent(parsed.session.id)}`);
       const payload = await readJsonResponse(response);
       decisions = payload.decisions ?? [];
-      renderDecisions(decisions);
       updateReviewCounts();
+      renderExportInsights();
+      renderExportList(exportedPaths);
       renderDetectionTable();
-      if (current) selectDetection(current.id);
+      syncCurrentDecisionUi();
     }
 
     sessionNameInput?.addEventListener("input", () => {
@@ -1233,14 +1470,13 @@ const clientBundle = JSON.stringify({
       let videoPath = input?.value ?? "";
       if (pickedVideoFile) {
         status && (status.textContent = `Copying ${pickedVideoFile.name} into the workspace...`);
-        const uploadBytes = await pickedVideoFile.arrayBuffer();
         const importResponse = await fetch("/api/import-video", {
           method: "POST",
           headers: {
             "Content-Type": "application/octet-stream",
             "X-File-Name": pickedVideoFile.name,
           },
-          body: uploadBytes,
+          body: pickedVideoFile,
         });
         const importPayload = await readJsonResponse(importResponse);
         if (!importResponse.ok) {
@@ -1404,16 +1640,91 @@ const clientBundle = JSON.stringify({
     function renderExportList(paths) {
       exportedPaths = paths ?? [];
       if (!exportList) return;
-      if (!exportedPaths.length) {
-        exportList.innerHTML = "<article><strong>No exports yet.</strong><span>Finish your review, then export the clips you want to keep.</span></article>";
+      const exportedByName = new Map(
+        exportedPaths.map((item) => {
+          const name = item.split("/").pop() ?? item;
+          return [name, item];
+        }),
+      );
+      const kept = keptDetections();
+      if (!kept.length) {
+        exportList.innerHTML = "<article><strong>Nothing ready yet.</strong><span>Mark attempts as Keep in Review to prepare them for export.</span></article>";
+        updateReviewCounts();
+        renderExportInsights();
         return;
       }
-      exportList.innerHTML = exportedPaths.map((item) => `
-        <a href="/api/media?path=${encodeURIComponent(item)}" target="_blank">
-          <strong>${item.split("/").pop()}</strong>
-          <span>${item}</span>
-        </a>
-      `).join("");
+      exportList.innerHTML = kept.map((item) => {
+        const expectedName = item.clip.filename ?? `${item.id}.mp4`;
+        const exportedPath = exportedByName.get(expectedName);
+        const exported = Boolean(exportedPath);
+        const title = `Dive ${item.index}`;
+        const subtitle = `Splash at ${formatSeconds(item.timestamp_seconds)}`;
+        const previewPath = item.reviewClipPath ?? item.clip?.browser_path ?? item.clip?.path ?? null;
+        const previewUrl = previewPath
+          ? `/api/media?path=${encodeURIComponent(previewPath)}`
+          : (parsed.primaryVideoUrl ?? parsed.sourceVideoUrl ?? "");
+        const previewMarkup = previewUrl
+          ? `<video class="export-card__thumb" muted playsinline preload="metadata" src="${previewUrl}#t=${Math.max(0, Number(item.review_start_seconds ?? item.start_time_seconds ?? item.timestamp_seconds ?? 0)).toFixed(3)}"></video>`
+          : `<div class="export-card__thumb export-card__thumb--empty" aria-hidden="true"></div>`;
+        return exported
+          ? `
+            <a href="/api/media?path=${encodeURIComponent(exportedPath)}" target="_blank" class="export-card export-card--done">
+              ${previewMarkup}
+              <div class="export-card__body">
+                <strong>${title}</strong>
+                <span>${subtitle}</span>
+                <em>Exported</em>
+              </div>
+            </a>
+          `
+          : `
+            <article class="export-card export-card--ready">
+              ${previewMarkup}
+              <div class="export-card__body">
+                <strong>${title}</strong>
+                <span>${subtitle}</span>
+              </div>
+            </article>
+          `;
+      }).join("");
+      updateReviewCounts();
+      renderExportInsights();
+    }
+
+    function formatExportStatus(payload) {
+      const totalCount = Number(payload?.detectionIds?.length ?? 0);
+      const exportedCount = Number(payload?.exportedPaths?.length ?? 0);
+
+      if (payload?.status === "failed") {
+        return payload.error ?? "Export failed. Try again.";
+      }
+
+      if (payload?.status === "completed") {
+        if (exportedCount <= 0) return "Export finished.";
+        return `${exportedCount} clip${exportedCount === 1 ? "" : "s"} ready.`;
+      }
+
+      if (payload?.phase === "queued") {
+        return totalCount > 0
+          ? `Preparing ${totalCount} clip${totalCount === 1 ? "" : "s"} for export...`
+          : "Preparing export...";
+      }
+
+      if (payload?.phase === "preparing") {
+        return totalCount > 0
+          ? `Getting ${totalCount} clip${totalCount === 1 ? "" : "s"} ready...`
+          : "Getting export ready...";
+      }
+
+      if (payload?.phase === "exporting") {
+        const currentCount = Math.min(totalCount || exportedCount + 1, exportedCount + 1);
+        if (totalCount > 0) {
+          return `Exporting clip ${currentCount} of ${totalCount}...`;
+        }
+        return "Exporting clips...";
+      }
+
+      return "Working on your export...";
     }
 
     async function pollExportJob(jobId) {
@@ -1425,8 +1736,7 @@ const clientBundle = JSON.stringify({
           exportStatus && (exportStatus.textContent = payload.error ?? "Could not read the export status.");
           return;
         }
-        const detail = payload.progressDetail ? ` - ${payload.progressDetail}` : "";
-        exportStatus && (exportStatus.textContent = `Export job ${payload.id}: ${payload.phaseLabel}${detail}`);
+        exportStatus && (exportStatus.textContent = formatExportStatus(payload));
         if (payload.status === "completed") {
           renderExportList(payload.exportedPaths ?? []);
           return;
@@ -1481,7 +1791,7 @@ const clientBundle = JSON.stringify({
 
     updateReviewModeCopy();
     updateToggleButtons();
-    renderExportList([]);
+    renderExportList(exportedPaths);
     installMediaSessionHandlers();
     syncVideoSource();
     renderDetectionTable();
