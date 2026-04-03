@@ -31,7 +31,7 @@ IOS_BUNDLE_ID ?= com.divesensei.mobile
 
 .PHONY: help venv install compile smoke-help desktop-setup desktop-check desktop-build \
 	electron-dev electron-start electron-prepare mobile-setup mobile-build mobile-sync-ios \
-	mobile-open-ios mobile-xcode-build mobile-sim-install mobile-sim-launch mobile-sim-reinstall \
+	mobile-open-ios mobile-xcode-build mobile-web-refresh mobile-fast mobile-sim-install mobile-sim-launch mobile-sim-relaunch mobile-sim-reinstall \
 	mobile-sim-screenshot mobile-review-reset status wait up down restart re logs clean \
 	clean-runtime clean-build clean-python clean-app
 
@@ -49,6 +49,9 @@ help:
 	@printf "  make mobile-sync-ios Sync the Capacitor iOS project\n"
 	@printf "  make mobile-open-ios Open the iOS workspace in Xcode\n"
 	@printf "  make mobile-xcode-build Build the iOS app for the configured simulator\n"
+	@printf "  make mobile-web-refresh Build + sync mobile web assets into the Xcode project\n"
+	@printf "  make mobile-sim-relaunch Relaunch the installed app on the simulator\n"
+	@printf "  make mobile-fast    Incremental iOS rebuild + reinstall for fast UI iteration\n"
 	@printf "  make mobile-sim-install Install the built app on the configured simulator\n"
 	@printf "  make mobile-sim-launch Launch the app on the configured simulator\n"
 	@printf "  make mobile-sim-reinstall Rebuild, install, and relaunch the app on the simulator\n"
@@ -164,14 +167,27 @@ mobile-xcode-build: mobile-sync-ios
 		-destination 'id=$(IOS_SIMULATOR_ID)' \
 		build
 
+mobile-web-refresh: mobile-build
+	cd "$(MOBILE_DIR_ABS)" && env $(CAP_SYNC_ENV) npx cap sync ios
+
+mobile-fast: mobile-xcode-build
+	xcrun simctl terminate "$(IOS_SIMULATOR_ID)" "$(IOS_BUNDLE_ID)" || true
+	xcrun simctl install "$(IOS_SIMULATOR_ID)" "$(IOS_APP_BUNDLE)"
+	xcrun simctl launch "$(IOS_SIMULATOR_ID)" "$(IOS_BUNDLE_ID)"
+
 mobile-sim-install:
 	xcrun simctl install "$(IOS_SIMULATOR_ID)" "$(IOS_APP_BUNDLE)"
 
 mobile-sim-launch:
 	xcrun simctl launch "$(IOS_SIMULATOR_ID)" "$(IOS_BUNDLE_ID)"
 
+mobile-sim-relaunch:
+	xcrun simctl terminate "$(IOS_SIMULATOR_ID)" "$(IOS_BUNDLE_ID)" || true
+	xcrun simctl launch "$(IOS_SIMULATOR_ID)" "$(IOS_BUNDLE_ID)"
+
 mobile-sim-reinstall: mobile-xcode-build
 	xcrun simctl terminate "$(IOS_SIMULATOR_ID)" "$(IOS_BUNDLE_ID)" || true
+	xcrun simctl uninstall "$(IOS_SIMULATOR_ID)" "$(IOS_BUNDLE_ID)" || true
 	xcrun simctl install "$(IOS_SIMULATOR_ID)" "$(IOS_APP_BUNDLE)"
 	xcrun simctl launch "$(IOS_SIMULATOR_ID)" "$(IOS_BUNDLE_ID)"
 
