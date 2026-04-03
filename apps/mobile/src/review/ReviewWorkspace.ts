@@ -216,25 +216,23 @@ export class ReviewWorkspace {
                 ></video>
                 <div class="review-card__video-overlay">
                   <div class="review-card__video-topline">
-                    <span class="pill pill--soft">${pendingIndex + 1} / ${pending.length}</span>
-                    <span class="pill">${formatSeconds(activeItem.windowStart)} to ${formatSeconds(activeItem.windowEnd)}</span>
+                    <span class="review-card__window-pill">${formatSeconds(activeItem.windowStart)} to ${formatSeconds(activeItem.windowEnd)}</span>
                   </div>
-                  <span class="review-card__video-state" data-video-state-label>Loading review loop</span>
+                  <span class="review-card__video-state" data-video-state-label>Loading</span>
                 </div>
                 <div class="review-card__video-caption">
                   <strong>${manifest.session.session_name ?? manifest.session.title}</strong>
                   <span>Swipe left to reject, right to keep.</span>
                 </div>
+                <div class="review-card__action-rail">
+                  <button class="decision-button decision-button--reject" type="button" data-decision-action="reject">Reject</button>
+                  <button class="decision-button decision-button--unsure" type="button" data-decision-action="unsure">Unsure</button>
+                  <button class="decision-button decision-button--keep" type="button" data-decision-action="keep">Keep</button>
+                </div>
               </div>
             </div>
           </article>
         </section>
-
-        <div class="review-deck__controls">
-          <button class="decision-button decision-button--reject" type="button" data-decision-action="reject">Reject</button>
-          <button class="decision-button decision-button--unsure" type="button" data-decision-action="unsure">Unsure</button>
-          <button class="decision-button decision-button--keep" type="button" data-decision-action="keep">Keep</button>
-        </div>
 
         <pre class="review-deck__debug-live review-deck__debug-live--hidden" data-review-debug-live>Awaiting player events.</pre>
       </section>
@@ -263,9 +261,6 @@ export class ReviewWorkspace {
             <article class="review-card review-card--active review-card--loading">
               <div class="review-card__surface">
                 <div class="review-card__video-shell review-card__video-shell--placeholder">
-                  <div class="review-card__video-placeholder">
-                    <span class="review-card__video-state">${proxy.status === "pending" ? "Preparing review loop" : "Review loop unavailable"}</span>
-                  </div>
                   <div class="review-card__video-overlay">
                     <div class="review-card__video-topline">
                       <span class="pill pill--soft">${pending.length} pending</span>
@@ -411,6 +406,7 @@ export class ReviewWorkspace {
     const setVideoState = (text: string) => {
       if (stateLabel) {
         stateLabel.textContent = text;
+        stateLabel.hidden = text.length === 0;
       }
       this.updateReviewDebug(text);
     };
@@ -428,7 +424,7 @@ export class ReviewWorkspace {
 
       try {
         await this.activeVideo.play();
-        setVideoState(`${formatSeconds(this.loopBounds.start)} to ${formatSeconds(this.loopBounds.end)}`);
+        setVideoState("");
       } catch {
         setVideoState("Tap video to play");
       }

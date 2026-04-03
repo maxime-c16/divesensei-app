@@ -246,71 +246,31 @@ function renderScreenHeader(title: string, note: string, meta: string[] = []): s
 function renderCreatePanel(): string {
   const currentSession = selectedSession();
   const source = state.source;
+  const sourceTitle = source ? sourceDisplayBaseName(source) : "Pick a dive video";
+  const sourceMeta = source
+    ? `${Math.round(source.durationSeconds ?? 0)}s · ${availabilityLabel(source.availability)}`
+    : "Photos video";
 
   return `
-    ${renderScreenHeader(
-      "Create session",
-      "Pick a source, set the detector, then prepare the review queue.",
-      [
-        `${state.sessions.length} sessions`,
-        `${state.sessions.filter((session) => session.status === "review_ready").length} ready`,
-      ],
-    )}
-
-    <section class="panel-card source-panel">
-      <div class="panel-card__header">
-        <div>
-          <h2>${source ? escapeHtml(source.displayName) : "Pick a dive video"}</h2>
+    <section class="create-workspace">
+      <section class="create-workspace__source-card">
+        <div class="create-workspace__source-copy">
+          <span class="field-label">Source</span>
+          <strong>${escapeHtml(sourceTitle)}</strong>
+          <p>${escapeHtml(sourceMeta)}</p>
         </div>
         <button class="primary-action" id="pick-source" type="button">${source ? "Change source" : "Pick source"}</button>
-      </div>
-      ${source ? `
-        <div class="source-summary">
-          <div class="source-summary__meta">
-            <span class="pill pill--soft">${escapeHtml(source.origin)}</span>
-            <span class="pill">${escapeHtml(availabilityLabel(source.availability))}</span>
-          </div>
-          <dl class="key-grid">
-            <div><dt>Duration</dt><dd>${source.durationSeconds ? `${Math.round(source.durationSeconds)}s` : "Unknown"}</dd></div>
-            <div><dt>Size</dt><dd>${source.fileSizeBytes ? formatBytes(source.fileSizeBytes) : "Unknown"}</dd></div>
-            <div><dt>Persistence</dt><dd>${source.canPersist ? "Native" : "Temporary"}</dd></div>
-          </dl>
-        </div>
-      ` : `
-        <p class="supporting-copy">Use the native Photos picker. Once a source is chosen, the session form unlocks below.</p>
-      `}
-      ${state.lastError ? `<p class="inline-error">${escapeHtml(state.lastError)}</p>` : ""}
-    </section>
+      </section>
 
-    <section class="panel-card">
-      <div class="panel-card__header">
-        <div>
-          <h2>Analysis setup</h2>
-        </div>
-      </div>
-      <label class="field">
-        <span>Session name</span>
-        <input id="session-name" type="text" value="${escapeHtmlAttribute(state.draftSessionName)}" placeholder="Morning training set" ${source ? "" : "disabled"} />
-      </label>
-      <div class="stack">
-        <div>
-          <span class="field-label">Session type</span>
-          <div class="segmented">
-            ${(["long-session", "reviewed"] as const).map((profile) => `
-              <button
-                type="button"
-                class="segmented__item ${state.draftProfile === profile ? "is-active" : ""}"
-                data-profile="${profile}"
-                ${source ? "" : "disabled"}
-              >
-                ${profileLabel(profile)}
-              </button>
-            `).join("")}
-          </div>
-        </div>
-        <div>
+      <section class="create-workspace__setup-card">
+        <label class="field field--compact">
+          <span>Session name</span>
+          <input id="session-name" type="text" value="${escapeHtmlAttribute(state.draftSessionName)}" placeholder="Morning training set" ${source ? "" : "disabled"} />
+        </label>
+
+        <div class="create-workspace__field-group">
           <span class="field-label">Detector</span>
-          <div class="segmented segmented--detectors">
+          <div class="create-workspace__detectors">
             ${([
               "audio_v2_pcen_classifier",
               "audio_v1_heuristic",
@@ -318,7 +278,7 @@ function renderCreatePanel(): string {
             ] as const).map((detectorId) => `
               <button
                 type="button"
-                class="segmented__item ${state.draftDetectorId === detectorId ? "is-active" : ""}"
+                class="detector-chip ${state.draftDetectorId === detectorId ? "is-active" : ""}"
                 data-detector="${detectorId}"
                 ${source ? "" : "disabled"}
               >
@@ -327,29 +287,17 @@ function renderCreatePanel(): string {
             `).join("")}
           </div>
         </div>
-      </div>
-      <div class="action-cluster">
-        <button class="primary-action" id="create-session" type="button" ${source ? "" : "disabled"}>Create session</button>
-        <button class="secondary-action" id="start-analysis" type="button" ${currentSession ? "" : "disabled"}>Start analysis</button>
-      </div>
-      <p class="supporting-copy">${currentSession
-        ? `Selected session: ${escapeHtml(currentSession.sessionName)} · ${escapeHtml(statusLabel(currentSession.status))}`
-        : "Create a session first, then analysis can begin."}</p>
-    </section>
 
-    <section class="panel-card checklist-card">
-      <div class="panel-card__header">
-        <div>
-          <h2>What happens next</h2>
+        <div class="create-workspace__actions">
+          <button class="secondary-action" id="create-session" type="button" ${source ? "" : "disabled"}>Create</button>
+          <button class="primary-action" id="start-analysis" type="button" ${currentSession ? "" : "disabled"}>Start analysis</button>
         </div>
-        <button class="ghost-link" type="button" data-set-tab="library">Open library</button>
-      </div>
-      <div class="checklist-grid">
-        <article><strong>1</strong><p>Pick the source video from Photos.</p></article>
-        <article><strong>2</strong><p>Create the session with the right detector.</p></article>
-        <article><strong>3</strong><p>Let analysis prepare the reviewable attempts.</p></article>
-        <article><strong>4</strong><p>Open Review to keep, reject, and export.</p></article>
-      </div>
+
+        <p class="create-workspace__status">${currentSession
+          ? `Current session: ${escapeHtml(currentSession.sessionName)} · ${escapeHtml(statusLabel(currentSession.status))}`
+          : "Pick a source, name the session, then start analysis."}</p>
+        ${state.lastError ? `<p class="inline-error">${escapeHtml(state.lastError)}</p>` : ""}
+      </section>
     </section>
   `;
 }
@@ -373,26 +321,37 @@ function renderExportsPanel(): string {
     return emptyState("Nothing to export yet", "Exports are attached to a selected session. Pick one from Library or create a new one first.", "Go to Library", "library");
   }
 
+  const pendingCount = Math.max(
+    (currentSession.candidateCount ?? 0) - ((currentSession.keptCount ?? 0) + (currentSession.rejectCount ?? 0) + (currentSession.unsureCount ?? 0)),
+    0,
+  );
+
   return `
-    ${renderScreenHeader(
-      "Exports",
-      "This tab will become the mobile export workspace once review flow is stable.",
-      [
-        `${currentSession.keptCount ?? 0} kept`,
-        `${currentSession.exportCount ?? 0} exports`,
-      ],
-    )}
-    <section class="panel-card">
-      <div class="panel-card__header">
-        <div>
-          <h2>Export flow comes after review</h2>
+    <section class="exports-workspace">
+      <section class="exports-workspace__hero">
+        <span class="field-label">Selected session</span>
+        <strong>${escapeHtml(currentSession.sessionName)}</strong>
+        <p>Exports unlock after review is complete.</p>
+      </section>
+
+      <section class="exports-workspace__panel">
+        <div class="exports-workspace__stats">
+          <article>
+            <strong>${currentSession.keptCount ?? 0}</strong>
+            <span>Kept</span>
+          </article>
+          <article>
+            <strong>${pendingCount}</strong>
+            <span>Pending</span>
+          </article>
+          <article>
+            <strong>${currentSession.exportCount ?? 0}</strong>
+            <span>Exports</span>
+          </article>
         </div>
-      </div>
-      <p class="supporting-copy">Keep using Review to decide what stays. Once export is implemented here, this tab will become the mobile destination for clip output, destinations, and saved artifacts.</p>
-      <div class="key-grid">
-        <div><dt>Session status</dt><dd>${escapeHtml(statusLabel(currentSession.status))}</dd></div>
-        <div><dt>Pending review</dt><dd>${Math.max((currentSession.candidateCount ?? 0) - ((currentSession.keptCount ?? 0) + (currentSession.rejectCount ?? 0) + (currentSession.unsureCount ?? 0)), 0)}</dd></div>
-      </div>
+        <p class="exports-workspace__status">${escapeHtml(statusLabel(currentSession.status))} · finish reviewing this session, then export clips here.</p>
+        <button class="primary-action" type="button" data-open-review="${currentSession.sessionId}">Open review</button>
+      </section>
     </section>
   `;
 }
@@ -401,23 +360,30 @@ function renderLibraryPanel(): string {
   const currentSession = selectedSession();
 
   return `
-    ${renderScreenHeader(
-      "Library",
-      "Reopen sessions, switch context fast, and jump back into review.",
-      [
-        `${state.sessions.length} saved`,
-        `${state.sessions.filter((session) => session.status === "analyzing").length} running`,
-      ],
-    )}
+    <section class="library-workspace">
+      ${currentSession ? `
+        <section class="library-workspace__hero">
+          <div class="library-workspace__hero-copy">
+            <span class="field-label">Selected session</span>
+            <strong>${escapeHtml(currentSession.sessionName)}</strong>
+            <p>${escapeHtml(statusLabel(currentSession.status))} · ${currentSession.candidateCount ?? 0} attempts · ${currentSession.keptCount ?? 0} kept</p>
+          </div>
+          <button class="primary-action" type="button" data-open-review="${currentSession.sessionId}">Open review</button>
+        </section>
+      ` : `
+        <section class="library-workspace__hero">
+          <div class="library-workspace__hero-copy">
+            <span class="field-label">Library</span>
+            <strong>No session selected</strong>
+            <p>Create one in the Create tab, then return here.</p>
+          </div>
+          <button class="secondary-action" type="button" data-set-tab="create">Go to Create</button>
+        </section>
+      `}
 
-    <section class="panel-card">
-      <div class="panel-card__header">
-        <div>
-          <h2>${state.sessions.length > 0 ? "Your recent sessions" : "No sessions yet"}</h2>
-        </div>
-      </div>
-      ${state.sessions.length > 0 ? `
-        <div class="session-stack">
+      <section class="library-workspace__panel">
+        ${state.sessions.length > 0 ? `
+        <div class="session-stack session-stack--compact">
           ${state.sessions.map((session) => `
             <article class="session-card ${session.sessionId === state.selectedSessionId ? "is-current" : ""}" data-session-id="${session.sessionId}">
               <button class="session-card__main" type="button" data-session-id="${session.sessionId}">
@@ -446,24 +412,8 @@ function renderLibraryPanel(): string {
           `).join("")}
         </div>
       ` : emptyState("Create your first session", "Pick a source in Create to start building the library.", "Go to Create", "create")}
-    </section>
-
-    ${currentSession ? `
-      <section class="panel-card">
-        <div class="panel-card__header">
-          <div>
-            <h2>${escapeHtml(currentSession.sessionName)}</h2>
-          </div>
-          <button class="ghost-link" type="button" data-open-review="${currentSession.sessionId}">Open review</button>
-        </div>
-        <div class="key-grid">
-          <div><dt>Status</dt><dd>${escapeHtml(statusLabel(currentSession.status))}</dd></div>
-          <div><dt>Source</dt><dd>${escapeHtml(currentSession.sourceDisplayName ?? "Unknown")}</dd></div>
-          <div><dt>Updated</dt><dd>${escapeHtml(formatDate(currentSession.updatedAt))}</dd></div>
-          <div><dt>Exports</dt><dd>${currentSession.exportCount ?? 0}</dd></div>
-        </div>
       </section>
-    ` : ""}
+    </section>
   `;
 }
 
@@ -500,7 +450,7 @@ function appShell(): string {
   const currentSession = selectedSession();
   const selectedLabel = currentSession ? currentSession.sessionName : "No session";
   return `
-    <main class="mobile-app-shell ${state.activeTab === "review" ? "mobile-app-shell--review" : ""}">
+    <main class="mobile-app-shell ${state.activeTab === "review" ? "mobile-app-shell--review" : ""} ${state.activeTab === "create" ? "mobile-app-shell--create" : ""} ${state.activeTab === "exports" ? "mobile-app-shell--exports" : ""} ${state.activeTab === "library" ? "mobile-app-shell--library" : ""}">
       <div class="app-topbar">
         <div class="app-topbar__brand">
           <img class="app-topbar__brand-image" src="${brandLockupDark}" alt="DiveSensei" />
@@ -512,9 +462,9 @@ function appShell(): string {
         </div>
       </div>
 
-      <section class="app-stage ${state.activeTab === "review" ? "app-stage--review" : ""}">
+      <section class="app-stage ${state.activeTab === "review" ? "app-stage--review" : ""} ${state.activeTab === "create" ? "app-stage--create" : ""} ${state.activeTab === "exports" ? "app-stage--exports" : ""} ${state.activeTab === "library" ? "app-stage--library" : ""}">
         ${activePanel()}
-        ${state.activeTab === "create" || state.lastError ? renderDiagnostics() : ""}
+        ${state.lastError ? renderDiagnostics() : ""}
       </section>
 
       <nav class="thumb-nav" aria-label="Primary">
