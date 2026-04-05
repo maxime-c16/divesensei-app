@@ -1,5 +1,6 @@
 SHELL := /bin/bash
 
+
 PYTHON ?= python3
 VENV ?= .venv
 DESKTOP_DIR ?= apps/desktop
