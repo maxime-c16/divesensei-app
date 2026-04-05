@@ -54,6 +54,39 @@ class AudioVisualDiveDetector:
         self.audio_candidate_model = self._load_audio_candidate_model()
         self.audio_clip_model = self._load_audio_clip_model()
 
+    def inspect_audio_proposals(self, video_path: str) -> List[Dict[str, Any]]:
+        signal, sample_rate = self._extract_audio_signal(video_path)
+        detector_id = str(getattr(self.config, "detector_id", "audio_v1_heuristic") or "audio_v1_heuristic")
+        proposals = self._merge_audio_candidates(
+            self._propose_from_audio_heuristic(signal, sample_rate),
+            self._propose_from_audio_pcen(signal, sample_rate),
+        )
+        if not proposals:
+            return []
+
+        proposals = self._suppress_rebound_precursors(proposals)
+        proposals = self._suppress_dominant_duplicate_followers(proposals)
+        scored = self._score_audio_candidates(signal, sample_rate, proposals)
+        source_file = Path(video_path).name
+        rows: List[Dict[str, Any]] = []
+        for proposal in scored:
+            details = self._proposal_details(proposal)
+            classifier_bucket = str(details.get("audio_clip_bucket", "unclassified"))
+            row = {
+                "source_video_path": str(video_path),
+                "source_file": source_file,
+                "timestamp": float(proposal.timestamp),
+                "proposal_frontend": str(details.get("proposal_frontend", "unknown")),
+                "raw_proposal_score": float(proposal.audio_score),
+                "audio_clip_probability": float(details.get("audio_clip_probability", 0.0) or 0.0),
+                "classifier_bucket": classifier_bucket,
+                "classifier_decision": "dive" if classifier_bucket == "accepted" else "non-dive",
+                "detector_id": detector_id,
+                "details": details,
+            }
+            rows.append(row)
+        return rows
+
     def detect(self, video_path: str) -> List[VerifiedDiveCandidate]:
         signal, sample_rate = self._extract_audio_signal(video_path)
         detector_id = str(getattr(self.config, "detector_id", "audio_v1_heuristic") or "audio_v1_heuristic")
@@ -274,6 +307,24 @@ class AudioVisualDiveDetector:
             return list(proposals), []
         accepted: List[AudioCandidate] = []
         ambiguous: List[AudioCandidate] = []
+        for proposal in self._score_audio_candidates(signal, sample_rate, proposals):
+            bucket = str(self._proposal_details(proposal).get("audio_clip_bucket", "rejected"))
+            if bucket == "accepted":
+                accepted.append(proposal)
+            elif bucket == "ambiguous":
+                ambiguous.append(proposal)
+        return accepted, ambiguous
+
+    def _score_audio_candidates(
+        self,
+        signal: np.ndarray,
+        sample_rate: int,
+        proposals: Sequence[AudioCandidate],
+    ) -> List[AudioCandidate]:
+        if self.audio_clip_model is None:
+            return list(proposals)
+
+        scored: List[AudioCandidate] = []
         low = float(getattr(self.config, "audio_clip_classifier_ambiguity_low", 0.35))
         high = float(getattr(self.config, "audio_clip_classifier_ambiguity_high", 0.65))
         min_probability = float(getattr(self.config, "audio_clip_model_min_probability", 0.5))
@@ -293,12 +344,14 @@ class AudioVisualDiveDetector:
             details = self._proposal_details(proposal)
             details.update(features)
             details["audio_clip_probability"] = probability
-            enriched = self._attach_details(proposal, details)
             if probability >= max(min_probability, high):
-                accepted.append(enriched)
+                details["audio_clip_bucket"] = "accepted"
             elif probability >= low:
-                ambiguous.append(enriched)
-        return accepted, ambiguous
+                details["audio_clip_bucket"] = "ambiguous"
+            else:
+                details["audio_clip_bucket"] = "rejected"
+            scored.append(self._attach_details(proposal, details))
+        return scored
 
     def _filter_noisy_audio_files(self, proposals: Sequence[AudioCandidate], duration_seconds: float) -> List[AudioCandidate]:
         if len(proposals) <= 1:

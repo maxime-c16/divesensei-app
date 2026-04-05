@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -9,6 +10,16 @@ import numpy as np
 
 def _temp_media_output_path(output_path: Path) -> Path:
     return output_path.with_name(f"{output_path.stem}.part{output_path.suffix}")
+
+
+def _resolve_binary(name: str) -> str:
+    resolved = shutil.which(name)
+    if resolved:
+        return resolved
+    for fallback in (f"/usr/bin/{name}", f"/usr/local/bin/{name}"):
+        if Path(fallback).exists():
+            return fallback
+    return name
 
 
 def _review_scale_filter(max_dimension: int, target_fps: float | None = None) -> str:
@@ -24,7 +35,7 @@ def _review_scale_filter(max_dimension: int, target_fps: float | None = None) ->
 
 def probe_media_duration_seconds(video_path: str | Path) -> float | None:
     cmd = [
-        "ffprobe",
+        _resolve_binary("ffprobe"),
         "-v",
         "error",
         "-show_entries",
@@ -52,7 +63,7 @@ def decode_audio_mono_s16le(
     ffmpeg_threads: int = 1,
 ) -> np.ndarray:
     cmd = [
-        "ffmpeg",
+        _resolve_binary("ffmpeg"),
         "-v",
         "error",
         "-nostdin",
@@ -104,7 +115,7 @@ def extract_clip_ffmpeg(
     if temp_output_path.exists():
         temp_output_path.unlink()
     cmd = [
-        "ffmpeg",
+        _resolve_binary("ffmpeg"),
         "-v",
         "error",
         "-nostdin",
@@ -162,7 +173,7 @@ def generate_review_proxy_ffmpeg(
     if temp_output_path.exists():
         temp_output_path.unlink()
     cmd = [
-        "ffmpeg",
+        _resolve_binary("ffmpeg"),
         "-v",
         "error",
         "-nostdin",

@@ -16,6 +16,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser("detect", help="Detect dives in a session video and export clips")
     subparsers.add_parser("validate", help="Run a benchmark manifest")
+    subparsers.add_parser("evaluate-audio-pcen", help="Evaluate proposal-level audio_v2_pcen_classifier performance")
 
     inspect = subparsers.add_parser("inspect", help="Print a summary for a session report or UI manifest")
     inspect.add_argument("report_path")
@@ -95,6 +96,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         from divesensei.app.validation import main as validation_main
 
         return validation_main(argv[1:])
+
+    if argv[0] == "evaluate-audio-pcen":
+        if any(flag in argv[1:] for flag in ("-h", "--help")):
+            from divesensei.workflows.evaluate_audio_pcen_classifier import build_parser as evaluate_build_parser
+
+            evaluate_build_parser().print_help()
+            return 0
+
+        from divesensei.workflows.evaluate_audio_pcen_classifier import main as evaluate_audio_pcen_main
+
+        return evaluate_audio_pcen_main(argv[1:])
 
     if argv[0] == "inspect":
         if len(argv) < 2:

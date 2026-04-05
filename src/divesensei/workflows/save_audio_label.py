@@ -9,6 +9,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Sequence
 
+from divesensei.io.media_io import _resolve_binary
+
 
 @dataclass
 class AudioLabelRecord:
@@ -45,7 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
 def extract_audio_clip(video_path: Path, output_path: Path, start_time: float, duration: float) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     cmd = [
-        "ffmpeg",
+        _resolve_binary("ffmpeg"),
         "-v",
         "error",
         "-nostdin",

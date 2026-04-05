@@ -49,6 +49,19 @@ function persistJob(record: AnalysisJobRecord): void {
   fs.writeFileSync(jobStatePath(record.id), JSON.stringify(record, null, 2));
 }
 
+function deriveFailureMessage(record: AnalysisJobRecord): string | null {
+  const lines = [...(record.logTail ?? [])].reverse();
+  for (const line of lines) {
+    const trimmed = String(line ?? "").trim();
+    if (!trimmed) continue;
+    if (trimmed.startsWith("{")) continue;
+    if (/^traceback/i.test(trimmed)) continue;
+    if (trimmed.includes("RuntimeError:")) return trimmed;
+    if (trimmed.includes("Error:")) return trimmed;
+  }
+  return null;
+}
+
 function sanitizeStem(videoPath: string): string {
   return path.basename(videoPath, path.extname(videoPath)).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 48) || "session";
 }
@@ -305,8 +318,9 @@ export function startAnalysisJob(videoPath: string, profile: string, detectorId:
     record.status = "failed";
     record.phase = "failed";
     record.phaseLabel = "Failed";
+    const derived = deriveFailureMessage(record);
     if (!record.error) {
-      record.error = `Pipeline exited with code ${code ?? "unknown"}.`;
+      record.error = derived ?? `Pipeline exited with code ${code ?? "unknown"}.`;
     }
     record.progressDetail = record.error;
     persistJob(record);
