@@ -194,16 +194,20 @@ def main(argv: Sequence[str] | None = None) -> int:
         review_proxy_error=review_proxy_error,
     )
     report["detections_csv"] = str(csv_path)
-    proposal_rows = build_proposal_diagnostics(
+    proposal_trace = build_proposal_diagnostics(
         detector=detector,
         audio_path=prepared_audio_path,
         source_video_path=video_path,
         candidates=candidates,
         session_id=output_dir.name,
     )
+    proposal_rows = list(proposal_trace.get("final_proposals", []))
     proposal_diagnostics_path = write_jsonl(output_dir / "proposal_diagnostics.jsonl", proposal_rows)
-    proposal_summary_path = write_json(
-        output_dir / "proposal_diagnostics_summary.json",
+    proposal_raw_peaks_path = write_jsonl(output_dir / "proposal_raw_peaks.jsonl", proposal_trace.get("raw_peaks", []))
+    proposal_frontend_candidates_path = write_jsonl(output_dir / "proposal_frontend_candidates.jsonl", proposal_trace.get("frontend_candidates", []))
+    proposal_suppression_events_path = write_jsonl(output_dir / "proposal_suppression_events.jsonl", proposal_trace.get("suppression_events", []))
+    proposal_summary = dict(proposal_trace.get("summary", {}) or {})
+    proposal_summary.update(
         {
             "session_id": output_dir.name,
             "proposal_count": len(proposal_rows),
@@ -211,9 +215,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             "classifier_rejected_count": sum(1 for row in proposal_rows if row.get("pipeline_stage") == "classifier_rejected"),
             "threshold_rejected_count": sum(1 for row in proposal_rows if row.get("pipeline_stage") == "threshold_rejected"),
             "ambiguous_count": sum(1 for row in proposal_rows if row.get("pipeline_stage") == "ambiguous_case"),
-        },
+        }
     )
+    proposal_summary_path = write_json(output_dir / "proposal_diagnostics_summary.json", proposal_summary)
     report["proposal_diagnostics_path"] = str(proposal_diagnostics_path)
+    report["proposal_raw_peaks_path"] = str(proposal_raw_peaks_path)
+    report["proposal_frontend_candidates_path"] = str(proposal_frontend_candidates_path)
+    report["proposal_suppression_events_path"] = str(proposal_suppression_events_path)
     report["proposal_diagnostics_summary_path"] = str(proposal_summary_path)
     report["extract_seconds"] = 0.0
     report["peak_rss_kb"] = peak_rss_kb
@@ -242,6 +250,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         ui_manifest_path=ui_manifest_path,
         detections_csv=csv_path,
         proposal_diagnostics_path=str(proposal_diagnostics_path),
+        proposal_raw_peaks_path=str(proposal_raw_peaks_path),
+        proposal_frontend_candidates_path=str(proposal_frontend_candidates_path),
+        proposal_suppression_events_path=str(proposal_suppression_events_path),
         candidate_count=len(candidates),
         extracted_count=0,
         extraction_error_count=0,
@@ -272,6 +283,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         ui_manifest_path=ui_manifest_path,
         detections_csv=csv_path,
         proposal_diagnostics_path=str(proposal_diagnostics_path),
+        proposal_raw_peaks_path=str(proposal_raw_peaks_path),
+        proposal_frontend_candidates_path=str(proposal_frontend_candidates_path),
+        proposal_suppression_events_path=str(proposal_suppression_events_path),
         candidate_count=len(candidates),
         extracted_count=0,
         extraction_error_count=0,

@@ -63,37 +63,74 @@ class AudioVisualDiveDetector:
         signal, sample_rate = load_wav_mono_float32(audio_path)
         return self.inspect_audio_proposals_from_signal(signal, sample_rate, source_path=audio_path)
 
-    def inspect_audio_proposals_from_signal(self, signal: np.ndarray, sample_rate: int, *, source_path: str) -> List[Dict[str, Any]]:
-        detector_id = str(getattr(self.config, "detector_id", "audio_v1_heuristic") or "audio_v1_heuristic")
-        proposals = self._merge_audio_candidates(
-            self._propose_from_audio_heuristic(signal, sample_rate),
-            self._propose_from_audio_pcen(signal, sample_rate),
-        )
-        if not proposals:
-            return []
+    def inspect_audio_proposal_pipeline_from_audio_file(self, audio_path: str) -> Dict[str, Any]:
+        signal, sample_rate = load_wav_mono_float32(audio_path)
+        return self.inspect_audio_proposal_pipeline_from_signal(signal, sample_rate, source_path=audio_path)
 
-        proposals = self._suppress_rebound_precursors(proposals)
-        proposals = self._suppress_dominant_duplicate_followers(proposals)
-        scored = self._score_audio_candidates(signal, sample_rate, proposals)
+    def inspect_audio_proposals_from_signal(self, signal: np.ndarray, sample_rate: int, *, source_path: str) -> List[Dict[str, Any]]:
+        pipeline = self.inspect_audio_proposal_pipeline_from_signal(signal, sample_rate, source_path=source_path)
+        return list(pipeline.get("final_proposals", []))
+
+    def inspect_audio_proposal_pipeline_from_signal(self, signal: np.ndarray, sample_rate: int, *, source_path: str) -> Dict[str, Any]:
+        detector_id = str(getattr(self.config, "detector_id", "audio_v1_heuristic") or "audio_v1_heuristic")
         source_file = Path(source_path).name
-        rows: List[Dict[str, Any]] = []
-        for proposal in scored:
-            details = self._proposal_details(proposal)
-            classifier_bucket = str(details.get("audio_clip_bucket", "unclassified"))
-            row = {
-                "source_video_path": str(source_path),
-                "source_file": source_file,
-                "timestamp": float(proposal.timestamp),
-                "proposal_frontend": str(details.get("proposal_frontend", "unknown")),
-                "raw_proposal_score": float(proposal.audio_score),
-                "audio_clip_probability": float(details.get("audio_clip_probability", 0.0) or 0.0),
-                "classifier_bucket": classifier_bucket,
-                "classifier_decision": "dive" if classifier_bucket in {"accepted", "accepted_no_model"} else "non-dive",
-                "detector_id": detector_id,
-                "details": details,
-            }
-            rows.append(row)
-        return rows
+        heuristic_proposals, heuristic_raw_peaks = self._inspect_heuristic_frontend(signal, sample_rate)
+        pcen_proposals, pcen_raw_peaks = self._inspect_pcen_frontend(signal, sample_rate)
+        frontend_candidates = [*heuristic_proposals, *pcen_proposals]
+        merged_candidates, merge_events = self._merge_audio_candidates_with_events(heuristic_proposals, pcen_proposals)
+        rebound_candidates, rebound_events = self._suppress_rebound_precursors_with_events(merged_candidates)
+        deduped_candidates, duplicate_events = self._suppress_dominant_duplicate_followers_with_events(rebound_candidates)
+        scored_candidates = self._score_audio_candidates(signal, sample_rate, deduped_candidates)
+        return {
+            "raw_peaks": [
+                {
+                    "source_video_path": str(source_path),
+                    "source_file": source_file,
+                    "detector_id": detector_id,
+                    **row,
+                }
+                for row in [*heuristic_raw_peaks, *pcen_raw_peaks]
+            ],
+            "frontend_candidates": [
+                self._serialize_proposal_candidate(
+                    proposal,
+                    source_path=source_path,
+                    source_file=source_file,
+                    detector_id=detector_id,
+                    pipeline_stage="frontend_candidate",
+                )
+                for proposal in frontend_candidates
+            ],
+            "merged_candidates": [
+                self._serialize_proposal_candidate(
+                    proposal,
+                    source_path=source_path,
+                    source_file=source_file,
+                    detector_id=detector_id,
+                    pipeline_stage="merged_candidate",
+                )
+                for proposal in merged_candidates
+            ],
+            "suppression_events": [
+                {
+                    "source_video_path": str(source_path),
+                    "source_file": source_file,
+                    "detector_id": detector_id,
+                    **event,
+                }
+                for event in [*merge_events, *rebound_events, *duplicate_events]
+            ],
+            "final_proposals": [
+                self._serialize_proposal_candidate(
+                    proposal,
+                    source_path=source_path,
+                    source_file=source_file,
+                    detector_id=detector_id,
+                    pipeline_stage=str(self._proposal_details(proposal).get("audio_clip_bucket", "unclassified")),
+                )
+                for proposal in scored_candidates
+            ],
+        }
 
     def detect(self, video_path: str) -> List[VerifiedDiveCandidate]:
         signal, sample_rate = self._extract_audio_signal(video_path)
@@ -190,15 +227,23 @@ class AudioVisualDiveDetector:
         return self._deduplicate(promoted)
 
     def _propose_from_audio_heuristic(self, signal: np.ndarray, sample_rate: int) -> List[AudioCandidate]:
+        proposals, _ = self._inspect_heuristic_frontend(signal, sample_rate)
+        return proposals
+
+    def _inspect_heuristic_frontend(self, signal: np.ndarray, sample_rate: int) -> tuple[List[AudioCandidate], List[Dict[str, Any]]]:
         features = self._compute_audio_base_features(signal, sample_rate)
         score = 0.6 * self._robust_zscore(features["flux"]) + 0.25 * self._robust_zscore(features["hf_ratio"]) + 0.15 * self._robust_zscore(features["rms"])
         threshold = max(
             float(getattr(self.config, "audio_peak_threshold", 4.0)),
             float(np.median(score) + 2.0 * self._mad(score)),
         )
-        return self._proposals_from_scored_peaks(features, sample_rate, score, threshold, frontend_name="heuristic")
+        return self._analyze_scored_frontend_peaks(features, sample_rate, score, threshold, frontend_name="heuristic")
 
     def _propose_from_audio_pcen(self, signal: np.ndarray, sample_rate: int) -> List[AudioCandidate]:
+        proposals, _ = self._inspect_pcen_frontend(signal, sample_rate)
+        return proposals
+
+    def _inspect_pcen_frontend(self, signal: np.ndarray, sample_rate: int) -> tuple[List[AudioCandidate], List[Dict[str, Any]]]:
         features = self._compute_audio_base_features(signal, sample_rate)
         pcen_features = compute_multiband_pcen_features(
             signal,
@@ -219,7 +264,15 @@ class AudioVisualDiveDetector:
             float(getattr(self.config, "audio_pcen_threshold", 2.4)),
             float(np.median(score) + 1.25 * self._mad(score)),
         )
-        return self._proposals_from_scored_peaks(features, sample_rate, score, threshold, frontend_name="pcen_multiband", onset_sum=onset_sum, onset_peak=onset_peak)
+        return self._analyze_scored_frontend_peaks(
+            features,
+            sample_rate,
+            score,
+            threshold,
+            frontend_name="pcen_multiband",
+            onset_sum=onset_sum,
+            onset_peak=onset_peak,
+        )
 
     def _proposals_from_scored_peaks(
         self,
@@ -232,11 +285,35 @@ class AudioVisualDiveDetector:
         onset_sum: np.ndarray | None = None,
         onset_peak: np.ndarray | None = None,
     ) -> List[AudioCandidate]:
+        proposals, _ = self._analyze_scored_frontend_peaks(
+            features,
+            sample_rate,
+            score,
+            threshold,
+            frontend_name=frontend_name,
+            onset_sum=onset_sum,
+            onset_peak=onset_peak,
+        )
+        return proposals
+
+    def _analyze_scored_frontend_peaks(
+        self,
+        features: Dict[str, np.ndarray],
+        sample_rate: int,
+        score: np.ndarray,
+        threshold: float,
+        *,
+        frontend_name: str,
+        onset_sum: np.ndarray | None = None,
+        onset_peak: np.ndarray | None = None,
+    ) -> tuple[List[AudioCandidate], List[Dict[str, Any]]]:
         hop_length = int(getattr(self.config, "audio_hop_length", 256))
         min_separation_seconds = float(getattr(self.config, "audio_peak_min_separation_seconds", 1.2))
         min_distance_frames = max(1, int(min_separation_seconds * sample_rate / hop_length))
         peaks = self._find_peaks(score, threshold=threshold, min_distance=min_distance_frames)
+        raw_peaks = self._find_peaks(score, threshold=float("-inf"), min_distance=1)
         proposals: List[AudioCandidate] = []
+        raw_rows: List[Dict[str, Any]] = []
         min_timestamp = float(getattr(self.config, "audio_ignore_before_seconds", 0.35))
         min_audio_score = float(getattr(self.config, "audio_min_score", 4.5))
         min_hf_ratio = float(getattr(self.config, "audio_min_hf_ratio", 0.115))
@@ -246,9 +323,12 @@ class AudioVisualDiveDetector:
         early_peak_max_centroid_hz = float(getattr(self.config, "audio_early_peak_max_centroid_hz", 2200.0))
         early_peak_max_flatness = float(getattr(self.config, "audio_early_peak_max_flatness", 0.45))
         min_pattern_score = float(getattr(self.config, "audio_pattern_min_score", 0.4))
-        for peak_idx in peaks:
+        peak_index_set = set(peaks)
+        audio_model_min_probability = float(getattr(self.config, "audio_model_min_probability", 0.0))
+        for peak_idx in raw_peaks:
             backtracked_idx = self._backtrack_onset(score, peak_idx)
             timestamp = backtracked_idx * hop_length / sample_rate
+            peak_timestamp = peak_idx * hop_length / sample_rate
             peak_score = float(score[peak_idx])
             peak_hf_ratio = float(features["hf_ratio"][peak_idx])
             peak_centroid_hz = float(features["spectral_centroid_hz"][peak_idx])
@@ -264,12 +344,6 @@ class AudioVisualDiveDetector:
                 and peak_centroid_hz <= early_peak_max_centroid_hz
                 and peak_flatness <= early_peak_max_flatness
             )
-            if timestamp < min_timestamp and not early_peak_allowed:
-                continue
-            if peak_hf_ratio < min_hf_ratio:
-                continue
-            if peak_score < min_audio_score and not early_peak_allowed:
-                continue
             audio_pattern_score = self._audio_pattern_score(
                 post_flux_ratio=post_flux_ratio,
                 post_rms_ratio=post_rms_ratio,
@@ -292,10 +366,6 @@ class AudioVisualDiveDetector:
                 and (float(onset_peak[peak_idx]) if onset_peak is not None else 0.0) < 3.2
             )
             strong_impulse_candidate = peak_score >= 8.0 and local_prominence >= 7.5
-            if sustained_noise_reject:
-                continue
-            if not early_peak_allowed and not strong_impulse_candidate and audio_pattern_score < min_pattern_score:
-                continue
             proposal = AudioCandidate(
                 timestamp=timestamp,
                 audio_score=peak_score,
@@ -311,20 +381,74 @@ class AudioVisualDiveDetector:
             )
             details = self._proposal_details(proposal)
             details["proposal_frontend"] = frontend_name
+            details["proposal_threshold"] = float(threshold)
+            details["peak_score_minus_threshold"] = float(peak_score - threshold)
+            details["peak_frame_index"] = int(peak_idx)
+            details["backtracked_frame_index"] = int(backtracked_idx)
+            details["peak_timestamp_seconds"] = float(peak_timestamp)
+            details["proposal_timestamp_seconds"] = float(timestamp)
+            details["selected_by_peak_threshold"] = bool(peak_idx in peak_index_set)
             if onset_sum is not None:
                 details["pcen_onset_mean"] = float(onset_sum[peak_idx])
             if onset_peak is not None:
                 details["pcen_onset_peak"] = float(onset_peak[peak_idx])
-            proposal = self._attach_details(proposal, details)
-            audio_model_min_probability = float(getattr(self.config, "audio_model_min_probability", 0.0))
+            threshold_passed = bool(peak_idx in peak_index_set)
+            timestamp_allowed = not (timestamp < min_timestamp and not early_peak_allowed)
+            hf_allowed = peak_hf_ratio >= min_hf_ratio
+            score_allowed = early_peak_allowed or peak_score >= min_audio_score
+            pattern_allowed = early_peak_allowed or strong_impulse_candidate or audio_pattern_score >= min_pattern_score
+            audio_model_probability = None
+            audio_model_allowed = True
             if self.audio_candidate_model is not None and not early_peak_allowed:
-                probability = self._audio_model_probability(proposal)
-                proposal = self._attach_details(proposal, {**details, "audio_model_probability": probability})
-                if probability < audio_model_min_probability:
-                    continue
-            proposals.append(proposal)
+                audio_model_probability = self._audio_model_probability(proposal)
+                audio_model_allowed = audio_model_probability >= audio_model_min_probability
+            details["audio_model_probability"] = audio_model_probability if audio_model_probability is not None else details.get("audio_model_probability", 0.0)
+            details["audio_pattern_score"] = float(audio_pattern_score)
+            details["early_peak_allowed"] = bool(early_peak_allowed)
+            details["strong_impulse_candidate"] = bool(strong_impulse_candidate)
+            details["threshold_passed"] = bool(threshold_passed)
+            details["timestamp_allowed"] = bool(timestamp_allowed)
+            details["hf_allowed"] = bool(hf_allowed)
+            details["score_allowed"] = bool(score_allowed)
+            details["pattern_allowed"] = bool(pattern_allowed)
+            details["sustained_noise_reject"] = bool(sustained_noise_reject)
+            details["audio_model_allowed"] = bool(audio_model_allowed)
+            rejection_stage = "accepted"
+            if not threshold_passed:
+                rejection_stage = "below_threshold"
+            elif not timestamp_allowed:
+                rejection_stage = "ignored_before_start"
+            elif not hf_allowed:
+                rejection_stage = "low_hf_ratio"
+            elif not score_allowed:
+                rejection_stage = "low_audio_score"
+            elif sustained_noise_reject:
+                rejection_stage = "sustained_noise_reject"
+            elif not pattern_allowed:
+                rejection_stage = "weak_pattern_score"
+            elif not audio_model_allowed:
+                rejection_stage = "audio_model_rejected"
+            details["rejection_stage"] = rejection_stage
+            proposal = self._attach_details(proposal, details)
+            raw_rows.append(
+                {
+                    "proposal_frontend": frontend_name,
+                    "timestamp": float(timestamp),
+                    "peak_timestamp_seconds": float(peak_timestamp),
+                    "peak_frame_index": int(peak_idx),
+                    "backtracked_frame_index": int(backtracked_idx),
+                    "raw_proposal_score": float(peak_score),
+                    "proposal_threshold": float(threshold),
+                    "peak_score_minus_threshold": float(peak_score - threshold),
+                    "accepted_as_proposal": rejection_stage == "accepted",
+                    "rejection_stage": rejection_stage,
+                    **details,
+                }
+            )
+            if rejection_stage == "accepted":
+                proposals.append(proposal)
         duration_seconds = float(features["duration_seconds"])
-        return self._filter_noisy_audio_files(proposals, duration_seconds)
+        return self._filter_noisy_audio_files(proposals, duration_seconds), raw_rows
 
     def _classify_audio_candidates(
         self,
@@ -400,15 +524,45 @@ class AudioVisualDiveDetector:
             top_ratio = ranked[0].audio_score / ranked[1].audio_score
             if top_ratio < noisy_peak_ratio:
                 cap = long_session_max_candidates if duration_seconds >= long_session_seconds else max(noisy_peak_count * 3, 12)
+                bucket_seconds = max(1.0, float(getattr(self.config, "audio_noise_diversity_bucket_seconds", 8.0)))
+                if cap <= 0:
+                    return []
+                buckets: dict[int, list[AudioCandidate]] = {}
+                for proposal in ranked:
+                    bucket_idx = int(float(proposal.timestamp) // bucket_seconds)
+                    buckets.setdefault(bucket_idx, []).append(proposal)
+                selected: list[AudioCandidate] = []
+                bucket_order = sorted(buckets.keys())
+                round_index = 0
+                while len(selected) < cap:
+                    added_any = False
+                    for bucket_idx in bucket_order:
+                        bucket_rows = buckets[bucket_idx]
+                        if round_index >= len(bucket_rows):
+                            continue
+                        selected.append(bucket_rows[round_index])
+                        added_any = True
+                        if len(selected) >= cap:
+                            break
+                    if not added_any:
+                        break
+                    round_index += 1
+                if selected:
+                    return sorted(selected, key=lambda p: p.timestamp)
                 return sorted(ranked[: max(1, cap)], key=lambda p: p.timestamp)
         return sorted(proposals, key=lambda p: p.timestamp)
 
     def _suppress_rebound_precursors(self, proposals: Sequence[AudioCandidate]) -> List[AudioCandidate]:
+        kept, _ = self._suppress_rebound_precursors_with_events(proposals)
+        return kept
+
+    def _suppress_rebound_precursors_with_events(self, proposals: Sequence[AudioCandidate]) -> tuple[List[AudioCandidate], List[Dict[str, Any]]]:
         if len(proposals) <= 1:
-            return list(proposals)
+            return list(proposals), []
 
         sorted_proposals = sorted(proposals, key=lambda p: p.timestamp)
         kept: List[AudioCandidate] = []
+        events: List[Dict[str, Any]] = []
         lookahead_seconds = 3.0
         min_score_gain = 4.0
         min_hf_gain = 0.12
@@ -431,31 +585,75 @@ class AudioVisualDiveDetector:
                     and follower.audio_score >= proposal.audio_score + min_score_gain
                     and follower.hf_ratio >= proposal.hf_ratio + min_hf_gain
                     and follower.spectral_centroid_hz >= proposal.spectral_centroid_hz + min_centroid_gain_hz
-                    and follower.post_flux_ratio >= proposal.post_flux_ratio + min_post_flux_gain
+                        and follower.post_flux_ratio >= proposal.post_flux_ratio + min_post_flux_gain
                 ):
                     suppress = True
+                    events.append(
+                        {
+                            "event_type": "suppressed_rebound_precursor",
+                            "suppressed_timestamp": float(proposal.timestamp),
+                            "suppressed_score": float(proposal.audio_score),
+                            "survivor_timestamp": float(follower.timestamp),
+                            "survivor_score": float(follower.audio_score),
+                            "offset_seconds": float(delta),
+                        }
+                    )
                     break
             if not suppress:
                 kept.append(proposal)
-        return kept
+        return kept, events
 
     def _merge_audio_candidates(self, primary: Sequence[AudioCandidate], secondary: Sequence[AudioCandidate]) -> List[AudioCandidate]:
+        merged, _ = self._merge_audio_candidates_with_events(primary, secondary)
+        return merged
+
+    def _merge_audio_candidates_with_events(
+        self,
+        primary: Sequence[AudioCandidate],
+        secondary: Sequence[AudioCandidate],
+    ) -> tuple[List[AudioCandidate], List[Dict[str, Any]]]:
         merged = sorted([*primary, *secondary], key=lambda item: item.timestamp)
         if not merged:
-            return []
+            return [], []
         merge_window = float(getattr(self.config, "audio_visual_merge_seconds", 2.0))
         deduped: List[AudioCandidate] = []
+        events: List[Dict[str, Any]] = []
         for candidate in merged:
             if not deduped or candidate.timestamp - deduped[-1].timestamp > merge_window:
                 deduped.append(candidate)
                 continue
             if candidate.audio_score > deduped[-1].audio_score:
+                events.append(
+                    {
+                        "event_type": "merged_replaced_by_stronger_neighbor",
+                        "suppressed_timestamp": float(deduped[-1].timestamp),
+                        "suppressed_score": float(deduped[-1].audio_score),
+                        "survivor_timestamp": float(candidate.timestamp),
+                        "survivor_score": float(candidate.audio_score),
+                        "offset_seconds": float(candidate.timestamp - deduped[-1].timestamp),
+                    }
+                )
                 deduped[-1] = candidate
-        return deduped
+            else:
+                events.append(
+                    {
+                        "event_type": "merged_into_stronger_neighbor",
+                        "suppressed_timestamp": float(candidate.timestamp),
+                        "suppressed_score": float(candidate.audio_score),
+                        "survivor_timestamp": float(deduped[-1].timestamp),
+                        "survivor_score": float(deduped[-1].audio_score),
+                        "offset_seconds": float(candidate.timestamp - deduped[-1].timestamp),
+                    }
+                )
+        return deduped, events
 
     def _suppress_dominant_duplicate_followers(self, proposals: Sequence[AudioCandidate]) -> List[AudioCandidate]:
+        kept, _ = self._suppress_dominant_duplicate_followers_with_events(proposals)
+        return kept
+
+    def _suppress_dominant_duplicate_followers_with_events(self, proposals: Sequence[AudioCandidate]) -> tuple[List[AudioCandidate], List[Dict[str, Any]]]:
         if len(proposals) <= 1:
-            return list(proposals)
+            return list(proposals), []
 
         sorted_proposals = sorted(proposals, key=lambda p: p.timestamp)
         suppress_window = float(getattr(self.config, "audio_duplicate_suppress_window_seconds", 0.9))
@@ -463,6 +661,7 @@ class AudioVisualDiveDetector:
         leader_min_prominence = float(getattr(self.config, "audio_duplicate_leader_min_prominence", 10.0))
         follower_max_ratio = float(getattr(self.config, "audio_duplicate_follower_max_score_ratio", 0.55))
         kept: List[AudioCandidate] = []
+        events: List[Dict[str, Any]] = []
         cluster: List[AudioCandidate] = [sorted_proposals[0]]
 
         def flush_cluster(items: Sequence[AudioCandidate]) -> None:
@@ -479,6 +678,18 @@ class AudioVisualDiveDetector:
             for item in items:
                 if item is leader or item.audio_score > threshold:
                     kept.append(item)
+                else:
+                    events.append(
+                        {
+                            "event_type": "suppressed_duplicate_follower",
+                            "suppressed_timestamp": float(item.timestamp),
+                            "suppressed_score": float(item.audio_score),
+                            "survivor_timestamp": float(leader.timestamp),
+                            "survivor_score": float(leader.audio_score),
+                            "offset_seconds": float(item.timestamp - leader.timestamp),
+                            "follower_score_threshold": float(threshold),
+                        }
+                    )
 
         for candidate in sorted_proposals[1:]:
             if candidate.timestamp - cluster[-1].timestamp <= suppress_window:
@@ -487,7 +698,7 @@ class AudioVisualDiveDetector:
             flush_cluster(cluster)
             cluster = [candidate]
         flush_cluster(cluster)
-        return kept
+        return kept, events
 
     def _verify_with_video(self, video_path: str, proposals: Sequence[AudioCandidate]) -> List[VerifiedDiveCandidate]:
         cap = cv2.VideoCapture(video_path)
@@ -687,6 +898,56 @@ class AudioVisualDiveDetector:
             if candidate.combined_score > merged[-1].combined_score:
                 merged[-1] = candidate
         return merged
+
+    def _serialize_proposal_candidate(
+        self,
+        proposal: AudioCandidate,
+        *,
+        source_path: str,
+        source_file: str,
+        detector_id: str,
+        pipeline_stage: str,
+    ) -> Dict[str, Any]:
+        details = self._proposal_details(proposal)
+        classifier_bucket = str(details.get("audio_clip_bucket", "unclassified"))
+        row = {
+            "source_video_path": str(source_path),
+            "source_file": source_file,
+            "timestamp": float(proposal.timestamp),
+            "proposal_frontend": str(details.get("proposal_frontend", "unknown")),
+            "raw_proposal_score": float(proposal.audio_score),
+            "audio_clip_probability": details.get("audio_clip_probability"),
+            "audio_model_probability": details.get("audio_model_probability"),
+            "classifier_bucket": classifier_bucket,
+            "classifier_decision": "dive" if classifier_bucket in {"accepted", "accepted_no_model"} else "non-dive",
+            "detector_id": detector_id,
+            "pipeline_stage": pipeline_stage,
+            "details": details,
+        }
+        for key in (
+            "proposal_threshold",
+            "peak_score_minus_threshold",
+            "peak_frame_index",
+            "backtracked_frame_index",
+            "peak_timestamp_seconds",
+            "proposal_timestamp_seconds",
+            "selected_by_peak_threshold",
+            "audio_pattern_score",
+            "early_peak_allowed",
+            "strong_impulse_candidate",
+            "threshold_passed",
+            "timestamp_allowed",
+            "hf_allowed",
+            "score_allowed",
+            "pattern_allowed",
+            "sustained_noise_reject",
+            "audio_model_allowed",
+            "rejection_stage",
+            "pcen_onset_mean",
+            "pcen_onset_peak",
+        ):
+            row[key] = details.get(key)
+        return row
 
     def _compute_audio_base_features(self, signal: np.ndarray, sample_rate: int) -> Dict[str, np.ndarray]:
         frame_length = int(getattr(self.config, "audio_frame_length", 1024))

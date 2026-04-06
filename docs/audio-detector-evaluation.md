@@ -66,6 +66,51 @@ Why they are confusable:
 - reviewed `non_dive` decisions now export directly into hard-negative mining artifacts
 - reviewed false negatives can be attributed to detector stages
 
+## Current Evaluation Loop
+
+1. run `evaluate-session` on source video or cached audio
+2. review candidates and false negatives in the desktop UI
+3. export reviewed session artifacts with `export-evaluation-review`
+4. retrain the logistic clip model on reviewed positives and mined hard negatives
+5. rerun `evaluate-session` with the retrained clip model
+6. use `replay-evaluation-review` to map the original review onto the rerun when timestamps still align
+7. compare summaries with `compare-evaluation-summaries`
+
+This keeps the human review fixed while detector or proposal logic changes underneath it.
+
+## Proposal-Stage Findings From Champigny
+
+The current Champigny evidence matters more than intuition:
+
+- retraining the clip logistic model on reviewed Champigny labels dramatically reduced reviewed false positives
+- the remaining reviewed false negatives did not improve
+- those missed dives were all initially tagged as `no_proposal_generated`, but richer diagnostics show that is too coarse
+
+With raw-peak and suppression tracing enabled, the missed dives now break down into more informative cases:
+
+- `proposal_filtered_pre_candidate`
+  - there was nearby raw transient activity, sometimes even an accepted raw proposal signal, but nothing survived into frontend candidates
+- `suppressed_or_merged_proposal_candidate`
+  - a nearby candidate existed and was then merged away or suppressed before final proposals
+
+That means the current bottleneck is upstream of the clip classifier:
+
+- not “no sound happened”
+- not primarily classifier rejection
+- not final thresholding
+- mainly proposal-stage filtering, merging, and candidate selection
+
+## Proposal Improvement Discipline
+
+Proposal changes must now be treated carefully:
+
+- use reviewed sessions to compare before and after
+- keep raw-peak, frontend-candidate, and suppression-event exports
+- do not claim recall improvement from final candidate counts alone
+- if replayed review coverage collapses after a proposal change, treat the result as disruptive until re-reviewed or better-aligned
+
+The first time-diverse long-session proposal-cap change increased final proposals on Champigny, but it also shifted candidate timing enough that only a small fraction of the original reviewed decisions still mapped automatically. That makes it a hypothesis, not a proven improvement.
+
 ## Current Limits
 
 - pool and mic domain shift remains a major source of instability

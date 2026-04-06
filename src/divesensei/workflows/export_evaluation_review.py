@@ -35,6 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--hard-negative-pre-seconds", type=float, default=2.0)
     parser.add_argument("--hard-negative-post-seconds", type=float, default=2.0)
     parser.add_argument("--false-negative-tolerance-seconds", type=float, default=1.0)
+    parser.add_argument("--false-negative-analysis-window-seconds", type=float, default=2.5)
     parser.add_argument("--recall-floor", type=float, default=0.9)
     parser.add_argument("--hist-bins", type=int, default=10)
     parser.add_argument("--top-k", type=int, default=10)
@@ -47,14 +48,31 @@ def _json_safe(value: Any) -> Any:
     return value
 
 
-def _probability_histogram(values: Sequence[float], bins: int) -> dict[str, list[float] | list[int]]:
+def _value_histogram(
+    values: Sequence[float],
+    bins: int,
+    *,
+    value_range: tuple[float, float] | None = None,
+) -> dict[str, list[float] | list[int]]:
     if not values:
         return {"bins": [], "counts": []}
-    hist, edges = np.histogram(np.array(values, dtype=np.float32), bins=max(2, bins), range=(0.0, 1.0))
+    series = np.array(values, dtype=np.float32)
+    if value_range is None:
+        min_value = float(np.min(series))
+        max_value = float(np.max(series))
+        if math.isclose(min_value, max_value):
+            min_value -= 0.5
+            max_value += 0.5
+        value_range = (min_value, max_value)
+    hist, edges = np.histogram(series, bins=max(2, bins), range=value_range)
     return {
         "bins": [float(edge) for edge in edges.tolist()],
         "counts": [int(count) for count in hist.tolist()],
     }
+
+
+def _probability_histogram(values: Sequence[float], bins: int) -> dict[str, list[float] | list[int]]:
+    return _value_histogram(values, bins, value_range=(0.0, 1.0))
 
 
 def _score_thresholds(rows: Sequence[dict[str, Any]], recall_floor: float) -> dict[str, Any]:
@@ -154,6 +172,32 @@ def _top_rows(rows: Sequence[dict[str, Any]], limit: int, key_name: str, reverse
     return sorted(rows, key=lambda row: float(row.get(key_name, 0.0) or 0.0), reverse=reverse)[:limit]
 
 
+def _nearest_row(rows: Sequence[dict[str, Any]], timestamp: float, key_name: str, window_seconds: float) -> dict[str, Any] | None:
+    nearby = [
+        row
+        for row in rows
+        if abs(float(row.get(key_name, 0.0) or 0.0) - timestamp) <= window_seconds
+    ]
+    if not nearby:
+        return None
+    nearby.sort(
+        key=lambda row: (
+            abs(float(row.get(key_name, 0.0) or 0.0) - timestamp),
+            -float(row.get("raw_proposal_score", row.get("survivor_score", 0.0)) or 0.0),
+        )
+    )
+    return nearby[0]
+
+
+def _local_score_max(rows: Sequence[dict[str, Any]], timestamp: float, key_name: str, window_seconds: float) -> float | None:
+    values = [
+        float(row.get("raw_proposal_score", 0.0) or 0.0)
+        for row in rows
+        if abs(float(row.get(key_name, 0.0) or 0.0) - timestamp) <= window_seconds
+    ]
+    return max(values) if values else None
+
+
 def _label_audio_command(row: dict[str, Any], *, pre_seconds: float, post_seconds: float) -> str:
     note_bits = ["hard negative mined from evaluation"]
     subtype = row.get("subtype")
@@ -250,19 +294,38 @@ def _merge_reviewed_candidates(
 def _attribute_false_negative(
     annotation: dict[str, Any],
     proposal_rows: Sequence[dict[str, Any]],
+    raw_peak_rows: Sequence[dict[str, Any]],
+    frontend_candidate_rows: Sequence[dict[str, Any]],
+    suppression_events: Sequence[dict[str, Any]],
     *,
     session_id: str,
     source_video_path: str,
     tolerance_seconds: float,
+    analysis_window_seconds: float,
 ) -> dict[str, Any]:
     timestamp = float(annotation.get("timestampSeconds", 0.0) or 0.0)
-    nearby = [
-        row
-        for row in proposal_rows
-        if abs(float(row.get("timestamp", 0.0) or 0.0) - timestamp) <= tolerance_seconds
-    ]
-    nearby.sort(key=lambda row: (abs(float(row.get("timestamp", 0.0) or 0.0) - timestamp), -float(row.get("raw_proposal_score", 0.0) or 0.0)))
-    matched = nearby[0] if nearby else None
+    matched = _nearest_row(proposal_rows, timestamp, "timestamp", tolerance_seconds)
+    nearest_proposal = _nearest_row(proposal_rows, timestamp, "timestamp", analysis_window_seconds)
+    nearest_frontend_candidate = _nearest_row(frontend_candidate_rows, timestamp, "timestamp", analysis_window_seconds)
+    nearest_raw_peak = _nearest_row(raw_peak_rows, timestamp, "timestamp", analysis_window_seconds)
+    nearest_suppression = _nearest_row(suppression_events, timestamp, "suppressed_timestamp", analysis_window_seconds)
+    nearby_raw_below_threshold = any(
+        abs(float(row.get("timestamp", 0.0) or 0.0) - timestamp) <= analysis_window_seconds
+        and str(row.get("rejection_stage", "")) == "below_threshold"
+        for row in raw_peak_rows
+    )
+    nearby_raw_accepted_proposal = any(
+        abs(float(row.get("timestamp", 0.0) or 0.0) - timestamp) <= analysis_window_seconds
+        and bool(row.get("accepted_as_proposal"))
+        for row in raw_peak_rows
+    )
+    nearby_filtered_raw_peak = any(
+        abs(float(row.get("timestamp", 0.0) or 0.0) - timestamp) <= analysis_window_seconds
+        and str(row.get("rejection_stage", "")) not in {"", "accepted", "below_threshold"}
+        for row in raw_peak_rows
+    )
+    local_final_proposal_max = _local_score_max(proposal_rows, timestamp, "timestamp", analysis_window_seconds)
+    local_frontend_proposal_max = _local_score_max(frontend_candidate_rows, timestamp, "timestamp", analysis_window_seconds)
     if matched is None:
         failure_type = "no_proposal_generated"
     else:
@@ -275,6 +338,22 @@ def _attribute_false_negative(
             failure_type = "reviewed_false_negative"
         else:
             failure_type = "classifier_rejected"
+    if nearest_suppression is not None:
+        proposal_failure_category = "suppressed_or_merged_proposal_candidate"
+    elif nearest_frontend_candidate is not None and abs(float(nearest_frontend_candidate.get("timestamp", 0.0) or 0.0) - timestamp) > tolerance_seconds:
+        proposal_failure_category = "nearby_but_miscentered_proposal"
+    elif nearby_raw_accepted_proposal and nearest_frontend_candidate is None:
+        proposal_failure_category = "proposal_filtered_pre_candidate"
+    elif nearest_raw_peak is None:
+        proposal_failure_category = "true_no_transient_case"
+    elif nearby_raw_below_threshold and nearest_frontend_candidate is None:
+        proposal_failure_category = "weak_transient_below_proposal_threshold"
+    elif nearby_filtered_raw_peak and nearest_frontend_candidate is None:
+        proposal_failure_category = "proposal_filtered_pre_candidate"
+    elif nearest_frontend_candidate is not None:
+        proposal_failure_category = "proposal_present"
+    else:
+        proposal_failure_category = "true_no_transient_case"
     payload = {
         "entry_type": "false_negative",
         "session_id": session_id,
@@ -293,10 +372,35 @@ def _attribute_false_negative(
         "subtype": None,
         "human_label": "dive",
         "failure_type": failure_type,
+        "proposal_failure_category": proposal_failure_category,
         "matched_proposal_delta_seconds": abs(float(matched.get("timestamp", 0.0)) - timestamp) if matched else None,
         "matched_proposal_probability": matched.get("audio_clip_probability") if matched else None,
         "matched_proposal_stage": matched.get("pipeline_stage") if matched else None,
         "matched_proposal_frontend": matched.get("proposal_frontend") if matched else None,
+        "nearest_raw_peak_timestamp_seconds": float(nearest_raw_peak.get("timestamp", 0.0)) if nearest_raw_peak else None,
+        "nearest_raw_peak_offset_seconds": (float(nearest_raw_peak.get("timestamp", 0.0)) - timestamp) if nearest_raw_peak else None,
+        "nearest_raw_peak_score": nearest_raw_peak.get("raw_proposal_score") if nearest_raw_peak else None,
+        "nearest_raw_peak_frontend": nearest_raw_peak.get("proposal_frontend") if nearest_raw_peak else None,
+        "nearest_raw_peak_rejection_stage": nearest_raw_peak.get("rejection_stage") if nearest_raw_peak else None,
+        "nearest_raw_peak_threshold": nearest_raw_peak.get("proposal_threshold") if nearest_raw_peak else None,
+        "nearest_frontend_candidate_timestamp_seconds": float(nearest_frontend_candidate.get("timestamp", 0.0)) if nearest_frontend_candidate else None,
+        "nearest_frontend_candidate_offset_seconds": (float(nearest_frontend_candidate.get("timestamp", 0.0)) - timestamp) if nearest_frontend_candidate else None,
+        "nearest_frontend_candidate_score": nearest_frontend_candidate.get("raw_proposal_score") if nearest_frontend_candidate else None,
+        "nearest_frontend_candidate_frontend": nearest_frontend_candidate.get("proposal_frontend") if nearest_frontend_candidate else None,
+        "nearest_proposal_timestamp_seconds": float(nearest_proposal.get("timestamp", 0.0)) if nearest_proposal else None,
+        "nearest_proposal_offset_seconds": (float(nearest_proposal.get("timestamp", 0.0)) - timestamp) if nearest_proposal else None,
+        "nearest_proposal_score": nearest_proposal.get("raw_proposal_score") if nearest_proposal else None,
+        "nearest_proposal_frontend": nearest_proposal.get("proposal_frontend") if nearest_proposal else None,
+        "local_final_proposal_score_max": local_final_proposal_max,
+        "local_frontend_proposal_score_max": local_frontend_proposal_max,
+        "nearby_raw_transient_below_threshold": nearby_raw_below_threshold,
+        "nearby_raw_accepted_proposal": nearby_raw_accepted_proposal,
+        "nearby_filtered_raw_transient": nearby_filtered_raw_peak,
+        "suppressed_or_merged_candidate_nearby": nearest_suppression is not None,
+        "nearest_suppression_event_type": nearest_suppression.get("event_type") if nearest_suppression else None,
+        "nearest_suppression_offset_seconds": (float(nearest_suppression.get("suppressed_timestamp", 0.0)) - timestamp) if nearest_suppression else None,
+        "nearest_suppressed_timestamp_seconds": float(nearest_suppression.get("suppressed_timestamp", 0.0)) if nearest_suppression else None,
+        "nearest_survivor_timestamp_seconds": float(nearest_suppression.get("survivor_timestamp", 0.0)) if nearest_suppression else None,
     }
     if matched is not None:
         for feature_name in AUDIO_CLIP_FEATURES:
@@ -353,6 +457,25 @@ def _per_session_metrics(
     }
 
 
+def _proposal_recall_summary(reviewed_candidates: Sequence[dict[str, Any]], false_negatives: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    reviewed_dives = sum(1 for row in reviewed_candidates if row.get("review_label") == "dive")
+    total_reviewed_events = reviewed_dives + len(false_negatives)
+    failure_category_counts: dict[str, int] = {}
+    for row in false_negatives:
+        key = str(row.get("proposal_failure_category") or "unknown")
+        failure_category_counts[key] = failure_category_counts.get(key, 0) + 1
+    return {
+        "reviewed_event_count": total_reviewed_events,
+        "reviewed_dive_candidate_count": reviewed_dives,
+        "reviewed_false_negative_count": len(false_negatives),
+        "proposal_recall_on_reviewed_events": (reviewed_dives / total_reviewed_events) if total_reviewed_events else None,
+        "false_negative_proposal_failure_counts": failure_category_counts,
+        "false_negative_nearby_raw_peak_count": sum(1 for row in false_negatives if row.get("nearest_raw_peak_timestamp_seconds") is not None),
+        "false_negative_nearby_frontend_candidate_count": sum(1 for row in false_negatives if row.get("nearest_frontend_candidate_timestamp_seconds") is not None),
+        "false_negative_nearby_final_proposal_count": sum(1 for row in false_negatives if row.get("nearest_proposal_timestamp_seconds") is not None),
+    }
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(list(sys.argv[1:] if argv is None else argv))
     session_paths = resolve_evaluation_session_paths(args.session_path)
@@ -363,6 +486,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     report = read_json(session_paths["report_path"])
     review_payload = load_evaluation_review_data(session_paths["review_path"])
     proposal_rows = load_jsonl(session_paths["proposal_path"])
+    raw_peak_rows = load_jsonl(session_paths["raw_peaks_path"])
+    frontend_candidate_rows = load_jsonl(session_paths["frontend_candidates_path"])
+    suppression_events = load_jsonl(session_paths["suppression_events_path"])
     output_dir = Path(args.output_dir).expanduser().resolve() if args.output_dir else session_paths["output_dir"] / "exports" / "evaluation-review"
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -376,9 +502,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         _attribute_false_negative(
             annotation,
             proposal_rows,
+            raw_peak_rows,
+            frontend_candidate_rows,
+            suppression_events,
             session_id=str(manifest["session"]["id"]),
             source_video_path=str(manifest["session"]["source_video_path"]),
             tolerance_seconds=float(args.false_negative_tolerance_seconds),
+            analysis_window_seconds=float(args.false_negative_analysis_window_seconds),
         )
         for annotation in review_payload.get("falseNegatives", [])
     ]
@@ -389,8 +519,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     model = _load_model(report)
     feature_summary = _feature_contribution_summary(model, reviewed_candidates, int(args.top_k))
     failure_counts: dict[str, int] = {}
+    proposal_failure_counts: dict[str, int] = {}
     for row in false_negatives:
         failure_counts[str(row.get("failure_type"))] = failure_counts.get(str(row.get("failure_type")), 0) + 1
+        proposal_key = str(row.get("proposal_failure_category") or "unknown")
+        proposal_failure_counts[proposal_key] = proposal_failure_counts.get(proposal_key, 0) + 1
 
     ranking_reports = {
         "top_reviewed_false_positives": _top_rows(hard_negative_rows, int(args.top_k), "audio_clip_probability"),
@@ -400,6 +533,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             int(args.top_k),
             "audio_clip_probability",
         ),
+        "top_proposal_near_misses": _top_rows(false_negatives, int(args.top_k), "local_frontend_proposal_score_max"),
     }
 
     summary = {
@@ -421,11 +555,20 @@ def main(argv: Sequence[str] | None = None) -> int:
             for subtype in ["board_rebound", "board_slap", "non_dive_splash", "voice_whistle", "handling_noise", "unknown_transient"]
         },
         "failure_attribution": failure_counts,
+        "proposal_failure_attribution": proposal_failure_counts,
         "per_session_metrics": [_per_session_metrics(manifest, reviewed_candidates, false_negatives)],
+        "proposal_recall_summary": _proposal_recall_summary(reviewed_candidates, false_negatives),
         "score_distributions": {
             "dive": _probability_histogram([float(row["audio_clip_probability"]) for row in reviewed_candidates if row.get("review_label") == "dive" and row.get("audio_clip_probability") is not None], int(args.hist_bins)),
             "non_dive": _probability_histogram([float(row["audio_clip_probability"]) for row in hard_negative_rows if row.get("audio_clip_probability") is not None], int(args.hist_bins)),
             "unsure": _probability_histogram([float(row["audio_clip_probability"]) for row in reviewed_candidates if row.get("review_label") == "unsure" and row.get("audio_clip_probability") is not None], int(args.hist_bins)),
+        },
+        "proposal_score_distributions": {
+            "reviewed_dive_proposal_score": _value_histogram([float(row["raw_proposal_score"]) for row in reviewed_candidates if row.get("review_label") == "dive" and row.get("raw_proposal_score") is not None], int(args.hist_bins)),
+            "reviewed_non_dive_proposal_score": _value_histogram([float(row["raw_proposal_score"]) for row in hard_negative_rows if row.get("raw_proposal_score") is not None], int(args.hist_bins)),
+            "false_negative_nearest_raw_peak_score": _value_histogram([float(row["nearest_raw_peak_score"]) for row in false_negatives if row.get("nearest_raw_peak_score") is not None], int(args.hist_bins)),
+            "false_negative_local_frontend_proposal_score_max": _value_histogram([float(row["local_frontend_proposal_score_max"]) for row in false_negatives if row.get("local_frontend_proposal_score_max") is not None], int(args.hist_bins)),
+            "false_negative_nearest_final_proposal_score": _value_histogram([float(row["nearest_proposal_score"]) for row in false_negatives if row.get("nearest_proposal_score") is not None], int(args.hist_bins)),
         },
         "threshold_recommendation": threshold_summary,
         "feature_diagnostics": feature_summary,

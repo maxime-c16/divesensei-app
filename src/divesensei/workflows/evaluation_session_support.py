@@ -82,12 +82,18 @@ def resolve_evaluation_session_paths(raw_path: str | Path) -> dict[str, Path]:
     artifacts = manifest.get("artifacts", {})
     review_path = Path(str(artifacts.get("evaluation_review") or output_dir / "evaluation_review.json")).resolve()
     proposal_path = Path(str(artifacts.get("proposal_diagnostics") or output_dir / "proposal_diagnostics.jsonl")).resolve()
+    raw_peaks_path = Path(str(artifacts.get("proposal_raw_peaks") or output_dir / "proposal_raw_peaks.jsonl")).resolve()
+    frontend_candidates_path = Path(str(artifacts.get("proposal_frontend_candidates") or output_dir / "proposal_frontend_candidates.jsonl")).resolve()
+    suppression_events_path = Path(str(artifacts.get("proposal_suppression_events") or output_dir / "proposal_suppression_events.jsonl")).resolve()
     return {
         "output_dir": output_dir,
         "manifest_path": manifest_path,
         "report_path": report_path,
         "review_path": review_path,
         "proposal_path": proposal_path,
+        "raw_peaks_path": raw_peaks_path,
+        "frontend_candidates_path": frontend_candidates_path,
+        "suppression_events_path": suppression_events_path,
     }
 
 
@@ -138,8 +144,9 @@ def build_proposal_diagnostics(
     candidates: Sequence[Any],
     session_id: str,
     tolerance_seconds: float = 0.75,
-) -> list[dict[str, Any]]:
-    proposal_rows = detector.inspect_audio_proposals_from_audio_file(str(audio_path))
+) -> dict[str, Any]:
+    pipeline = detector.inspect_audio_proposal_pipeline_from_audio_file(str(audio_path))
+    proposal_rows = list(pipeline.get("final_proposals", []))
     candidate_timestamps = [float(candidate.timestamp) for candidate in candidates]
     proposal_timestamps = [float(row.get("timestamp", 0.0)) for row in proposal_rows]
     matches = _greedy_timestamp_matches(proposal_timestamps, candidate_timestamps, tolerance_seconds)
@@ -197,7 +204,45 @@ def build_proposal_diagnostics(
         for feature_name in AUDIO_CLIP_FEATURES:
             payload[feature_name] = details.get(feature_name)
         enriched_rows.append(payload)
-    return enriched_rows
+    raw_peaks = list(pipeline.get("raw_peaks", []))
+    frontend_candidates = list(pipeline.get("frontend_candidates", []))
+    suppression_events = list(pipeline.get("suppression_events", []))
+    summary = {
+        "session_id": session_id,
+        "final_proposal_count": len(enriched_rows),
+        "raw_peak_count": len(raw_peaks),
+        "frontend_candidate_count": len(frontend_candidates),
+        "suppression_event_count": len(suppression_events),
+        "raw_peak_rejection_counts": {
+            stage: sum(1 for row in raw_peaks if row.get("rejection_stage") == stage)
+            for stage in [
+                "accepted",
+                "below_threshold",
+                "ignored_before_start",
+                "low_hf_ratio",
+                "low_audio_score",
+                "sustained_noise_reject",
+                "weak_pattern_score",
+                "audio_model_rejected",
+            ]
+        },
+        "suppression_event_counts": {
+            event_type: sum(1 for row in suppression_events if row.get("event_type") == event_type)
+            for event_type in [
+                "merged_replaced_by_stronger_neighbor",
+                "merged_into_stronger_neighbor",
+                "suppressed_rebound_precursor",
+                "suppressed_duplicate_follower",
+            ]
+        },
+    }
+    return {
+        "final_proposals": enriched_rows,
+        "raw_peaks": raw_peaks,
+        "frontend_candidates": frontend_candidates,
+        "suppression_events": suppression_events,
+        "summary": summary,
+    }
 
 
 def load_evaluation_review_data(review_path: Path) -> dict[str, Any]:

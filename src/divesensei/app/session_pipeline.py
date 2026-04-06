@@ -80,6 +80,7 @@ def build_config(args: argparse.Namespace):
         audio_pattern_min_score=args.audio_pattern_min_score,
         audio_noise_max_peak_count=args.audio_noise_max_peak_count,
         audio_noise_max_top_ratio=args.audio_noise_max_top_ratio,
+        audio_noise_diversity_bucket_seconds=args.audio_noise_diversity_bucket_seconds,
         audio_long_session_seconds=args.audio_long_session_seconds,
         audio_long_session_max_candidates=args.audio_long_session_max_candidates,
         audio_model_path=args.audio_model_path,
@@ -220,6 +221,7 @@ def build_parser() -> argparse.ArgumentParser:
     internal.add_argument("--audio-pattern-min-score", type=float, default=0.4, help=argparse.SUPPRESS)
     internal.add_argument("--audio-noise-max-peak-count", type=int, default=5, help=argparse.SUPPRESS)
     internal.add_argument("--audio-noise-max-top-ratio", type=float, default=1.8, help=argparse.SUPPRESS)
+    internal.add_argument("--audio-noise-diversity-bucket-seconds", type=float, default=8.0, help=argparse.SUPPRESS)
     internal.add_argument("--audio-long-session-seconds", type=float, default=120.0, help=argparse.SUPPRESS)
     internal.add_argument("--audio-long-session-max-candidates", type=int, default=120, help=argparse.SUPPRESS)
     internal.add_argument("--audio-model-path", default="", help=argparse.SUPPRESS)

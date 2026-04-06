@@ -18,6 +18,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("evaluate-session", help="Prepare an audio-first evaluation session with cached audio and a review proxy")
     subparsers.add_parser("export-evaluation-review", help="Export reviewed evaluation sessions into hard-negative and diagnostics artifacts")
     subparsers.add_parser("compare-evaluation-summaries", help="Compare two reviewed evaluation export summaries")
+    subparsers.add_parser("replay-evaluation-review", help="Replay reviewed labels from one evaluation session onto another by timestamp")
     subparsers.add_parser("validate", help="Run a benchmark manifest")
     subparsers.add_parser("evaluate-audio-pcen", help="Evaluate proposal-level audio_v2_pcen_classifier performance")
 
@@ -137,6 +138,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         from divesensei.workflows.compare_evaluation_summaries import main as compare_evaluation_summaries_main
 
         return compare_evaluation_summaries_main(argv[1:])
+
+    if argv[0] == "replay-evaluation-review":
+        if any(flag in argv[1:] for flag in ("-h", "--help")):
+            from divesensei.workflows.replay_evaluation_review import build_parser as replay_build_parser
+
+            replay_build_parser().print_help()
+            return 0
+
+        from divesensei.workflows.replay_evaluation_review import main as replay_evaluation_review_main
+
+        return replay_evaluation_review_main(argv[1:])
 
     if argv[0] == "evaluate-audio-pcen":
         if any(flag in argv[1:] for flag in ("-h", "--help")):

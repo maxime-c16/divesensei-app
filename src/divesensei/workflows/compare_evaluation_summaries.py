@@ -120,6 +120,31 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             for key in sorted(set((baseline.get("failure_attribution") or {}).keys()) | set((candidate.get("failure_attribution") or {}).keys()))
         },
+        "proposal_failure_attribution_delta": {
+            key: _delta(
+                (candidate.get("proposal_failure_attribution") or {}).get(key, 0),
+                (baseline.get("proposal_failure_attribution") or {}).get(key, 0),
+            )
+            for key in sorted(set((baseline.get("proposal_failure_attribution") or {}).keys()) | set((candidate.get("proposal_failure_attribution") or {}).keys()))
+        },
+        "proposal_recall_delta": {
+            "proposal_recall_on_reviewed_events_delta": _delta(
+                (candidate.get("proposal_recall_summary") or {}).get("proposal_recall_on_reviewed_events"),
+                (baseline.get("proposal_recall_summary") or {}).get("proposal_recall_on_reviewed_events"),
+            ),
+            "false_negative_nearby_raw_peak_count_delta": _delta(
+                (candidate.get("proposal_recall_summary") or {}).get("false_negative_nearby_raw_peak_count"),
+                (baseline.get("proposal_recall_summary") or {}).get("false_negative_nearby_raw_peak_count"),
+            ),
+            "false_negative_nearby_frontend_candidate_count_delta": _delta(
+                (candidate.get("proposal_recall_summary") or {}).get("false_negative_nearby_frontend_candidate_count"),
+                (baseline.get("proposal_recall_summary") or {}).get("false_negative_nearby_frontend_candidate_count"),
+            ),
+            "false_negative_nearby_final_proposal_count_delta": _delta(
+                (candidate.get("proposal_recall_summary") or {}).get("false_negative_nearby_final_proposal_count"),
+                (baseline.get("proposal_recall_summary") or {}).get("false_negative_nearby_final_proposal_count"),
+            ),
+        },
         "per_session": per_session,
     }
     if args.output_json:
