@@ -63,7 +63,7 @@ class DetectionConfig:
     audio_pattern_min_score: float = 0.4
     audio_noise_max_peak_count: int = 5
     audio_noise_max_top_ratio: float = 1.8
-    audio_noise_diversity_bucket_seconds: float = 8.0
+    audio_noise_diversity_bucket_seconds: float = 0.0
     audio_long_session_seconds: float = 120.0
     audio_long_session_max_candidates: int = 120
     audio_model_path: str = ""

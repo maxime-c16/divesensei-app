@@ -109,7 +109,7 @@ Proposal changes must now be treated carefully:
 - do not claim recall improvement from final candidate counts alone
 - if replayed review coverage collapses after a proposal change, treat the result as disruptive until re-reviewed or better-aligned
 
-The first time-diverse long-session proposal-cap change increased final proposals on Champigny, but it also shifted candidate timing enough that only a small fraction of the original reviewed decisions still mapped automatically. That makes it a hypothesis, not a proven improvement.
+The first time-diverse long-session proposal-cap change increased final proposals on Champigny, but it also shifted candidate timing enough that only a small fraction of the original reviewed decisions still mapped automatically. That makes it a hypothesis, not a proven improvement, so the diversity bucket remains an opt-in experiment rather than the default path.
 
 ## Current Limits
 

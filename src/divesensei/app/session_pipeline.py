@@ -221,7 +221,7 @@ def build_parser() -> argparse.ArgumentParser:
     internal.add_argument("--audio-pattern-min-score", type=float, default=0.4, help=argparse.SUPPRESS)
     internal.add_argument("--audio-noise-max-peak-count", type=int, default=5, help=argparse.SUPPRESS)
     internal.add_argument("--audio-noise-max-top-ratio", type=float, default=1.8, help=argparse.SUPPRESS)
-    internal.add_argument("--audio-noise-diversity-bucket-seconds", type=float, default=8.0, help=argparse.SUPPRESS)
+    internal.add_argument("--audio-noise-diversity-bucket-seconds", type=float, default=0.0, help=argparse.SUPPRESS)
     internal.add_argument("--audio-long-session-seconds", type=float, default=120.0, help=argparse.SUPPRESS)
     internal.add_argument("--audio-long-session-max-candidates", type=int, default=120, help=argparse.SUPPRESS)
     internal.add_argument("--audio-model-path", default="", help=argparse.SUPPRESS)

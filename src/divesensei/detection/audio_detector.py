@@ -524,31 +524,33 @@ class AudioVisualDiveDetector:
             top_ratio = ranked[0].audio_score / ranked[1].audio_score
             if top_ratio < noisy_peak_ratio:
                 cap = long_session_max_candidates if duration_seconds >= long_session_seconds else max(noisy_peak_count * 3, 12)
-                bucket_seconds = max(1.0, float(getattr(self.config, "audio_noise_diversity_bucket_seconds", 8.0)))
                 if cap <= 0:
                     return []
-                buckets: dict[int, list[AudioCandidate]] = {}
-                for proposal in ranked:
-                    bucket_idx = int(float(proposal.timestamp) // bucket_seconds)
-                    buckets.setdefault(bucket_idx, []).append(proposal)
-                selected: list[AudioCandidate] = []
-                bucket_order = sorted(buckets.keys())
-                round_index = 0
-                while len(selected) < cap:
-                    added_any = False
-                    for bucket_idx in bucket_order:
-                        bucket_rows = buckets[bucket_idx]
-                        if round_index >= len(bucket_rows):
-                            continue
-                        selected.append(bucket_rows[round_index])
-                        added_any = True
-                        if len(selected) >= cap:
+                bucket_seconds = float(getattr(self.config, "audio_noise_diversity_bucket_seconds", 0.0) or 0.0)
+                if bucket_seconds > 0.0:
+                    bucket_seconds = max(1.0, bucket_seconds)
+                    buckets: dict[int, list[AudioCandidate]] = {}
+                    for proposal in ranked:
+                        bucket_idx = int(float(proposal.timestamp) // bucket_seconds)
+                        buckets.setdefault(bucket_idx, []).append(proposal)
+                    selected: list[AudioCandidate] = []
+                    bucket_order = sorted(buckets.keys())
+                    round_index = 0
+                    while len(selected) < cap:
+                        added_any = False
+                        for bucket_idx in bucket_order:
+                            bucket_rows = buckets[bucket_idx]
+                            if round_index >= len(bucket_rows):
+                                continue
+                            selected.append(bucket_rows[round_index])
+                            added_any = True
+                            if len(selected) >= cap:
+                                break
+                        if not added_any:
                             break
-                    if not added_any:
-                        break
-                    round_index += 1
-                if selected:
-                    return sorted(selected, key=lambda p: p.timestamp)
+                        round_index += 1
+                    if selected:
+                        return sorted(selected, key=lambda p: p.timestamp)
                 return sorted(ranked[: max(1, cap)], key=lambda p: p.timestamp)
         return sorted(proposals, key=lambda p: p.timestamp)
 
