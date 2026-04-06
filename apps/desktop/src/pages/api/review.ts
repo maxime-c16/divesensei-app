@@ -8,6 +8,7 @@ import {
 } from "@/lib/evaluation-review-store";
 import { getManifestPathForAnalysisRun, listReviewDecisions, saveReviewDecision } from "@/lib/session-catalog";
 import { readManifest } from "@/lib/session-catalog-core";
+import type { EvaluationReviewSubtype } from "@/types/ui";
 
 export const GET: APIRoute = async ({ url }) => {
   const analysisRunId = url.searchParams.get("analysisRunId");
@@ -38,6 +39,7 @@ export const POST: APIRoute = async ({ request }) => {
         analysisRunId?: string;
         detectionId?: string;
         label?: "keep" | "reject" | "unsure" | "dive" | "non_dive" | "false_negative";
+        subtype?: EvaluationReviewSubtype | null;
         notes?: string;
         timestampSeconds?: number;
       }
@@ -58,7 +60,7 @@ export const POST: APIRoute = async ({ request }) => {
         if (typeof body.timestampSeconds !== "number" || Number.isNaN(body.timestampSeconds)) {
           return Response.json({ error: "timestampSeconds is required for false_negative." }, { status: 400 });
         }
-        const annotation = addEvaluationFalseNegative(manifest, body.analysisRunId, body.timestampSeconds, body.notes ?? "");
+        const annotation = addEvaluationFalseNegative(manifest, body.analysisRunId, body.timestampSeconds, body.subtype ?? null, body.notes ?? "");
         return Response.json({ annotation, mode: "evaluation" });
       }
       if (!body.detectionId) {
@@ -67,7 +69,14 @@ export const POST: APIRoute = async ({ request }) => {
       if (!["dive", "non_dive", "unsure"].includes(body.label)) {
         return Response.json({ error: "Invalid evaluation label." }, { status: 400 });
       }
-      const decision = saveEvaluationReviewDecision(manifest, body.analysisRunId, body.detectionId, body.label, body.notes ?? "");
+      const decision = saveEvaluationReviewDecision(
+        manifest,
+        body.analysisRunId,
+        body.detectionId,
+        body.label,
+        body.label === "non_dive" ? body.subtype ?? null : null,
+        body.notes ?? "",
+      );
       return Response.json({ decision, mode: "evaluation" });
     }
 

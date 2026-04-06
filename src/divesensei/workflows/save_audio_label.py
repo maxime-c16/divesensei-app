@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Sequence
 
 from divesensei.io.media_io import _resolve_binary
+from divesensei.workflows.evaluation_session_support import NON_DIVE_SUBTYPES, normalize_non_dive_subtype
 
 
 @dataclass
@@ -21,6 +22,7 @@ class AudioLabelRecord:
     clip_start_seconds: float
     clip_duration_seconds: float
     label: str
+    subtype: str | None
     notes: str
     audio_path: str
 
@@ -33,6 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("video_path", help="Path to the source session video")
     parser.add_argument("timestamp_seconds", type=float, help="Anchor timestamp in seconds")
     parser.add_argument("--label", choices=["dive", "non-dive"], required=True, help="Training label")
+    parser.add_argument("--subtype", choices=list(NON_DIVE_SUBTYPES), default="", help="Optional hard-negative subtype metadata")
     parser.add_argument("--notes", default="", help="Optional note about the sound event")
     parser.add_argument("--pre-seconds", type=float, default=2.0, help="Seconds to include before the timestamp")
     parser.add_argument("--post-seconds", type=float, default=2.0, help="Seconds to include after the timestamp")
@@ -106,6 +109,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         clip_start_seconds=clip_start,
         clip_duration_seconds=clip_duration,
         label=args.label,
+        subtype=normalize_non_dive_subtype(args.subtype) if args.label == "non-dive" else None,
         notes=args.notes,
         audio_path=str(audio_path),
     )

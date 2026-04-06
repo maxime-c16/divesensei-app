@@ -19,6 +19,7 @@ from divesensei.app.session_pipeline import (
 )
 from divesensei.io.logging_utils import StructuredLogger, build_candidate_debug_summary
 from divesensei.io.media_io import extract_audio_wav_ffmpeg, generate_review_proxy_ffmpeg, probe_media_duration_seconds
+from divesensei.workflows.evaluation_session_support import build_proposal_diagnostics, write_json, write_jsonl
 
 
 def default_output_dir(video_path: Path) -> Path:
@@ -193,6 +194,27 @@ def main(argv: Sequence[str] | None = None) -> int:
         review_proxy_error=review_proxy_error,
     )
     report["detections_csv"] = str(csv_path)
+    proposal_rows = build_proposal_diagnostics(
+        detector=detector,
+        audio_path=prepared_audio_path,
+        source_video_path=video_path,
+        candidates=candidates,
+        session_id=output_dir.name,
+    )
+    proposal_diagnostics_path = write_jsonl(output_dir / "proposal_diagnostics.jsonl", proposal_rows)
+    proposal_summary_path = write_json(
+        output_dir / "proposal_diagnostics_summary.json",
+        {
+            "session_id": output_dir.name,
+            "proposal_count": len(proposal_rows),
+            "selected_count": sum(1 for row in proposal_rows if row.get("pipeline_selected")),
+            "classifier_rejected_count": sum(1 for row in proposal_rows if row.get("pipeline_stage") == "classifier_rejected"),
+            "threshold_rejected_count": sum(1 for row in proposal_rows if row.get("pipeline_stage") == "threshold_rejected"),
+            "ambiguous_count": sum(1 for row in proposal_rows if row.get("pipeline_stage") == "ambiguous_case"),
+        },
+    )
+    report["proposal_diagnostics_path"] = str(proposal_diagnostics_path)
+    report["proposal_diagnostics_summary_path"] = str(proposal_summary_path)
     report["extract_seconds"] = 0.0
     report["peak_rss_kb"] = peak_rss_kb
     report["manifest_ready_seconds"] = time.time() - audio_extract_started
@@ -219,6 +241,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         report_path=report_path,
         ui_manifest_path=ui_manifest_path,
         detections_csv=csv_path,
+        proposal_diagnostics_path=str(proposal_diagnostics_path),
         candidate_count=len(candidates),
         extracted_count=0,
         extraction_error_count=0,
@@ -248,6 +271,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         report_path=report_path,
         ui_manifest_path=ui_manifest_path,
         detections_csv=csv_path,
+        proposal_diagnostics_path=str(proposal_diagnostics_path),
         candidate_count=len(candidates),
         extracted_count=0,
         extraction_error_count=0,

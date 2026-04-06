@@ -304,6 +304,17 @@ const clientBundle = JSON.stringify({
             {isEvaluationSession && (
               <button class="action-link review-decisions__button review-decisions__button--reject" type="button" data-decision-false-negative>Missed dive</button>
             )}
+            {isEvaluationSession && (
+              <select class="review-decisions__subtype" data-decision-subtype aria-label="Evaluation subtype">
+                <option value="">Subtype (optional)</option>
+                <option value="board_rebound">Board rebound</option>
+                <option value="board_slap">Board slap</option>
+                <option value="non_dive_splash">Non-dive splash</option>
+                <option value="voice_whistle">Voice / whistle</option>
+                <option value="handling_noise">Handling noise</option>
+                <option value="unknown_transient">Unknown transient</option>
+              </select>
+            )}
             <input type="text" class="review-decisions__note" data-decision-notes placeholder="Note (optional)" />
           </div>
         </div>
@@ -618,6 +629,7 @@ const clientBundle = JSON.stringify({
     const reviewFilterSelect = document.querySelector("[data-review-filter]");
     const decisionStatus = document.querySelector("[data-decision-status]");
     const decisionNotes = document.querySelector("[data-decision-notes]");
+    const decisionSubtype = document.querySelector("[data-decision-subtype]");
     const reviewCompleteNotice = document.querySelector("[data-review-complete]");
     const reviewCompleteTitle = document.querySelector("[data-review-complete-title]");
     const reviewCompleteCopy = document.querySelector("[data-review-complete-copy]");
@@ -689,6 +701,7 @@ const clientBundle = JSON.stringify({
         },
         reviewClipPath: null,
         notes: annotation.notes ?? "",
+        subtype: annotation.subtype ?? "",
       };
     }
 
@@ -792,17 +805,20 @@ const clientBundle = JSON.stringify({
         decisionStatus && (decisionStatus.textContent = `Saved ${currentDecision.label} for ${currentDecision.detectionId}.`);
         decisionDetailLabel && (decisionDetailLabel.textContent = `Decision ${currentDecision.label}`);
         if (decisionNotes) decisionNotes.value = currentDecision.notes ?? "";
+        if (decisionSubtype) decisionSubtype.value = currentDecision.subtype ?? "";
         return;
       }
       if (String(current?.id ?? "").startsWith("fn-")) {
         decisionStatus && (decisionStatus.textContent = "Manual false negative annotation.");
         decisionDetailLabel && (decisionDetailLabel.textContent = "Decision false_negative");
         if (decisionNotes) decisionNotes.value = String(current?.notes ?? "");
+        if (decisionSubtype) decisionSubtype.value = String(current?.subtype ?? "");
         return;
       }
       decisionStatus && (decisionStatus.textContent = "No decision saved for this attempt.");
       decisionDetailLabel && (decisionDetailLabel.textContent = "No decision yet");
       if (decisionNotes) decisionNotes.value = "";
+      if (decisionSubtype) decisionSubtype.value = "";
     }
 
     function updateReviewCompleteNotice() {
@@ -1730,6 +1746,7 @@ const clientBundle = JSON.stringify({
       if (!parsed.session?.id || !current) return;
       if (String(current.id).startsWith("fn-")) return;
       const savedDetectionId = current.id;
+      const subtype = isEvaluationSession() ? (decisionSubtype?.value?.trim() || null) : null;
       const response = await fetch("/api/review", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1737,6 +1754,7 @@ const clientBundle = JSON.stringify({
           analysisRunId: parsed.session.id,
           detectionId: savedDetectionId,
           label,
+          subtype,
           notes: decisionNotes?.value ?? "",
         }),
       });
@@ -1753,6 +1771,7 @@ const clientBundle = JSON.stringify({
     async function saveFalseNegative() {
       if (!parsed.session?.id || !isEvaluationSession()) return;
       const timestampSeconds = Number(reviewVideo?.currentTime ?? current?.timestamp_seconds ?? 0);
+      const subtype = decisionSubtype?.value?.trim() || null;
       const response = await fetch("/api/review", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1760,6 +1779,7 @@ const clientBundle = JSON.stringify({
           analysisRunId: parsed.session.id,
           label: "false_negative",
           timestampSeconds,
+          subtype,
           notes: decisionNotes?.value ?? "",
         }),
       });

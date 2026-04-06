@@ -88,7 +88,7 @@ class AudioVisualDiveDetector:
                 "raw_proposal_score": float(proposal.audio_score),
                 "audio_clip_probability": float(details.get("audio_clip_probability", 0.0) or 0.0),
                 "classifier_bucket": classifier_bucket,
-                "classifier_decision": "dive" if classifier_bucket == "accepted" else "non-dive",
+                "classifier_decision": "dive" if classifier_bucket in {"accepted", "accepted_no_model"} else "non-dive",
                 "detector_id": detector_id,
                 "details": details,
             }
@@ -332,13 +332,11 @@ class AudioVisualDiveDetector:
         sample_rate: int,
         proposals: Sequence[AudioCandidate],
     ) -> tuple[List[AudioCandidate], List[AudioCandidate]]:
-        if self.audio_clip_model is None:
-            return list(proposals), []
         accepted: List[AudioCandidate] = []
         ambiguous: List[AudioCandidate] = []
         for proposal in self._score_audio_candidates(signal, sample_rate, proposals):
             bucket = str(self._proposal_details(proposal).get("audio_clip_bucket", "rejected"))
-            if bucket == "accepted":
+            if bucket in {"accepted", "accepted_no_model"}:
                 accepted.append(proposal)
             elif bucket == "ambiguous":
                 ambiguous.append(proposal)
@@ -350,9 +348,6 @@ class AudioVisualDiveDetector:
         sample_rate: int,
         proposals: Sequence[AudioCandidate],
     ) -> List[AudioCandidate]:
-        if self.audio_clip_model is None:
-            return list(proposals)
-
         scored: List[AudioCandidate] = []
         low = float(getattr(self.config, "audio_clip_classifier_ambiguity_low", 0.35))
         high = float(getattr(self.config, "audio_clip_classifier_ambiguity_high", 0.65))
@@ -369,16 +364,26 @@ class AudioVisualDiveDetector:
                 frame_length=frame_length,
                 hop_length=hop_length,
             )
-            probability = self.audio_clip_model.predict_probability(features)
             details = self._proposal_details(proposal)
             details.update(features)
-            details["audio_clip_probability"] = probability
-            if probability >= max(min_probability, high):
-                details["audio_clip_bucket"] = "accepted"
-            elif probability >= low:
-                details["audio_clip_bucket"] = "ambiguous"
+            details["clip_feature_window_seconds"] = window_seconds
+            details["audio_clip_classifier_ambiguity_low"] = low
+            details["audio_clip_classifier_ambiguity_high"] = high
+            details["audio_clip_model_min_probability"] = min_probability
+            if self.audio_clip_model is None:
+                details["audio_clip_probability"] = None
+                details["audio_clip_bucket"] = "accepted_no_model"
+                details["audio_clip_model_available"] = False
             else:
-                details["audio_clip_bucket"] = "rejected"
+                probability = self.audio_clip_model.predict_probability(features)
+                details["audio_clip_probability"] = probability
+                details["audio_clip_model_available"] = True
+                if probability >= max(min_probability, high):
+                    details["audio_clip_bucket"] = "accepted"
+                elif probability >= low:
+                    details["audio_clip_bucket"] = "ambiguous"
+                else:
+                    details["audio_clip_bucket"] = "rejected"
             scored.append(self._attach_details(proposal, details))
         return scored
 

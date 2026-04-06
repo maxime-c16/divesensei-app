@@ -25,6 +25,16 @@ AUDIO_CLIP_FEATURES = [
     "clip_pcen_peak_band",
     "clip_pcen_high_band_ratio",
     "clip_pcen_low_band_ratio",
+    "clip_pre_post_flux_ratio",
+    "clip_pre_post_rms_ratio",
+    "clip_peak_to_tail_flux_ratio",
+    "clip_peak_to_tail_rms_ratio",
+    "clip_post_onset_decay_ratio",
+    "clip_post_onset_autocorr_peak",
+    "clip_post_band_spread_mean",
+    "clip_post_peak_band_stability",
+    "clip_temporal_asymmetry_flux",
+    "clip_temporal_asymmetry_rms",
 ]
 
 
@@ -149,6 +159,41 @@ def extract_clip_feature_map(
     frame_length: int,
     hop_length: int,
 ) -> Dict[str, float]:
+    def safe_mean(values: np.ndarray) -> float:
+        return float(np.mean(values)) if values.size else 0.0
+
+    def safe_std(values: np.ndarray) -> float:
+        return float(np.std(values)) if values.size else 0.0
+
+    def safe_peak(values: np.ndarray) -> float:
+        return float(np.max(values)) if values.size else 0.0
+
+    def safe_ratio(numerator: float, denominator: float) -> float:
+        return float(numerator / (denominator + 1e-6))
+
+    def normalized_difference(left: float, right: float) -> float:
+        return float((right - left) / (abs(left) + abs(right) + 1e-6))
+
+    def frame_band_spread(frame: np.ndarray) -> float:
+        if frame.size == 0:
+            return 0.0
+        peak = max(float(np.max(frame)), 1e-6)
+        return float(np.mean(frame >= 0.65 * peak))
+
+    def post_autocorr_peak(values: np.ndarray) -> float:
+        if values.size < 4:
+            return 0.0
+        centered = values.astype(np.float32) - float(np.mean(values))
+        denom = float(np.dot(centered, centered))
+        if denom <= 1e-6:
+            return 0.0
+        best = 0.0
+        max_lag = min(12, values.size - 1)
+        for lag in range(2, max_lag + 1):
+            corr = float(np.dot(centered[:-lag], centered[lag:]) / denom)
+            best = max(best, corr)
+        return best
+
     half_window = max(window_seconds / 2.0, hop_length / float(sample_rate))
     start = max(0, int(round((center_time - half_window) * sample_rate)))
     end = min(signal.size, int(round((center_time + half_window) * sample_rate)))
@@ -166,33 +211,67 @@ def extract_clip_feature_map(
         peak_band = 0.0
         high_band_ratio = 0.0
         low_band_ratio = 0.0
+        peak_idx = 0
     else:
         onset_sum = onset.mean(axis=1)
         peak_idx = int(np.argmax(onset_sum))
         peak_frame = onset[peak_idx]
-        onset_band_spread = float(np.mean(peak_frame >= 0.65 * max(float(np.max(peak_frame)), 1e-6)))
+        onset_band_spread = frame_band_spread(peak_frame)
         peak_band = float(np.argmax(peak_frame) / max(1, peak_frame.size - 1))
         high_band_ratio = float(np.sum(peak_frame[-max(1, peak_frame.size // 3):]) / (np.sum(peak_frame) + 1e-6))
         low_band_ratio = float(np.sum(peak_frame[: max(1, peak_frame.size // 3)]) / (np.sum(peak_frame) + 1e-6))
 
+    if onset_sum.size == 0:
+        peak_idx = int(np.argmax(flux)) if flux.size else 0
+    pre_slice = slice(max(0, peak_idx - 6), peak_idx)
+    early_post_slice = slice(min(peak_idx + 1, onset_sum.size), min(onset_sum.size, peak_idx + 6))
+    tail_slice = slice(min(peak_idx + 6, onset_sum.size), min(onset_sum.size, peak_idx + 18))
+    post_slice = slice(min(peak_idx + 1, onset_sum.size), min(onset_sum.size, peak_idx + 18))
+
+    pre_flux = flux[pre_slice]
+    post_flux = flux[post_slice]
+    pre_rms = rms[pre_slice]
+    post_rms = rms[post_slice]
+    early_post_onset = onset_sum[early_post_slice]
+    tail_onset = onset_sum[tail_slice]
+    tail_flux = flux[tail_slice]
+    tail_rms = rms[tail_slice]
+    post_frames = onset[post_slice] if onset.size else np.empty((0, 0), dtype=np.float32)
+    post_band_spread_mean = safe_mean(np.array([frame_band_spread(frame) for frame in post_frames], dtype=np.float32)) if post_frames.size else 0.0
+    if post_frames.size:
+        peak_bands = np.argmax(post_frames, axis=1)
+        modal_peak_band = np.bincount(peak_bands).max() / max(1, peak_bands.size)
+    else:
+        modal_peak_band = 0.0
+
     return {
-        "clip_rms_mean": float(np.mean(rms)) if rms.size else 0.0,
-        "clip_rms_std": float(np.std(rms)) if rms.size else 0.0,
-        "clip_rms_peak": float(np.max(rms)) if rms.size else 0.0,
-        "clip_flux_mean": float(np.mean(flux)) if flux.size else 0.0,
-        "clip_flux_peak": float(np.max(flux)) if flux.size else 0.0,
-        "clip_flux_std": float(np.std(flux)) if flux.size else 0.0,
-        "clip_hf_ratio_mean": float(np.mean(hf_ratio)) if hf_ratio.size else 0.0,
-        "clip_hf_ratio_peak": float(np.max(hf_ratio)) if hf_ratio.size else 0.0,
-        "clip_centroid_mean": float(np.mean(centroid)) if centroid.size else 0.0,
-        "clip_flatness_mean": float(np.mean(flatness)) if flatness.size else 0.0,
-        "clip_pcen_onset_mean": float(np.mean(onset_sum)) if onset_sum.size else 0.0,
-        "clip_pcen_onset_peak": float(np.max(onset_sum)) if onset_sum.size else 0.0,
-        "clip_pcen_onset_std": float(np.std(onset_sum)) if onset_sum.size else 0.0,
+        "clip_rms_mean": safe_mean(rms),
+        "clip_rms_std": safe_std(rms),
+        "clip_rms_peak": safe_peak(rms),
+        "clip_flux_mean": safe_mean(flux),
+        "clip_flux_peak": safe_peak(flux),
+        "clip_flux_std": safe_std(flux),
+        "clip_hf_ratio_mean": safe_mean(hf_ratio),
+        "clip_hf_ratio_peak": safe_peak(hf_ratio),
+        "clip_centroid_mean": safe_mean(centroid),
+        "clip_flatness_mean": safe_mean(flatness),
+        "clip_pcen_onset_mean": safe_mean(onset_sum),
+        "clip_pcen_onset_peak": safe_peak(onset_sum),
+        "clip_pcen_onset_std": safe_std(onset_sum),
         "clip_pcen_band_spread": onset_band_spread,
         "clip_pcen_peak_band": peak_band,
         "clip_pcen_high_band_ratio": high_band_ratio,
         "clip_pcen_low_band_ratio": low_band_ratio,
+        "clip_pre_post_flux_ratio": safe_ratio(safe_mean(post_flux), safe_mean(pre_flux)),
+        "clip_pre_post_rms_ratio": safe_ratio(safe_mean(post_rms), safe_mean(pre_rms)),
+        "clip_peak_to_tail_flux_ratio": safe_ratio(safe_peak(flux), safe_mean(tail_flux)),
+        "clip_peak_to_tail_rms_ratio": safe_ratio(safe_peak(rms), safe_mean(tail_rms)),
+        "clip_post_onset_decay_ratio": safe_ratio(safe_mean(early_post_onset), safe_mean(tail_onset)),
+        "clip_post_onset_autocorr_peak": post_autocorr_peak(onset_sum[post_slice]),
+        "clip_post_band_spread_mean": post_band_spread_mean,
+        "clip_post_peak_band_stability": float(modal_peak_band),
+        "clip_temporal_asymmetry_flux": normalized_difference(safe_mean(pre_flux), safe_mean(post_flux)),
+        "clip_temporal_asymmetry_rms": normalized_difference(safe_mean(pre_rms), safe_mean(post_rms)),
     }
 
 

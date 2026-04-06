@@ -1,6 +1,13 @@
 export type ConfidenceLevel = "high" | "medium" | "low";
 export type SessionMode = "standard" | "evaluation";
 export type ReviewDecisionLabel = "keep" | "reject" | "unsure" | "dive" | "non_dive";
+export type EvaluationReviewSubtype =
+  | "board_rebound"
+  | "board_slap"
+  | "non_dive_splash"
+  | "voice_whistle"
+  | "handling_noise"
+  | "unknown_transient";
 
 export interface SessionSummary {
   id: string;
@@ -62,7 +69,7 @@ export interface SessionManifest {
   kind: string;
   generated_at: string;
   session: SessionSummary;
-  artifacts: Record<string, string>;
+  artifacts: Record<string, string | null>;
   detections: Detection[];
 }
 
@@ -94,6 +101,7 @@ export interface ReviewDecision {
   analysisRunId: string;
   detectionId: string;
   label: ReviewDecisionLabel;
+  subtype?: EvaluationReviewSubtype | null;
   notes: string;
   createdAt: string;
   updatedAt: string;
@@ -106,6 +114,7 @@ export interface EvaluationFalseNegativeAnnotation {
   reviewStartSeconds: number;
   reviewEndSeconds: number;
   label: "false_negative";
+  subtype?: EvaluationReviewSubtype | null;
   notes: string;
   createdAt: string;
   updatedAt: string;

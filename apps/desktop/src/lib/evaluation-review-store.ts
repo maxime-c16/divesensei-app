@@ -1,6 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { EvaluationFalseNegativeAnnotation, ReviewDecision, ReviewDecisionLabel, SessionManifest } from "@/types/ui";
+import type {
+  EvaluationFalseNegativeAnnotation,
+  EvaluationReviewSubtype,
+  ReviewDecision,
+  ReviewDecisionLabel,
+  SessionManifest,
+} from "@/types/ui";
 
 interface EvaluationReviewStore {
   schemaVersion: string;
@@ -56,6 +62,7 @@ export function saveEvaluationReviewDecision(
   analysisRunId: string,
   detectionId: string,
   label: Extract<ReviewDecisionLabel, "dive" | "non_dive" | "unsure">,
+  subtype: EvaluationReviewSubtype | null = null,
   notes = "",
 ): ReviewDecision {
   const store = loadEvaluationReviewStore(manifest);
@@ -66,6 +73,7 @@ export function saveEvaluationReviewDecision(
     analysisRunId,
     detectionId,
     label,
+    subtype,
     notes,
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
@@ -90,6 +98,7 @@ export function addEvaluationFalseNegative(
   manifest: SessionManifest,
   analysisRunId: string,
   timestampSeconds: number,
+  subtype: EvaluationReviewSubtype | null = null,
   notes = "",
 ): EvaluationFalseNegativeAnnotation {
   const store = loadEvaluationReviewStore(manifest);
@@ -101,6 +110,7 @@ export function addEvaluationFalseNegative(
     reviewStartSeconds: Math.max(0, timestampSeconds - 2.0),
     reviewEndSeconds: Math.max(timestampSeconds + 2.0, timestampSeconds + 0.5),
     label: "false_negative",
+    subtype,
     notes,
     createdAt: now,
     updatedAt: now,

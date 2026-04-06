@@ -32,3 +32,31 @@ class AudioClipModel:
         normalized = (values - self.means) / np.maximum(self.stds, 1e-6)
         logit = float(np.dot(normalized, self.weights) + self.bias)
         return 1.0 / (1.0 + np.exp(-np.clip(logit, -40.0, 40.0)))
+
+    def explain_feature_map(self, feature_map: Dict[str, float]) -> list[dict[str, float | str]]:
+        values = np.array([float(feature_map.get(name, 0.0)) for name in self.feature_names], dtype=np.float32)
+        normalized = (values - self.means) / np.maximum(self.stds, 1e-6)
+        contributions = normalized * self.weights
+        ranked = sorted(
+            [
+                {
+                    "feature": name,
+                    "value": float(value),
+                    "normalized_value": float(z_value),
+                    "weight": float(weight),
+                    "contribution": float(contribution),
+                    "abs_contribution": float(abs(contribution)),
+                }
+                for name, value, z_value, weight, contribution in zip(
+                    self.feature_names,
+                    values,
+                    normalized,
+                    self.weights,
+                    contributions,
+                    strict=True,
+                )
+            ],
+            key=lambda item: item["abs_contribution"],
+            reverse=True,
+        )
+        return ranked
