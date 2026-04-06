@@ -609,6 +609,7 @@ const clientBundle = JSON.stringify({
     let reviewCompleteNoticeTimer = null;
     let timelineScrubbing = false;
     let timelinePointerId = null;
+    let manualTimelineSeekMode = false;
 
     const tabButtons = Array.from(document.querySelectorAll("[data-tab-trigger]"));
     const panels = Array.from(document.querySelectorAll("[data-tab-panel]"));
@@ -988,8 +989,23 @@ const clientBundle = JSON.stringify({
         timelineTooltip.style.left = `${ratio * 100}%`;
       };
 
+      const seekTimelineFreely = (targetTime) => {
+        if (!reviewVideo) return;
+        manualTimelineSeekMode = isEvaluationSession();
+        reviewVideo.pause();
+        const duration = Number.isFinite(reviewVideo.duration) && reviewVideo.duration > 0
+          ? reviewVideo.duration
+          : rangeStartValue + rangeSpanValue;
+        reviewVideo.currentTime = Math.min(Math.max(targetTime, 0), Math.max(0, duration - 0.05));
+        syncPlaybackUi();
+      };
+
       const commitTimelineScrub = (clientX) => {
         const targetTime = timelineTimeFromClientX(clientX);
+        if (isEvaluationSession()) {
+          seekTimelineFreely(targetTime);
+          return;
+        }
         const nextDetection = closestDetectionForTime(targetTime);
         if (!nextDetection) return;
         selectDetection(nextDetection.id, { autoplay: false });
@@ -1106,6 +1122,7 @@ const clientBundle = JSON.stringify({
 
     function playCurrentSegment() {
       if (!reviewVideo || !current) return;
+      manualTimelineSeekMode = false;
       const start = reviewStartFor(current);
       const end = reviewEndFor(current);
       if (reviewVideo.currentTime < start || reviewVideo.currentTime >= end) {
@@ -1227,6 +1244,10 @@ const clientBundle = JSON.stringify({
         reviewVideo.currentTime = start;
       }
       sourceLoopHandler = () => {
+        if (manualTimelineSeekMode && isEvaluationSession()) {
+          syncPlaybackUi();
+          return;
+        }
         if (reviewVideo.currentTime >= end) {
           if (loopEnabled) {
             reviewVideo.currentTime = start;
@@ -1253,6 +1274,7 @@ const clientBundle = JSON.stringify({
     function selectDetection(id, options = {}) {
       current = detections.find((item) => item.id === id) ?? current;
       if (!current) return;
+      manualTimelineSeekMode = false;
       reviewLabel && (reviewLabel.textContent = `${formatSeconds(reviewStartFor(current))} to ${formatSeconds(reviewEndFor(current))} · ${parsed.session?.source_video_path ?? ""}`);
       audioLabel && (audioLabel.textContent = `Audio ${current.scores.audio.toFixed(2)}`);
       windowLabel && (windowLabel.textContent = `Window ${formatSeconds(reviewStartFor(current))} to ${formatSeconds(reviewEndFor(current))}`);

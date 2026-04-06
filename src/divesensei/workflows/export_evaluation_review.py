@@ -290,7 +290,7 @@ def _attribute_false_negative(
         "review_notes": annotation.get("notes", ""),
         "review_created_at": annotation.get("createdAt"),
         "review_updated_at": annotation.get("updatedAt"),
-        "subtype": normalize_non_dive_subtype(annotation.get("subtype")),
+        "subtype": None,
         "human_label": "dive",
         "failure_type": failure_type,
         "matched_proposal_delta_seconds": abs(float(matched.get("timestamp", 0.0)) - timestamp) if matched else None,
