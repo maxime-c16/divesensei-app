@@ -1,9 +1,12 @@
 export type ConfidenceLevel = "high" | "medium" | "low";
+export type SessionMode = "standard" | "evaluation";
+export type ReviewDecisionLabel = "keep" | "reject" | "unsure" | "dive" | "non_dive";
 
 export interface SessionSummary {
   id: string;
   title: string;
   session_name?: string;
+  mode?: SessionMode;
   profile: string;
   detector_id?: string;
   status: string;
@@ -90,7 +93,19 @@ export interface ReviewDecision {
   id: string;
   analysisRunId: string;
   detectionId: string;
-  label: "keep" | "reject" | "unsure";
+  label: ReviewDecisionLabel;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EvaluationFalseNegativeAnnotation {
+  id: string;
+  analysisRunId: string;
+  timestampSeconds: number;
+  reviewStartSeconds: number;
+  reviewEndSeconds: number;
+  label: "false_negative";
   notes: string;
   createdAt: string;
   updatedAt: string;

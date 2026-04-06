@@ -7,13 +7,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 import cv2
 import numpy as np
 
 from divesensei.detection.audio_clip_model import AudioClipModel
-from divesensei.detection.audio_features import compute_multiband_pcen_features, extract_clip_feature_map, frame_audio
+from divesensei.detection.audio_features import compute_multiband_pcen_features, extract_clip_feature_map, frame_audio, load_wav_mono_float32
 from divesensei.detection.audio_model import AudioCandidateModel
 from divesensei.io.media_io import decode_audio_mono_s16le
 from divesensei.io.runtime import configure_runtime
@@ -48,14 +48,22 @@ class VerifiedDiveCandidate:
 
 
 class AudioVisualDiveDetector:
-    def __init__(self, config: Any):
+    def __init__(self, config: Any, progress_callback: Callable[[dict[str, Any]], None] | None = None):
         self.config = config
+        self.progress_callback = progress_callback
         configure_runtime(int(getattr(config, "opencv_threads", 1)))
         self.audio_candidate_model = self._load_audio_candidate_model()
         self.audio_clip_model = self._load_audio_clip_model()
 
     def inspect_audio_proposals(self, video_path: str) -> List[Dict[str, Any]]:
         signal, sample_rate = self._extract_audio_signal(video_path)
+        return self.inspect_audio_proposals_from_signal(signal, sample_rate, source_path=video_path)
+
+    def inspect_audio_proposals_from_audio_file(self, audio_path: str) -> List[Dict[str, Any]]:
+        signal, sample_rate = load_wav_mono_float32(audio_path)
+        return self.inspect_audio_proposals_from_signal(signal, sample_rate, source_path=audio_path)
+
+    def inspect_audio_proposals_from_signal(self, signal: np.ndarray, sample_rate: int, *, source_path: str) -> List[Dict[str, Any]]:
         detector_id = str(getattr(self.config, "detector_id", "audio_v1_heuristic") or "audio_v1_heuristic")
         proposals = self._merge_audio_candidates(
             self._propose_from_audio_heuristic(signal, sample_rate),
@@ -67,13 +75,13 @@ class AudioVisualDiveDetector:
         proposals = self._suppress_rebound_precursors(proposals)
         proposals = self._suppress_dominant_duplicate_followers(proposals)
         scored = self._score_audio_candidates(signal, sample_rate, proposals)
-        source_file = Path(video_path).name
+        source_file = Path(source_path).name
         rows: List[Dict[str, Any]] = []
         for proposal in scored:
             details = self._proposal_details(proposal)
             classifier_bucket = str(details.get("audio_clip_bucket", "unclassified"))
             row = {
-                "source_video_path": str(video_path),
+                "source_video_path": str(source_path),
                 "source_file": source_file,
                 "timestamp": float(proposal.timestamp),
                 "proposal_frontend": str(details.get("proposal_frontend", "unknown")),
@@ -89,6 +97,19 @@ class AudioVisualDiveDetector:
 
     def detect(self, video_path: str) -> List[VerifiedDiveCandidate]:
         signal, sample_rate = self._extract_audio_signal(video_path)
+        return self.detect_from_signal(signal, sample_rate, video_path=video_path)
+
+    def detect_from_audio_file(self, audio_path: str, *, video_path: str | None = None) -> List[VerifiedDiveCandidate]:
+        signal, sample_rate = load_wav_mono_float32(audio_path)
+        return self.detect_from_signal(signal, sample_rate, video_path=video_path)
+
+    def detect_from_signal(
+        self,
+        signal: np.ndarray,
+        sample_rate: int,
+        *,
+        video_path: str | None = None,
+    ) -> List[VerifiedDiveCandidate]:
         detector_id = str(getattr(self.config, "detector_id", "audio_v1_heuristic") or "audio_v1_heuristic")
 
         if detector_id == "audio_v1_heuristic":
@@ -97,6 +118,8 @@ class AudioVisualDiveDetector:
                 return []
             if bool(getattr(self.config, "audio_visual_skip_video_verification", False)):
                 return self._promote_audio_only(proposals)
+            if not video_path:
+                raise RuntimeError("Video verification requires a source video path.")
             return self._verify_with_video(video_path, proposals)
 
         proposals = self._merge_audio_candidates(
@@ -115,10 +138,14 @@ class AudioVisualDiveDetector:
             return self._promote_audio_only(accepted)
 
         if detector_id == "audio_v2_hybrid_video":
+            if not video_path:
+                raise RuntimeError("Hybrid video verification requires a source video path.")
             promoted = self._promote_audio_only(accepted)
             verified = self._verify_with_video(video_path, ambiguous)
             return self._deduplicate([*promoted, *verified])
 
+        if not video_path:
+            raise RuntimeError("Video verification requires a source video path.")
         promoted = self._promote_audio_only(accepted)
         verified = self._verify_with_video(video_path, proposals)
         return self._deduplicate([*promoted, *verified])
@@ -132,6 +159,8 @@ class AudioVisualDiveDetector:
             sample_rate=sample_rate,
             timeout_seconds=timeout_seconds,
             ffmpeg_threads=ffmpeg_threads,
+            progress_callback=self.progress_callback,
+            progress_interval_seconds=float(getattr(self.config, "audio_decode_progress_interval_seconds", 15.0)),
         )
         return samples, sample_rate
 

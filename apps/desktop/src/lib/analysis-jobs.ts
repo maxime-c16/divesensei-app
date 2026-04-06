@@ -45,6 +45,17 @@ interface ProgressSnapshot {
   progressDetail?: string;
 }
 
+function formatSeconds(value: unknown): string | null {
+  const numberValue = Number(value);
+  if (!Number.isFinite(numberValue) || numberValue < 0) return null;
+  if (numberValue >= 60) {
+    const minutes = Math.floor(numberValue / 60);
+    const seconds = Math.round(numberValue % 60);
+    return `${minutes}m ${seconds}s`;
+  }
+  return `${Math.round(numberValue)}s`;
+}
+
 function persistJob(record: AnalysisJobRecord): void {
   fs.writeFileSync(jobStatePath(record.id), JSON.stringify(record, null, 2));
 }
@@ -101,6 +112,36 @@ function parseProgressLog(record: AnalysisJobRecord): void {
         phase: "scanning-audio",
         phaseLabel: "Analyzing video",
         progressDetail: "Scanning the video for dive attempts.",
+      };
+    } else if (event === "audio_decode_started") {
+      const timeout = formatSeconds(parsed.timeout_seconds);
+      lastSnapshot = {
+        phase: "scanning-audio",
+        phaseLabel: "Analyzing video",
+        progressDetail: timeout
+          ? `Decoding the audio track. Timeout window: ${timeout}.`
+          : "Decoding the audio track.",
+      };
+    } else if (event === "audio_decode_progress") {
+      const elapsed = formatSeconds(parsed.elapsed_seconds);
+      const timeout = formatSeconds(parsed.timeout_seconds);
+      lastSnapshot = {
+        phase: "scanning-audio",
+        phaseLabel: "Analyzing video",
+        progressDetail: elapsed && timeout
+          ? `Decoding the audio track. ${elapsed} elapsed of ${timeout} timeout window.`
+          : elapsed
+            ? `Decoding the audio track. ${elapsed} elapsed.`
+            : "Decoding the audio track.",
+      };
+    } else if (event === "audio_decode_complete") {
+      const elapsed = formatSeconds(parsed.elapsed_seconds);
+      lastSnapshot = {
+        phase: "scanning-audio",
+        phaseLabel: "Analyzing video",
+        progressDetail: elapsed
+          ? `Audio decoded in ${elapsed}. Detecting dive attempts now.`
+          : "Audio decoded. Detecting dive attempts now.",
       };
     } else if (event === "detection_complete") {
       const candidateCount = Number(parsed.candidate_count ?? 0);
@@ -249,22 +290,57 @@ export function startAnalysisJob(videoPath: string, profile: string, detectorId:
 
   const pushLog = (chunk: Buffer) => {
     const text = chunk.toString("utf-8").trim();
-      if (!text) return;
-      for (const line of text.split("\n")) {
-        record.logTail.push(line);
-        if (line.includes("\"event\": \"detection_complete\"")) {
-          const candidateMatch = line.match(/\"candidate_count\":\s*(\d+)/);
-          const candidateCount = candidateMatch ? Number(candidateMatch[1]) : 0;
-          applySnapshot(record, {
-            phase: "scanning-audio",
-            phaseLabel: "Preparing review",
-            progressDetail: candidateCount > 0
-              ? `Detection finished. Preparing ${candidateCount} review attempts.`
-              : "Detection finished. Preparing the review view.",
-          });
-        } else if (line.includes("\"event\": \"clip_extracted\"")) {
-          parseProgressLog(record);
-        } else if (line.includes("\"event\": \"review_ready\"")) {
+    if (!text) return;
+    for (const line of text.split("\n")) {
+      record.logTail.push(line);
+      let parsed: Record<string, unknown> | null = null;
+      try {
+        parsed = JSON.parse(line) as Record<string, unknown>;
+      } catch {
+        parsed = null;
+      }
+      if (line.includes("\"event\": \"audio_decode_started\"")) {
+        const timeout = formatSeconds(parsed?.timeout_seconds);
+        applySnapshot(record, {
+          phase: "scanning-audio",
+          phaseLabel: "Analyzing video",
+          progressDetail: timeout
+            ? `Decoding the audio track. Timeout window: ${timeout}.`
+            : "Decoding the audio track.",
+        });
+      } else if (line.includes("\"event\": \"audio_decode_progress\"")) {
+        const elapsed = formatSeconds(parsed?.elapsed_seconds);
+        const timeout = formatSeconds(parsed?.timeout_seconds);
+        applySnapshot(record, {
+          phase: "scanning-audio",
+          phaseLabel: "Analyzing video",
+          progressDetail: elapsed && timeout
+            ? `Decoding the audio track. ${elapsed} elapsed of ${timeout} timeout window.`
+            : elapsed
+              ? `Decoding the audio track. ${elapsed} elapsed.`
+              : "Decoding the audio track.",
+        });
+      } else if (line.includes("\"event\": \"audio_decode_complete\"")) {
+        const elapsed = formatSeconds(parsed?.elapsed_seconds);
+        applySnapshot(record, {
+          phase: "scanning-audio",
+          phaseLabel: "Analyzing video",
+          progressDetail: elapsed
+            ? `Audio decoded in ${elapsed}. Detecting dive attempts now.`
+            : "Audio decoded. Detecting dive attempts now.",
+        });
+      } else if (line.includes("\"event\": \"detection_complete\"")) {
+        const candidateCount = Number(parsed?.candidate_count ?? 0);
+        applySnapshot(record, {
+          phase: "scanning-audio",
+          phaseLabel: "Preparing review",
+          progressDetail: candidateCount > 0
+            ? `Detection finished. Preparing ${candidateCount} review attempts.`
+            : "Detection finished. Preparing the review view.",
+        });
+      } else if (line.includes("\"event\": \"clip_extracted\"")) {
+        parseProgressLog(record);
+      } else if (line.includes("\"event\": \"review_ready\"")) {
         applySnapshot(record, {
           phase: "review-ready",
           phaseLabel: "Ready for review",

@@ -9,7 +9,7 @@ LONG_SESSION_BASELINE_OVERRIDES: Dict[str, Any] = {
     "audio_peak_separation": 4.0,
     "audio_visual_merge_seconds": 2.0,
     # Large local/NAS recordings can take significantly longer to decode audio.
-    "audio_decode_timeout_seconds": 900.0,
+    "audio_decode_timeout_seconds": 3600.0,
 }
 
 LONG_SESSION_ADVANCED_OVERRIDES: Dict[str, Any] = {
@@ -20,7 +20,7 @@ LONG_SESSION_ADVANCED_OVERRIDES: Dict[str, Any] = {
     "audio_visual_merge_seconds": 0.45,
     "audio_clip_model_min_probability": 0.9,
     # Keep the same relaxed timeout for the advanced profile.
-    "audio_decode_timeout_seconds": 900.0,
+    "audio_decode_timeout_seconds": 3600.0,
 }
 
 

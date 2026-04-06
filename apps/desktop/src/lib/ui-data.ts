@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { getManifestPathForAnalysisRun, listCatalogSessions } from "@/lib/session-catalog";
+import { getManifestPathForAnalysisRun, listCatalogSessions, resolveCatalogManifestPaths } from "@/lib/session-catalog";
 import type { DebugLogEntry, LibraryIndex, SessionManifest, UiDataBundle } from "@/types/ui";
 import { outputsRoot, repoRoot } from "@/lib/runtime-config";
 
@@ -69,28 +69,34 @@ function discoverManifestPaths(root: string): string[] {
 }
 
 function buildLibraryFromCatalog(): LibraryIndex {
-  const sessions = listCatalogSessions().map((session) => ({
-    id: session.sessionId,
-    title: session.title,
-    session_name: session.sessionName ?? session.title,
-    profile: session.profile,
-    status: session.status,
-    created_at: session.createdAt,
-    updated_at: session.updatedAt,
-    source_availability: session.sourceAvailability,
-    candidate_count: session.candidateCount,
-    extracted_count: session.extractedCount,
-    source_video_path: session.sourceVideoPath,
-    output_dir: session.outputDir,
-    manifest_path: session.manifestPath,
-    timestamp_range: { first: 0, last: 0 },
-    telemetry: {
-      detector_seconds: 0,
-      extract_seconds: 0,
-      total_runtime_seconds: 0,
-      peak_rss_kb: 0,
-    },
-  }));
+  const discoveredManifestPaths = discoverManifestPaths(repoRoot);
+  resolveCatalogManifestPaths(discoveredManifestPaths);
+  const sessions = listCatalogSessions().map((session) => {
+    const manifest = readJsonFile<SessionManifest>(session.manifestPath);
+    return {
+      id: session.sessionId,
+      title: session.title,
+      session_name: session.sessionName ?? session.title,
+      mode: manifest?.session.mode ?? "standard",
+      profile: session.profile,
+      status: session.status,
+      created_at: session.createdAt,
+      updated_at: session.updatedAt,
+      source_availability: session.sourceAvailability,
+      candidate_count: session.candidateCount,
+      extracted_count: session.extractedCount,
+      source_video_path: session.sourceVideoPath,
+      output_dir: session.outputDir,
+      manifest_path: session.manifestPath,
+      timestamp_range: manifest?.session.timestamp_range ?? { first: 0, last: 0 },
+      telemetry: manifest?.session.telemetry ?? {
+        detector_seconds: 0,
+        extract_seconds: 0,
+        total_runtime_seconds: 0,
+        peak_rss_kb: 0,
+      },
+    };
+  });
 
   return {
     schema_version: "1.0.0",
@@ -199,6 +205,8 @@ export function mediaUrl(filePath: string | null | undefined): string {
 }
 
 export function sessionStatusLabel(status: string): string {
+  if (status === "evaluation_ready") return "Evaluation ready";
+  if (status === "evaluation_proxy_error") return "Evaluation ready";
   if (status === "ready_proxy_pending") return "Ready for review";
   if (status === "complete_proxy_error") return "Needs attention";
   if (status === "complete_with_errors") return "Needs attention";
@@ -207,7 +215,7 @@ export function sessionStatusLabel(status: string): string {
 }
 
 export function sessionIsReviewReady(status: string): boolean {
-  return ["ready_proxy_pending", "complete", "complete_with_errors", "complete_proxy_error"].includes(status);
+  return ["ready_proxy_pending", "complete", "complete_with_errors", "complete_proxy_error", "evaluation_ready", "evaluation_proxy_error"].includes(status);
 }
 
 export function resolveClipMediaPath(filePath: string | null | undefined): string | null {

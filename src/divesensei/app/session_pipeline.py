@@ -96,6 +96,7 @@ def build_config(args: argparse.Namespace):
         audio_duplicate_leader_min_prominence=args.audio_duplicate_leader_min_prominence,
         audio_duplicate_follower_max_score_ratio=args.audio_duplicate_follower_max_score_ratio,
         audio_decode_timeout_seconds=args.audio_decode_timeout_seconds,
+        audio_decode_progress_interval_seconds=args.audio_decode_progress_interval_seconds,
         ffmpeg_threads=args.ffmpeg_threads,
         opencv_threads=args.opencv_threads,
         audio_only_pre_seconds=args.audio_only_pre_seconds,
@@ -201,8 +202,8 @@ def build_parser() -> argparse.ArgumentParser:
     internal.add_argument("--skip-review-proxy", action="store_true", help=argparse.SUPPRESS)
     internal.add_argument("--use-opencv-extraction", action="store_true", help=argparse.SUPPRESS)
     internal.add_argument("--ffmpeg-preset", default="ultrafast", help=argparse.SUPPRESS)
-    internal.add_argument("--ffmpeg-threads", type=int, default=1, help="Bound FFmpeg worker threads")
-    internal.add_argument("--opencv-threads", type=int, default=1, help="Bound OpenCV worker threads")
+    internal.add_argument("--ffmpeg-threads", type=int, default=0, help="FFmpeg worker threads; 0 lets FFmpeg choose")
+    internal.add_argument("--opencv-threads", type=int, default=0, help="OpenCV worker threads; 0 lets OpenCV choose")
     internal.add_argument("--skip-video-verification", action="store_true", default=True, help=argparse.SUPPRESS)
     internal.add_argument("--with-video-verification", action="store_true", help=argparse.SUPPRESS)
     internal.add_argument("--bbox", nargs=4, type=float, default=[0.72, 0.95, 0.0, 1.0], metavar=("TOP", "BOTTOM", "LEFT", "RIGHT"), help=argparse.SUPPRESS)
@@ -234,7 +235,8 @@ def build_parser() -> argparse.ArgumentParser:
     internal.add_argument("--audio-duplicate-leader-min-score", type=float, default=12.0, help=argparse.SUPPRESS)
     internal.add_argument("--audio-duplicate-leader-min-prominence", type=float, default=10.0, help=argparse.SUPPRESS)
     internal.add_argument("--audio-duplicate-follower-max-score-ratio", type=float, default=0.55, help=argparse.SUPPRESS)
-    internal.add_argument("--audio-decode-timeout-seconds", type=float, default=180.0, help=argparse.SUPPRESS)
+    internal.add_argument("--audio-decode-timeout-seconds", type=float, default=3600.0, help=argparse.SUPPRESS)
+    internal.add_argument("--audio-decode-progress-interval-seconds", type=float, default=15.0, help=argparse.SUPPRESS)
     internal.add_argument("--audio-only-pre-seconds", type=float, default=6.0, help=argparse.SUPPRESS)
     internal.add_argument("--audio-only-post-seconds", type=float, default=3.0, help=argparse.SUPPRESS)
     internal.add_argument("--audio-verify-pre", type=float, default=3.0, help=argparse.SUPPRESS)
@@ -323,6 +325,10 @@ def write_session_outputs(
     candidates: Sequence[Any],
     extracted_paths: Sequence[str],
     status_override: str | None = None,
+    session_mode: str = "standard",
+    source_audio_path: str | None = None,
+    review_proxy_path: str | None = None,
+    evaluation_review_path: str | None = None,
 ) -> tuple[Path, Path]:
     report_path = output_dir / "session_pipeline_report.json"
     report_path.write_text(json.dumps(report, indent=2))
@@ -335,6 +341,10 @@ def write_session_outputs(
         candidates=candidates,
         extracted_paths=extracted_paths,
         status_override=status_override,
+        session_mode=session_mode,
+        source_audio_path=source_audio_path,
+        review_proxy_path=review_proxy_path,
+        evaluation_review_path=evaluation_review_path,
     )
     ui_manifest_path = write_ui_session_manifest(output_dir / "ui_session_manifest.json", ui_manifest)
     return report_path, ui_manifest_path
@@ -350,6 +360,10 @@ def write_incremental_session_outputs(
     extracted_paths: Sequence[str],
     extraction_errors: Sequence[dict[str, Any]],
     status_override: str,
+    session_mode: str = "standard",
+    source_audio_path: str | None = None,
+    review_proxy_path: str | None = None,
+    evaluation_review_path: str | None = None,
 ) -> tuple[Path, Path]:
     report["extracted_paths"] = list(extracted_paths)
     report["extraction_error_count"] = len(extraction_errors)
@@ -362,6 +376,10 @@ def write_incremental_session_outputs(
         candidates=candidates,
         extracted_paths=extracted_paths,
         status_override=status_override,
+        session_mode=session_mode,
+        source_audio_path=source_audio_path,
+        review_proxy_path=review_proxy_path,
+        evaluation_review_path=evaluation_review_path,
     )
 
 
@@ -379,7 +397,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     config = build_config(args)
     from divesensei.detection.audio_detector import AudioVisualDiveDetector
 
-    detector = AudioVisualDiveDetector(config)
+    detector = AudioVisualDiveDetector(
+        config,
+        progress_callback=lambda payload: logger.log(
+            str(payload["event"]),
+            **{key: value for key, value in payload.items() if key != "event"},
+        ),
+    )
     logger.log("session_start", video_path=video_path, output_dir=output_dir, profile=args.profile, config=config.__dict__)
 
     run_start = time.time()

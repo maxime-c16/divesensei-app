@@ -31,6 +31,10 @@ def build_ui_session_manifest(
     candidates: Sequence[Any],
     extracted_paths: Sequence[str],
     status_override: str | None = None,
+    session_mode: str = "standard",
+    source_audio_path: str | None = None,
+    review_proxy_path: str | None = None,
+    evaluation_review_path: str | None = None,
 ) -> dict[str, Any]:
     debug_summary = report.get("debug_summary", {})
     created_at = str(report.get("session_created_at") or _utc_now())
@@ -92,6 +96,7 @@ def build_ui_session_manifest(
             "id": output_dir.name,
             "title": video_path.stem,
             "session_name": session_name,
+            "mode": session_mode,
             "profile": profile,
             "detector_id": report.get("detector_id"),
             "source_video_path": str(video_path),
@@ -115,6 +120,9 @@ def build_ui_session_manifest(
             "session_debug_summary": str(output_dir / "session_debug_summary.json"),
             "session_pipeline_log": str(output_dir / "session_pipeline.log.jsonl"),
             "detections_csv": report.get("detections_csv"),
+            "source_audio": source_audio_path,
+            "review_proxy": review_proxy_path,
+            "evaluation_review": evaluation_review_path,
         },
         "detections": detections,
     }
@@ -135,6 +143,7 @@ def build_ui_library_index(session_manifests: Sequence[dict[str, Any]]) -> dict[
                 "id": session["id"],
                 "title": session["title"],
                 "session_name": session.get("session_name"),
+                "mode": session.get("mode", "standard"),
                 "profile": session["profile"],
                 "source_video_path": session["source_video_path"],
                 "output_dir": session["output_dir"],

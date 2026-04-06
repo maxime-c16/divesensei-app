@@ -15,6 +15,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command")
 
     subparsers.add_parser("detect", help="Detect dives in a session video and export clips")
+    subparsers.add_parser("evaluate-session", help="Prepare an audio-first evaluation session with cached audio and a review proxy")
     subparsers.add_parser("validate", help="Run a benchmark manifest")
     subparsers.add_parser("evaluate-audio-pcen", help="Evaluate proposal-level audio_v2_pcen_classifier performance")
 
@@ -91,6 +92,22 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(format_missing_dependencies_message(missing))
             return 2
         return session_main(argv[1:])
+
+    if argv[0] == "evaluate-session":
+        if any(flag in argv[1:] for flag in ("-h", "--help")):
+            from divesensei.workflows.evaluate_session import build_parser as evaluate_session_build_parser
+
+            evaluate_session_build_parser().print_help()
+            return 0
+
+        from divesensei.preflight import format_missing_dependencies_message, missing_runtime_dependencies
+        from divesensei.workflows.evaluate_session import main as evaluate_session_main
+
+        missing = missing_runtime_dependencies()
+        if missing:
+            print(format_missing_dependencies_message(missing))
+            return 2
+        return evaluate_session_main(argv[1:])
 
     if argv[0] == "validate":
         from divesensei.app.validation import main as validation_main

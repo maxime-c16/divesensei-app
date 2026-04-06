@@ -78,9 +78,10 @@ class DetectionConfig:
     audio_duplicate_leader_min_score: float = 12.0
     audio_duplicate_leader_min_prominence: float = 10.0
     audio_duplicate_follower_max_score_ratio: float = 0.55
-    audio_decode_timeout_seconds: float = 20.0
-    ffmpeg_threads: int = 1
-    opencv_threads: int = 1
+    audio_decode_timeout_seconds: float = 3600.0
+    audio_decode_progress_interval_seconds: float = 15.0
+    ffmpeg_threads: int = 0
+    opencv_threads: int = 0
     audio_only_pre_seconds: float = 3.0
     audio_only_post_seconds: float = 1.0
     audio_visual_verify_pre_seconds: float = 3.0
