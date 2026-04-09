@@ -134,6 +134,12 @@ class DetectionConfig:
     frontend_pattern_persistence_bonus_min_post_flux_ratio: float = 1.0
     frontend_pattern_persistence_bonus_min_post_rms_ratio: float = 1.0
     frontend_pattern_persistence_bonus_min_prominence: float = 0.0
+    frontend_region_descriptor_enabled: bool = False
+    frontend_region_descriptor_weight: float = 0.0
+    frontend_region_descriptor_max_bonus: float = 0.0
+    frontend_region_descriptor_pre_seconds: float = 0.2
+    frontend_region_descriptor_post_seconds: float = 0.8
+    frontend_region_descriptor_pattern_tiebreak_band: float = 0.35
     audio_long_session_seconds: float = 120.0
     audio_long_session_max_candidates: int = 120
     audio_model_path: str = ""

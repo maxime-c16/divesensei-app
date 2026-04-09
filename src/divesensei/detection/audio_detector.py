@@ -453,6 +453,17 @@ class AudioVisualDiveDetector:
         min_pattern_score = float(getattr(self.config, "audio_pattern_min_score", 0.4))
         tail_persistence_weight = float(getattr(self.config, "pre_candidate_tail_persistence_weight", 0.0))
         cluster_support_weight = float(getattr(self.config, "pre_candidate_cluster_support_weight", 0.0))
+        region_descriptor_enabled = bool(getattr(self.config, "frontend_region_descriptor_enabled", False))
+        region_env = (
+            self._frontend_region_descriptor_envelope(
+                flux=features["flux"],
+                rms=features["rms"],
+                sample_rate=sample_rate,
+                hop_length=hop_length,
+            )
+            if region_descriptor_enabled
+            else None
+        )
         peak_index_set = set(peaks)
         audio_model_min_probability = float(getattr(self.config, "audio_model_min_probability", 0.0))
         for peak_idx in raw_peaks:
@@ -502,6 +513,34 @@ class AudioVisualDiveDetector:
                     "cluster_support_mass_ratio": 0.0,
                     "cluster_support_score": 0.0,
                     "cluster_support_peaks": [],
+                }
+            )
+            region_descriptor = (
+                self._frontend_region_descriptor_features(
+                    env=region_env,
+                    peak_idx=peak_idx,
+                    sample_rate=sample_rate,
+                    hop_length=hop_length,
+                )
+                if region_env is not None
+                else {
+                    "frontend_region_descriptor_raw_score": 0.0,
+                    "frontend_region_descriptor_probability": 0.0,
+                    "frontend_region_descriptor_bonus": 0.0,
+                    "frontend_region_descriptor_pre_seconds": float(
+                        getattr(self.config, "frontend_region_descriptor_pre_seconds", 0.2)
+                    ),
+                    "frontend_region_descriptor_post_seconds": float(
+                        getattr(self.config, "frontend_region_descriptor_post_seconds", 0.8)
+                    ),
+                    "frontend_region_peak_amplitude": 0.0,
+                    "frontend_region_time_to_peak": 0.0,
+                    "frontend_region_decay_slope": 0.0,
+                    "frontend_region_early_energy": 0.0,
+                    "frontend_region_mid_energy": 0.0,
+                    "frontend_region_late_energy": 0.0,
+                    "frontend_region_late_over_early": 0.0,
+                    "frontend_region_duration_above_1p10": 0.0,
                 }
             )
             proposal_evidence_boost = (
@@ -566,6 +605,34 @@ class AudioVisualDiveDetector:
                 audio_pattern_score += 0.25 * max(float(onset_sum[peak_idx]) if onset_sum is not None else 0.0, 0.0)
                 audio_pattern_score += 0.15 * max(float(onset_peak[peak_idx]) if onset_peak is not None else 0.0, 0.0)
             audio_pattern_score += proposal_evidence_boost
+            threshold_passed = bool(
+                peak_idx in peak_index_set
+                or (
+                    (proposal_evidence_boost > 0.0 or float(frontend_persistence["frontend_persistence_integral_bonus"]) > 0.0)
+                    and float(effective_peak_score + proposal_evidence_boost) >= threshold
+                )
+            )
+            timestamp_allowed = not (timestamp < min_timestamp and not early_peak_allowed)
+            hf_allowed = peak_hf_ratio >= min_hf_ratio
+            score_allowed = early_peak_allowed or (effective_peak_score + proposal_evidence_boost) >= min_audio_score
+            region_pattern_tiebreak_bonus = 0.0
+            region_pattern_tiebreak_band = float(
+                getattr(self.config, "frontend_region_descriptor_pattern_tiebreak_band", 0.35)
+            )
+            region_pattern_tiebreak_applied = False
+            if (
+                float(region_descriptor["frontend_region_descriptor_bonus"]) > 0.0
+                and threshold_passed
+                and timestamp_allowed
+                and hf_allowed
+                and score_allowed
+                and not early_peak_allowed
+                and audio_pattern_score < min_pattern_score
+                and audio_pattern_score >= (min_pattern_score - region_pattern_tiebreak_band)
+            ):
+                region_pattern_tiebreak_bonus = float(region_descriptor["frontend_region_descriptor_bonus"])
+                audio_pattern_score += region_pattern_tiebreak_bonus
+                region_pattern_tiebreak_applied = region_pattern_tiebreak_bonus > 0.0
             sustained_noise_reject = (
                 post_flux_ratio >= 1.6
                 and post_rms_ratio >= 1.8
@@ -607,6 +674,11 @@ class AudioVisualDiveDetector:
             )
             setattr(proposal, "_pre_candidate_tail_persistence_score", float(tail_persistence["tail_persistence_score"]))
             setattr(proposal, "_pre_candidate_cluster_support_score", float(cluster_support["cluster_support_score"]))
+            setattr(
+                proposal,
+                "_pre_candidate_region_descriptor_bonus",
+                float(region_descriptor["frontend_region_descriptor_bonus"]),
+            )
             setattr(proposal, "_pre_candidate_evidence_boost", float(proposal_evidence_boost))
             details = self._proposal_details(proposal)
             details["proposal_frontend"] = frontend_name
@@ -629,21 +701,12 @@ class AudioVisualDiveDetector:
             details["cluster_support_mass_ratio"] = float(cluster_support["cluster_support_mass_ratio"])
             details["cluster_support_score"] = float(cluster_support["cluster_support_score"])
             details["cluster_support_peaks"] = cluster_support["cluster_support_peaks"]
+            details.update(region_descriptor)
             details["proposal_evidence_boost"] = float(proposal_evidence_boost)
             if onset_sum is not None:
                 details["pcen_onset_mean"] = float(onset_sum[peak_idx])
             if onset_peak is not None:
                 details["pcen_onset_peak"] = float(onset_peak[peak_idx])
-            threshold_passed = bool(
-                peak_idx in peak_index_set
-                or (
-                    (proposal_evidence_boost > 0.0 or float(frontend_persistence["frontend_persistence_integral_bonus"]) > 0.0)
-                    and float(effective_peak_score + proposal_evidence_boost) >= threshold
-                )
-            )
-            timestamp_allowed = not (timestamp < min_timestamp and not early_peak_allowed)
-            hf_allowed = peak_hf_ratio >= min_hf_ratio
-            score_allowed = early_peak_allowed or (effective_peak_score + proposal_evidence_boost) >= min_audio_score
             pattern_allowed = early_peak_allowed or strong_impulse_candidate or audio_pattern_score >= min_pattern_score
             audio_model_probability = None
             audio_model_allowed = True
@@ -651,8 +714,12 @@ class AudioVisualDiveDetector:
                 audio_model_probability = self._audio_model_probability(proposal)
                 audio_model_allowed = audio_model_probability >= audio_model_min_probability
             details["audio_model_probability"] = audio_model_probability if audio_model_probability is not None else details.get("audio_model_probability", 0.0)
+            details["audio_pattern_score_before_region_tiebreak"] = float(audio_pattern_score - region_pattern_tiebreak_bonus)
             details["audio_pattern_score"] = float(audio_pattern_score)
             details["frontend_pattern_persistence_bonus"] = float(pattern_persistence_bonus)
+            details["frontend_region_pattern_tiebreak_bonus"] = float(region_pattern_tiebreak_bonus)
+            details["frontend_region_pattern_tiebreak_applied"] = bool(region_pattern_tiebreak_applied)
+            details["frontend_region_pattern_tiebreak_band"] = float(region_pattern_tiebreak_band)
             details["early_peak_allowed"] = bool(early_peak_allowed)
             details["strong_impulse_candidate"] = bool(strong_impulse_candidate)
             details["threshold_passed"] = bool(threshold_passed)
@@ -719,6 +786,12 @@ class AudioVisualDiveDetector:
                 {
                     "tail_persistence_score": float(details.get("tail_persistence_score", 0.0) or 0.0),
                     "cluster_support_score": float(details.get("cluster_support_score", 0.0) or 0.0),
+                    "frontend_region_descriptor_bonus": float(
+                        details.get("frontend_region_descriptor_bonus", 0.0) or 0.0
+                    ),
+                    "frontend_region_descriptor_probability": float(
+                        details.get("frontend_region_descriptor_probability", 0.0) or 0.0
+                    ),
                     "proposal_evidence_boost": float(details.get("proposal_evidence_boost", 0.0) or 0.0),
                     "consolidation_score": float(details.get("consolidation_score", 0.0) or 0.0),
                     "consolidation_bonus": float(details.get("consolidation_bonus", 0.0) or 0.0),
@@ -1993,6 +2066,162 @@ class AudioVisualDiveDetector:
             "frontend_persistence_pre_seconds": float(pre_seconds),
         }
 
+    def _ema_series(
+        self,
+        values: np.ndarray,
+        tau_seconds: float,
+        sample_rate: int,
+        hop_length: int,
+    ) -> np.ndarray:
+        if values.size == 0:
+            return np.zeros(0, dtype=np.float32)
+        alpha = float(np.exp(-hop_length / max(tau_seconds * sample_rate, 1e-6)))
+        out = np.empty_like(values, dtype=np.float32)
+        acc = float(values[0])
+        for index, value in enumerate(values):
+            acc = alpha * acc + (1.0 - alpha) * float(value)
+            out[index] = acc
+        return out
+
+    def _frontend_region_descriptor_envelope(
+        self,
+        *,
+        flux: np.ndarray,
+        rms: np.ndarray,
+        sample_rate: int,
+        hop_length: int,
+    ) -> np.ndarray:
+        flux_base = self._ema_series(flux, 0.35, sample_rate, hop_length) + 1e-6
+        rms_base = self._ema_series(rms, 0.35, sample_rate, hop_length) + 1e-6
+        return (0.65 * (flux / flux_base) + 0.35 * (rms / rms_base)).astype(np.float32)
+
+    def _duration_above_threshold(self, values: np.ndarray, threshold: float, sample_rate: int, hop_length: int) -> float:
+        if values.size == 0:
+            return 0.0
+        above = values >= threshold
+        longest = 0
+        active_start = None
+        for index, flag in enumerate(above):
+            if flag and active_start is None:
+                active_start = index
+            elif not flag and active_start is not None:
+                longest = max(longest, index - active_start)
+                active_start = None
+        if active_start is not None:
+            longest = max(longest, len(values) - active_start)
+        return float(longest * hop_length / sample_rate)
+
+    def _frontend_region_descriptor_features(
+        self,
+        *,
+        env: np.ndarray,
+        peak_idx: int,
+        sample_rate: int,
+        hop_length: int,
+    ) -> Dict[str, Any]:
+        enabled = bool(getattr(self.config, "frontend_region_descriptor_enabled", False))
+        weight = float(getattr(self.config, "frontend_region_descriptor_weight", 0.0))
+        max_bonus = float(getattr(self.config, "frontend_region_descriptor_max_bonus", 0.0))
+        pre_seconds = float(getattr(self.config, "frontend_region_descriptor_pre_seconds", 0.2))
+        post_seconds = float(getattr(self.config, "frontend_region_descriptor_post_seconds", 0.8))
+        base = {
+            "frontend_region_descriptor_raw_score": 0.0,
+            "frontend_region_descriptor_probability": 0.0,
+            "frontend_region_descriptor_bonus": 0.0,
+            "frontend_region_descriptor_pre_seconds": float(pre_seconds),
+            "frontend_region_descriptor_post_seconds": float(post_seconds),
+            "frontend_region_peak_amplitude": 0.0,
+            "frontend_region_time_to_peak": 0.0,
+            "frontend_region_decay_slope": 0.0,
+            "frontend_region_early_energy": 0.0,
+            "frontend_region_mid_energy": 0.0,
+            "frontend_region_late_energy": 0.0,
+            "frontend_region_late_over_early": 0.0,
+            "frontend_region_duration_above_1p10": 0.0,
+        }
+        if not enabled or weight <= 0.0 or max_bonus <= 0.0 or env.size == 0:
+            return base
+
+        pre_frames = max(1, int(round(pre_seconds * sample_rate / max(hop_length, 1))))
+        post_frames = max(1, int(round(post_seconds * sample_rate / max(hop_length, 1))))
+        start_index = max(0, int(peak_idx) - pre_frames)
+        end_index = min(len(env), int(peak_idx) + post_frames)
+        region = env[start_index:end_index]
+        if region.size == 0:
+            return base
+
+        time_axis = np.arange(region.size, dtype=np.float32) * hop_length / sample_rate
+
+        def time_span(start: float, end: float) -> np.ndarray:
+            begin = max(0, int(round(start * sample_rate / max(hop_length, 1))))
+            finish = min(region.size, int(round(end * sample_rate / max(hop_length, 1))))
+            if finish <= begin:
+                return region[0:0]
+            return region[begin:finish]
+
+        early = time_span(0.0, 0.15)
+        mid = time_span(0.15, 0.40)
+        late = time_span(0.40, 0.80)
+        peak_offset = int(np.argmax(region))
+        peak_time = float(time_axis[peak_offset]) if time_axis.size else 0.0
+        decay_end = min(region.size, peak_offset + max(1, int(round(0.6 * sample_rate / max(hop_length, 1)))))
+        decay_segment = region[peak_offset:decay_end]
+        decay_time = time_axis[peak_offset:decay_end]
+        decay_slope = float(np.polyfit(decay_time, decay_segment, 1)[0]) if decay_segment.size >= 2 else 0.0
+
+        feature_values = {
+            "decay_slope": float(decay_slope),
+            "early_energy": float(np.sum(early)),
+            "mid_energy": float(np.sum(mid)),
+            "late_energy": float(np.sum(late)),
+            "late_over_early": float(np.sum(late) / (np.sum(early) + 1e-6)),
+            "duration_above_1p10": float(self._duration_above_threshold(region, 1.10, sample_rate, hop_length)),
+        }
+        means = {
+            "decay_slope": -2.2543070055384544,
+            "early_energy": 10.685887813795613,
+            "mid_energy": 18.133771475489812,
+            "late_energy": 23.533556844441947,
+            "late_over_early": 2.4132621387707935,
+            "duration_above_1p10": 0.11700763358778633,
+        }
+        stds = {
+            "decay_slope": 4.478045155805434,
+            "early_energy": 3.2181968246999104,
+            "mid_energy": 3.933853347519769,
+            "late_energy": 4.868877563357533,
+            "late_over_early": 0.9248458202450075,
+            "duration_above_1p10": 0.07258782573286013,
+        }
+        weights = {
+            "decay_slope": 1.0064918075119564,
+            "early_energy": -0.05984636043726436,
+            "mid_energy": -0.15566075480401506,
+            "late_energy": 0.35519146274026536,
+            "late_over_early": -0.26202704447630015,
+            "duration_above_1p10": 0.6253123588220937,
+        }
+        raw_score = -2.721715148427047
+        for key, weight_value in weights.items():
+            raw_score += weight_value * ((feature_values[key] - means[key]) / max(stds[key], 1e-6))
+        probability = float(1.0 / (1.0 + np.exp(-np.clip(raw_score, -40.0, 40.0))))
+        bonus = min(max_bonus, max(0.0, weight * probability))
+        return {
+            "frontend_region_descriptor_raw_score": float(raw_score),
+            "frontend_region_descriptor_probability": probability,
+            "frontend_region_descriptor_bonus": float(bonus),
+            "frontend_region_descriptor_pre_seconds": float(pre_seconds),
+            "frontend_region_descriptor_post_seconds": float(post_seconds),
+            "frontend_region_peak_amplitude": float(np.max(region)),
+            "frontend_region_time_to_peak": float(peak_time),
+            "frontend_region_decay_slope": float(feature_values["decay_slope"]),
+            "frontend_region_early_energy": float(feature_values["early_energy"]),
+            "frontend_region_mid_energy": float(feature_values["mid_energy"]),
+            "frontend_region_late_energy": float(feature_values["late_energy"]),
+            "frontend_region_late_over_early": float(feature_values["late_over_early"]),
+            "frontend_region_duration_above_1p10": float(feature_values["duration_above_1p10"]),
+        }
+
     def _frontend_persistence_integral_features(
         self,
         *,
@@ -2398,6 +2627,7 @@ class AudioVisualDiveDetector:
         cluster_support_weight = float(getattr(self.config, "pre_candidate_cluster_support_weight", 0.0))
         tail_persistence_score = float(getattr(proposal, "_pre_candidate_tail_persistence_score", 0.0))
         cluster_support_score = float(getattr(proposal, "_pre_candidate_cluster_support_score", 0.0))
+        region_descriptor_bonus = float(getattr(proposal, "_pre_candidate_region_descriptor_bonus", 0.0))
         consolidation_score = float(getattr(proposal, "_pre_candidate_consolidation_score", 0.0))
         consolidation_bonus = float(getattr(proposal, "_pre_candidate_consolidation_bonus", 0.0))
         consolidation_group_count = int(getattr(proposal, "_pre_candidate_consolidation_group_count", 0))
@@ -2466,6 +2696,7 @@ class AudioVisualDiveDetector:
             "decay_component": float(decay_component),
             "tail_persistence_score": float(tail_persistence_score),
             "cluster_support_score": float(cluster_support_score),
+            "frontend_region_descriptor_bonus": float(region_descriptor_bonus),
             "consolidation_score": float(consolidation_score),
             "consolidation_bonus": float(consolidation_bonus),
             "consolidation_group_count": int(consolidation_group_count),

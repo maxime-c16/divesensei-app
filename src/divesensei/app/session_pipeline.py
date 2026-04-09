@@ -151,6 +151,12 @@ def build_config(args: argparse.Namespace):
         frontend_pattern_persistence_bonus_min_post_flux_ratio=args.frontend_pattern_persistence_bonus_min_post_flux_ratio,
         frontend_pattern_persistence_bonus_min_post_rms_ratio=args.frontend_pattern_persistence_bonus_min_post_rms_ratio,
         frontend_pattern_persistence_bonus_min_prominence=args.frontend_pattern_persistence_bonus_min_prominence,
+        frontend_region_descriptor_enabled=args.frontend_region_descriptor_enabled,
+        frontend_region_descriptor_weight=args.frontend_region_descriptor_weight,
+        frontend_region_descriptor_max_bonus=args.frontend_region_descriptor_max_bonus,
+        frontend_region_descriptor_pre_seconds=args.frontend_region_descriptor_pre_seconds,
+        frontend_region_descriptor_post_seconds=args.frontend_region_descriptor_post_seconds,
+        frontend_region_descriptor_pattern_tiebreak_band=args.frontend_region_descriptor_pattern_tiebreak_band,
         audio_long_session_seconds=args.audio_long_session_seconds,
         audio_long_session_max_candidates=args.audio_long_session_max_candidates,
         audio_model_path=args.audio_model_path,
@@ -362,6 +368,12 @@ def build_parser() -> argparse.ArgumentParser:
     internal.add_argument("--frontend-pattern-persistence-bonus-min-post-flux-ratio", type=float, default=1.0, help=argparse.SUPPRESS)
     internal.add_argument("--frontend-pattern-persistence-bonus-min-post-rms-ratio", type=float, default=1.0, help=argparse.SUPPRESS)
     internal.add_argument("--frontend-pattern-persistence-bonus-min-prominence", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-region-descriptor-enabled", action="store_true", help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-region-descriptor-weight", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-region-descriptor-max-bonus", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-region-descriptor-pre-seconds", type=float, default=0.2, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-region-descriptor-post-seconds", type=float, default=0.8, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-region-descriptor-pattern-tiebreak-band", type=float, default=0.35, help=argparse.SUPPRESS)
     internal.add_argument("--audio-long-session-seconds", type=float, default=120.0, help=argparse.SUPPRESS)
     internal.add_argument("--audio-long-session-max-candidates", type=int, default=120, help=argparse.SUPPRESS)
     internal.add_argument("--audio-model-path", default="", help=argparse.SUPPRESS)
