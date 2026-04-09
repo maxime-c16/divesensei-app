@@ -132,9 +132,13 @@ def main(argv: Sequence[str] | None = None) -> int:
                 (candidate.get("proposal_recall_summary") or {}).get("proposal_recall_on_reviewed_events"),
                 (baseline.get("proposal_recall_summary") or {}).get("proposal_recall_on_reviewed_events"),
             ),
-            "false_negative_nearby_raw_peak_count_delta": _delta(
-                (candidate.get("proposal_recall_summary") or {}).get("false_negative_nearby_raw_peak_count"),
-                (baseline.get("proposal_recall_summary") or {}).get("false_negative_nearby_raw_peak_count"),
+            "false_negative_nearby_transient_peak_count_delta": _delta(
+                (candidate.get("proposal_recall_summary") or {}).get("false_negative_nearby_transient_peak_count"),
+                (baseline.get("proposal_recall_summary") or {}).get("false_negative_nearby_transient_peak_count"),
+            ),
+            "false_negative_nearby_frontend_score_peak_count_delta": _delta(
+                (candidate.get("proposal_recall_summary") or {}).get("false_negative_nearby_frontend_score_peak_count"),
+                (baseline.get("proposal_recall_summary") or {}).get("false_negative_nearby_frontend_score_peak_count"),
             ),
             "false_negative_nearby_frontend_candidate_count_delta": _delta(
                 (candidate.get("proposal_recall_summary") or {}).get("false_negative_nearby_frontend_candidate_count"),
@@ -143,6 +147,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             "false_negative_nearby_final_proposal_count_delta": _delta(
                 (candidate.get("proposal_recall_summary") or {}).get("false_negative_nearby_final_proposal_count"),
                 (baseline.get("proposal_recall_summary") or {}).get("false_negative_nearby_final_proposal_count"),
+            ),
+        },
+        "replay_mapping_quality_delta": {
+            "coverage_delta": _delta(
+                (candidate.get("replay_mapping_quality") or {}).get("mapping_coverage"),
+                (baseline.get("replay_mapping_quality") or {}).get("mapping_coverage"),
+            ),
+            "median_delta_seconds_delta": _delta(
+                (candidate.get("replay_mapping_quality") or {}).get("median_delta_seconds"),
+                (baseline.get("replay_mapping_quality") or {}).get("median_delta_seconds"),
             ),
         },
         "per_session": per_session,

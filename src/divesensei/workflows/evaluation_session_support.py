@@ -83,7 +83,9 @@ def resolve_evaluation_session_paths(raw_path: str | Path) -> dict[str, Path]:
     review_path = Path(str(artifacts.get("evaluation_review") or output_dir / "evaluation_review.json")).resolve()
     proposal_path = Path(str(artifacts.get("proposal_diagnostics") or output_dir / "proposal_diagnostics.jsonl")).resolve()
     raw_peaks_path = Path(str(artifacts.get("proposal_raw_peaks") or output_dir / "proposal_raw_peaks.jsonl")).resolve()
+    transient_peaks_path = Path(str(artifacts.get("proposal_transient_peaks") or output_dir / "proposal_transient_peaks.jsonl")).resolve()
     frontend_candidates_path = Path(str(artifacts.get("proposal_frontend_candidates") or output_dir / "proposal_frontend_candidates.jsonl")).resolve()
+    frontend_stage_summary_path = Path(str(artifacts.get("proposal_frontend_stage_summary") or output_dir / "proposal_frontend_stage_summary.json")).resolve()
     suppression_events_path = Path(str(artifacts.get("proposal_suppression_events") or output_dir / "proposal_suppression_events.jsonl")).resolve()
     return {
         "output_dir": output_dir,
@@ -92,7 +94,9 @@ def resolve_evaluation_session_paths(raw_path: str | Path) -> dict[str, Path]:
         "review_path": review_path,
         "proposal_path": proposal_path,
         "raw_peaks_path": raw_peaks_path,
+        "transient_peaks_path": transient_peaks_path,
         "frontend_candidates_path": frontend_candidates_path,
+        "frontend_stage_summary_path": frontend_stage_summary_path,
         "suppression_events_path": suppression_events_path,
     }
 
@@ -210,9 +214,15 @@ def build_proposal_diagnostics(
     summary = {
         "session_id": session_id,
         "final_proposal_count": len(enriched_rows),
+        "transient_peak_count": len(pipeline.get("transient_peaks", [])),
         "raw_peak_count": len(raw_peaks),
         "frontend_candidate_count": len(frontend_candidates),
         "suppression_event_count": len(suppression_events),
+        "evidence_threshold_promoted_count": sum(1 for row in raw_peaks if row.get("evidence_threshold_promoted")),
+        "proposal_evidence_boosted_count": sum(
+            1 for row in enriched_rows if float((row.get("details") or {}).get("proposal_evidence_boost", 0.0) or 0.0) > 0.0
+        ),
+        "frontend_stage_summaries": list(pipeline.get("frontend_stage_summaries", [])),
         "raw_peak_rejection_counts": {
             stage: sum(1 for row in raw_peaks if row.get("rejection_stage") == stage)
             for stage in [
@@ -226,6 +236,8 @@ def build_proposal_diagnostics(
                 "audio_model_rejected",
             ]
         },
+        "local_rescue_survivor_count": sum(1 for row in raw_peaks if row.get("pre_candidate_loss_stage") == "local_rescue_survivor"),
+        "protected_survivor_count": sum(1 for row in raw_peaks if row.get("pre_candidate_loss_stage") == "protected_survivor"),
         "suppression_event_counts": {
             event_type: sum(1 for row in suppression_events if row.get("event_type") == event_type)
             for event_type in [
@@ -238,11 +250,24 @@ def build_proposal_diagnostics(
     }
     return {
         "final_proposals": enriched_rows,
+        "transient_peaks": list(pipeline.get("transient_peaks", [])),
         "raw_peaks": raw_peaks,
         "frontend_candidates": frontend_candidates,
+        "frontend_stage_summaries": list(pipeline.get("frontend_stage_summaries", [])),
         "suppression_events": suppression_events,
         "summary": summary,
     }
+
+
+def build_detector_from_report(report: dict[str, Any], progress_callback: Any = None) -> Any:
+    from divesensei.detection.audio_detector import AudioVisualDiveDetector
+    from divesensei.detection.config import DetectionConfig
+
+    config = DetectionConfig()
+    for key, value in dict(report.get("config", {}) or {}).items():
+        if hasattr(config, key):
+            setattr(config, key, value)
+    return AudioVisualDiveDetector(config, progress_callback=progress_callback)
 
 
 def load_evaluation_review_data(review_path: Path) -> dict[str, Any]:

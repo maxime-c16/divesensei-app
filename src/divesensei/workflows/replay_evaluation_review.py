@@ -67,6 +67,27 @@ def main(argv: Sequence[str] | None = None) -> int:
     target_review["decisions"] = mapped_decisions
     if args.copy_false_negatives:
         target_review["falseNegatives"] = list(source_review.get("falseNegatives", []))
+    mapping_deltas = [float(item.get("_replayedDeltaSeconds", 0.0) or 0.0) for item in mapped_decisions]
+    mapping_coverage = len(mapped_decisions) / max(1, len(source_review.get("decisions", [])))
+    if mapping_coverage >= 0.9:
+        mapping_quality = "high"
+    elif mapping_coverage >= 0.7:
+        mapping_quality = "medium"
+    else:
+        mapping_quality = "degraded"
+    target_review["replayMetadata"] = {
+        "source_session_id": source_manifest.get("session", {}).get("id"),
+        "target_session_id": target_manifest.get("session", {}).get("id"),
+        "tolerance_seconds": float(args.tolerance_seconds),
+        "source_decision_count": len(source_review.get("decisions", [])),
+        "target_detection_count": len(target_detections),
+        "mapped_decision_count": len(mapped_decisions),
+        "unmatched_decision_count": len(unmatched_decisions),
+        "mapping_coverage": mapping_coverage,
+        "median_delta_seconds": sorted(mapping_deltas)[len(mapping_deltas) // 2] if mapping_deltas else None,
+        "max_delta_seconds": max(mapping_deltas) if mapping_deltas else None,
+        "mapping_quality": mapping_quality,
+    }
     write_json(target_paths["review_path"], target_review)
 
     print(
@@ -77,6 +98,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "mapped_decision_count": len(mapped_decisions),
                 "unmatched_decision_count": len(unmatched_decisions),
                 "false_negative_count_copied": len(target_review.get("falseNegatives", [])),
+                "mapping_coverage": mapping_coverage,
+                "mapping_quality": mapping_quality,
                 "unmatched_decisions": unmatched_decisions[:20],
             },
             indent=2,

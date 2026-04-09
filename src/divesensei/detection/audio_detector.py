@@ -5,6 +5,7 @@ Audio-led dive proposal detection with optional classifier and video verificatio
 
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
@@ -74,14 +75,25 @@ class AudioVisualDiveDetector:
     def inspect_audio_proposal_pipeline_from_signal(self, signal: np.ndarray, sample_rate: int, *, source_path: str) -> Dict[str, Any]:
         detector_id = str(getattr(self.config, "detector_id", "audio_v1_heuristic") or "audio_v1_heuristic")
         source_file = Path(source_path).name
-        heuristic_proposals, heuristic_raw_peaks = self._inspect_heuristic_frontend(signal, sample_rate)
-        pcen_proposals, pcen_raw_peaks = self._inspect_pcen_frontend(signal, sample_rate)
+        heuristic_trace = self._inspect_heuristic_frontend_trace(signal, sample_rate)
+        pcen_trace = self._inspect_pcen_frontend_trace(signal, sample_rate)
+        heuristic_proposals = list(heuristic_trace["frontend_candidates"])
+        pcen_proposals = list(pcen_trace["frontend_candidates"])
         frontend_candidates = [*heuristic_proposals, *pcen_proposals]
         merged_candidates, merge_events = self._merge_audio_candidates_with_events(heuristic_proposals, pcen_proposals)
         rebound_candidates, rebound_events = self._suppress_rebound_precursors_with_events(merged_candidates)
         deduped_candidates, duplicate_events = self._suppress_dominant_duplicate_followers_with_events(rebound_candidates)
         scored_candidates = self._score_audio_candidates(signal, sample_rate, deduped_candidates)
         return {
+            "transient_peaks": [
+                {
+                    "source_video_path": str(source_path),
+                    "source_file": source_file,
+                    "detector_id": detector_id,
+                    **row,
+                }
+                for row in [*heuristic_trace["transient_peaks"], *pcen_trace["transient_peaks"]]
+            ],
             "raw_peaks": [
                 {
                     "source_video_path": str(source_path),
@@ -89,7 +101,7 @@ class AudioVisualDiveDetector:
                     "detector_id": detector_id,
                     **row,
                 }
-                for row in [*heuristic_raw_peaks, *pcen_raw_peaks]
+                for row in [*heuristic_trace["frontend_score_peaks"], *pcen_trace["frontend_score_peaks"]]
             ],
             "frontend_candidates": [
                 self._serialize_proposal_candidate(
@@ -100,6 +112,20 @@ class AudioVisualDiveDetector:
                     pipeline_stage="frontend_candidate",
                 )
                 for proposal in frontend_candidates
+            ],
+            "frontend_stage_summaries": [
+                {
+                    "source_video_path": str(source_path),
+                    "source_file": source_file,
+                    "detector_id": detector_id,
+                    **heuristic_trace["frontend_stage_summary"],
+                },
+                {
+                    "source_video_path": str(source_path),
+                    "source_file": source_file,
+                    "detector_id": detector_id,
+                    **pcen_trace["frontend_stage_summary"],
+                },
             ],
             "merged_candidates": [
                 self._serialize_proposal_candidate(
@@ -131,6 +157,47 @@ class AudioVisualDiveDetector:
                 for proposal in scored_candidates
             ],
         }
+
+    def inspect_false_negative_neighborhoods_from_audio_file(
+        self,
+        audio_path: str,
+        timestamps_seconds: Sequence[float],
+        *,
+        window_seconds: float = 2.5,
+        trace_stride_frames: int = 4,
+    ) -> List[Dict[str, Any]]:
+        signal, sample_rate = load_wav_mono_float32(audio_path)
+        return self.inspect_false_negative_neighborhoods_from_signal(
+            signal,
+            sample_rate,
+            timestamps_seconds,
+            source_path=audio_path,
+            window_seconds=window_seconds,
+            trace_stride_frames=trace_stride_frames,
+        )
+
+    def inspect_false_negative_neighborhoods_from_signal(
+        self,
+        signal: np.ndarray,
+        sample_rate: int,
+        timestamps_seconds: Sequence[float],
+        *,
+        source_path: str,
+        window_seconds: float = 2.5,
+        trace_stride_frames: int = 4,
+    ) -> List[Dict[str, Any]]:
+        heuristic_trace = self._inspect_heuristic_frontend_trace(signal, sample_rate)
+        pcen_trace = self._inspect_pcen_frontend_trace(signal, sample_rate)
+        return [
+            self._build_false_negative_neighborhood(
+                float(timestamp),
+                [heuristic_trace, pcen_trace],
+                source_path=source_path,
+                window_seconds=window_seconds,
+                trace_stride_frames=trace_stride_frames,
+            )
+            for timestamp in timestamps_seconds
+        ]
 
     def detect(self, video_path: str) -> List[VerifiedDiveCandidate]:
         signal, sample_rate = self._extract_audio_signal(video_path)
@@ -231,19 +298,47 @@ class AudioVisualDiveDetector:
         return proposals
 
     def _inspect_heuristic_frontend(self, signal: np.ndarray, sample_rate: int) -> tuple[List[AudioCandidate], List[Dict[str, Any]]]:
+        trace = self._inspect_heuristic_frontend_trace(signal, sample_rate)
+        return list(trace["frontend_candidates"]), list(trace["frontend_score_peaks"])
+
+    def _inspect_heuristic_frontend_trace(self, signal: np.ndarray, sample_rate: int) -> Dict[str, Any]:
         features = self._compute_audio_base_features(signal, sample_rate)
         score = 0.6 * self._robust_zscore(features["flux"]) + 0.25 * self._robust_zscore(features["hf_ratio"]) + 0.15 * self._robust_zscore(features["rms"])
         threshold = max(
             float(getattr(self.config, "audio_peak_threshold", 4.0)),
             float(np.median(score) + 2.0 * self._mad(score)),
         )
-        return self._analyze_scored_frontend_peaks(features, sample_rate, score, threshold, frontend_name="heuristic")
+        transient_peaks = self._collect_signal_peaks(
+            features["flux"],
+            sample_rate,
+            frontend_name="heuristic",
+            signal_name="spectral_flux",
+        )
+        proposals, score_peak_rows = self._analyze_scored_frontend_peaks(features, sample_rate, score, threshold, frontend_name="heuristic")
+        return {
+            "frontend_name": "heuristic",
+            "features": features,
+            "score": score,
+            "threshold": float(threshold),
+            "frontend_candidates": proposals,
+            "frontend_score_peaks": score_peak_rows,
+            "transient_peaks": transient_peaks,
+            "frontend_stage_summary": self._build_frontend_stage_summary(
+                frontend_name="heuristic",
+                transient_peaks=transient_peaks,
+                frontend_score_peaks=score_peak_rows,
+            ),
+        }
 
     def _propose_from_audio_pcen(self, signal: np.ndarray, sample_rate: int) -> List[AudioCandidate]:
         proposals, _ = self._inspect_pcen_frontend(signal, sample_rate)
         return proposals
 
     def _inspect_pcen_frontend(self, signal: np.ndarray, sample_rate: int) -> tuple[List[AudioCandidate], List[Dict[str, Any]]]:
+        trace = self._inspect_pcen_frontend_trace(signal, sample_rate)
+        return list(trace["frontend_candidates"]), list(trace["frontend_score_peaks"])
+
+    def _inspect_pcen_frontend_trace(self, signal: np.ndarray, sample_rate: int) -> Dict[str, Any]:
         features = self._compute_audio_base_features(signal, sample_rate)
         pcen_features = compute_multiband_pcen_features(
             signal,
@@ -255,7 +350,20 @@ class AudioVisualDiveDetector:
         onset_sum = onset.mean(axis=1) if onset.size else np.empty(0, dtype=np.float32)
         onset_peak = onset.max(axis=1) if onset.size else np.empty(0, dtype=np.float32)
         if onset_sum.size == 0:
-            return []
+            return {
+                "frontend_name": "pcen_multiband",
+                "features": features,
+                "score": np.empty(0, dtype=np.float32),
+                "threshold": float(getattr(self.config, "audio_pcen_threshold", 2.4)),
+                "frontend_candidates": [],
+                "frontend_score_peaks": [],
+                "transient_peaks": [],
+                "frontend_stage_summary": self._build_frontend_stage_summary(
+                    frontend_name="pcen_multiband",
+                    transient_peaks=[],
+                    frontend_score_peaks=[],
+                ),
+            }
         pcen_score = 0.6 * self._robust_zscore(onset_sum) + 0.4 * self._robust_zscore(onset_peak)
         heuristic_score = 0.6 * self._robust_zscore(features["flux"]) + 0.25 * self._robust_zscore(features["hf_ratio"]) + 0.15 * self._robust_zscore(features["rms"])
         merge_weight = float(getattr(self.config, "audio_pcen_merge_weight", 0.65))
@@ -264,7 +372,13 @@ class AudioVisualDiveDetector:
             float(getattr(self.config, "audio_pcen_threshold", 2.4)),
             float(np.median(score) + 1.25 * self._mad(score)),
         )
-        return self._analyze_scored_frontend_peaks(
+        transient_peaks = self._collect_signal_peaks(
+            onset_peak,
+            sample_rate,
+            frontend_name="pcen_multiband",
+            signal_name="pcen_onset_peak",
+        )
+        proposals, score_peak_rows = self._analyze_scored_frontend_peaks(
             features,
             sample_rate,
             score,
@@ -273,6 +387,20 @@ class AudioVisualDiveDetector:
             onset_sum=onset_sum,
             onset_peak=onset_peak,
         )
+        return {
+            "frontend_name": "pcen_multiband",
+            "features": features,
+            "score": score,
+            "threshold": float(threshold),
+            "frontend_candidates": proposals,
+            "frontend_score_peaks": score_peak_rows,
+            "transient_peaks": transient_peaks,
+            "frontend_stage_summary": self._build_frontend_stage_summary(
+                frontend_name="pcen_multiband",
+                transient_peaks=transient_peaks,
+                frontend_score_peaks=score_peak_rows,
+            ),
+        }
 
     def _proposals_from_scored_peaks(
         self,
@@ -323,6 +451,8 @@ class AudioVisualDiveDetector:
         early_peak_max_centroid_hz = float(getattr(self.config, "audio_early_peak_max_centroid_hz", 2200.0))
         early_peak_max_flatness = float(getattr(self.config, "audio_early_peak_max_flatness", 0.45))
         min_pattern_score = float(getattr(self.config, "audio_pattern_min_score", 0.4))
+        tail_persistence_weight = float(getattr(self.config, "pre_candidate_tail_persistence_weight", 0.0))
+        cluster_support_weight = float(getattr(self.config, "pre_candidate_cluster_support_weight", 0.0))
         peak_index_set = set(peaks)
         audio_model_min_probability = float(getattr(self.config, "audio_model_min_probability", 0.0))
         for peak_idx in raw_peaks:
@@ -337,9 +467,51 @@ class AudioVisualDiveDetector:
             post_rms_ratio = self._forward_ratio(features["rms"], peak_idx, 10)
             local_prominence = self._local_prominence(score, peak_idx, 30, 3)
             nearby_peaks_8s = self._count_nearby_peaks(peaks, peak_idx, int(8.0 * sample_rate / hop_length))
+            frontend_persistence = self._frontend_persistence_integral_features(
+                flux=features["flux"],
+                onset_sum=onset_sum,
+                peak_idx=peak_idx,
+                sample_rate=sample_rate,
+                hop_length=hop_length,
+            )
+            tail_persistence = (
+                self._tail_persistence_features(
+                    flux=features["flux"],
+                    rms=features["rms"],
+                    peak_idx=peak_idx,
+                    sample_rate=sample_rate,
+                    hop_length=hop_length,
+                )
+                if tail_persistence_weight > 0.0
+                else {"tail_persistence_windows": [], "tail_persistence_score": 0.0}
+            )
+            cluster_support = (
+                self._cluster_support_features(
+                    score=score,
+                    raw_peaks=raw_peaks,
+                    peak_idx=peak_idx,
+                    sample_rate=sample_rate,
+                    hop_length=hop_length,
+                )
+                if cluster_support_weight > 0.0
+                else {
+                    "cluster_support_window_seconds": float(getattr(self.config, "pre_candidate_cluster_support_window_seconds", 1.5)),
+                    "cluster_support_min_peak_ratio": float(getattr(self.config, "pre_candidate_cluster_support_min_peak_ratio", 0.55)),
+                    "cluster_support_count": 0,
+                    "cluster_support_mass": 0.0,
+                    "cluster_support_mass_ratio": 0.0,
+                    "cluster_support_score": 0.0,
+                    "cluster_support_peaks": [],
+                }
+            )
+            proposal_evidence_boost = (
+                tail_persistence_weight * float(tail_persistence["tail_persistence_score"])
+                + cluster_support_weight * float(cluster_support["cluster_support_score"])
+            )
+            effective_peak_score = float(peak_score + float(frontend_persistence["frontend_persistence_integral_bonus"]))
             early_peak_allowed = (
                 timestamp <= early_peak_max_seconds
-                and peak_score >= early_peak_score
+                and effective_peak_score >= early_peak_score
                 and peak_hf_ratio <= early_peak_max_hf_ratio
                 and peak_centroid_hz <= early_peak_max_centroid_hz
                 and peak_flatness <= early_peak_max_flatness
@@ -353,22 +525,76 @@ class AudioVisualDiveDetector:
                 hf_ratio=peak_hf_ratio,
                 nearby_peaks_8s=nearby_peaks_8s,
             )
+            pattern_persistence_bonus = 0.0
+            pattern_persistence_weight = float(getattr(self.config, "frontend_pattern_persistence_bonus_weight", 0.0))
+            pattern_persistence_max = float(getattr(self.config, "frontend_pattern_persistence_bonus_max", 0.0))
+            if pattern_persistence_weight > 0.0 and pattern_persistence_max > 0.0:
+                pattern_persistence_min_bonus = float(
+                    getattr(self.config, "frontend_pattern_persistence_bonus_min_bonus", 0.0)
+                )
+                pattern_persistence_min_post_flux = float(
+                    getattr(self.config, "frontend_pattern_persistence_bonus_min_post_flux_ratio", 1.0)
+                )
+                pattern_persistence_min_post_rms = float(
+                    getattr(self.config, "frontend_pattern_persistence_bonus_min_post_rms_ratio", 1.0)
+                )
+                pattern_persistence_min_prominence = float(
+                    getattr(self.config, "frontend_pattern_persistence_bonus_min_prominence", 0.0)
+                )
+                if (
+                    float(frontend_persistence["frontend_persistence_integral_bonus"]) >= pattern_persistence_min_bonus
+                    and post_flux_ratio >= pattern_persistence_min_post_flux
+                    and post_rms_ratio >= pattern_persistence_min_post_rms
+                    and local_prominence >= pattern_persistence_min_prominence
+                ):
+                    tail_strength = max(
+                        min(post_flux_ratio - pattern_persistence_min_post_flux, post_rms_ratio - pattern_persistence_min_post_rms),
+                        0.0,
+                    )
+                    persistence_strength = max(
+                        float(frontend_persistence["frontend_persistence_integral_bonus"]) - pattern_persistence_min_bonus,
+                        0.0,
+                    )
+                    prominence_strength = max(local_prominence - pattern_persistence_min_prominence, 0.0)
+                    pattern_persistence_bonus = min(
+                        pattern_persistence_max,
+                        pattern_persistence_weight
+                        * (persistence_strength + 0.6 * tail_strength + 0.05 * prominence_strength),
+                    )
+                    audio_pattern_score += pattern_persistence_bonus
             if front_end_is_advanced(frontend_name):
                 audio_pattern_score += 0.25 * max(float(onset_sum[peak_idx]) if onset_sum is not None else 0.0, 0.0)
                 audio_pattern_score += 0.15 * max(float(onset_peak[peak_idx]) if onset_peak is not None else 0.0, 0.0)
+            audio_pattern_score += proposal_evidence_boost
             sustained_noise_reject = (
                 post_flux_ratio >= 1.6
                 and post_rms_ratio >= 1.8
-                and peak_score < 7.0
+                and effective_peak_score < 7.0
                 and local_prominence < 6.5
                 and peak_centroid_hz >= 1800.0
                 and peak_flatness >= 0.39
                 and (float(onset_peak[peak_idx]) if onset_peak is not None else 0.0) < 3.2
             )
-            strong_impulse_candidate = peak_score >= 8.0 and local_prominence >= 7.5
+            sustained_noise_exception = (
+                bool(getattr(self.config, "frontend_sustained_noise_exception_enabled", False))
+                and float(frontend_persistence["frontend_persistence_integral_bonus"])
+                >= float(getattr(self.config, "frontend_sustained_noise_exception_min_bonus", 0.0))
+                and float(frontend_persistence["frontend_persistence_flux_ratio"])
+                >= float(getattr(self.config, "frontend_sustained_noise_exception_min_flux_ratio", 1.0))
+                and post_flux_ratio
+                >= float(getattr(self.config, "frontend_sustained_noise_exception_min_post_flux_ratio", 1.0))
+                and post_rms_ratio
+                >= float(getattr(self.config, "frontend_sustained_noise_exception_min_post_rms_ratio", 1.0))
+                and local_prominence
+                >= float(getattr(self.config, "frontend_sustained_noise_exception_min_prominence", 0.0))
+                and float(frontend_persistence["frontend_persistence_pcen_ratio"])
+                >= float(getattr(self.config, "frontend_sustained_noise_exception_min_pcen_ratio", 0.0))
+            )
+            sustained_noise_reject = sustained_noise_reject and not sustained_noise_exception
+            strong_impulse_candidate = effective_peak_score >= 8.0 and local_prominence >= 7.5
             proposal = AudioCandidate(
                 timestamp=timestamp,
-                audio_score=peak_score,
+                audio_score=effective_peak_score,
                 spectral_flux=float(features["flux"][peak_idx]),
                 rms=float(features["rms"][peak_idx]),
                 hf_ratio=peak_hf_ratio,
@@ -379,23 +605,45 @@ class AudioVisualDiveDetector:
                 local_prominence=local_prominence,
                 nearby_peaks_8s=nearby_peaks_8s,
             )
+            setattr(proposal, "_pre_candidate_tail_persistence_score", float(tail_persistence["tail_persistence_score"]))
+            setattr(proposal, "_pre_candidate_cluster_support_score", float(cluster_support["cluster_support_score"]))
+            setattr(proposal, "_pre_candidate_evidence_boost", float(proposal_evidence_boost))
             details = self._proposal_details(proposal)
             details["proposal_frontend"] = frontend_name
             details["proposal_threshold"] = float(threshold)
             details["peak_score_minus_threshold"] = float(peak_score - threshold)
+            details["frontend_effective_score"] = float(effective_peak_score)
+            details["frontend_effective_score_minus_threshold"] = float(effective_peak_score - threshold)
+            details.update(frontend_persistence)
             details["peak_frame_index"] = int(peak_idx)
             details["backtracked_frame_index"] = int(backtracked_idx)
             details["peak_timestamp_seconds"] = float(peak_timestamp)
             details["proposal_timestamp_seconds"] = float(timestamp)
             details["selected_by_peak_threshold"] = bool(peak_idx in peak_index_set)
+            details["tail_persistence_windows"] = tail_persistence["tail_persistence_windows"]
+            details["tail_persistence_score"] = float(tail_persistence["tail_persistence_score"])
+            details["cluster_support_window_seconds"] = float(cluster_support["cluster_support_window_seconds"])
+            details["cluster_support_min_peak_ratio"] = float(cluster_support["cluster_support_min_peak_ratio"])
+            details["cluster_support_count"] = int(cluster_support["cluster_support_count"])
+            details["cluster_support_mass"] = float(cluster_support["cluster_support_mass"])
+            details["cluster_support_mass_ratio"] = float(cluster_support["cluster_support_mass_ratio"])
+            details["cluster_support_score"] = float(cluster_support["cluster_support_score"])
+            details["cluster_support_peaks"] = cluster_support["cluster_support_peaks"]
+            details["proposal_evidence_boost"] = float(proposal_evidence_boost)
             if onset_sum is not None:
                 details["pcen_onset_mean"] = float(onset_sum[peak_idx])
             if onset_peak is not None:
                 details["pcen_onset_peak"] = float(onset_peak[peak_idx])
-            threshold_passed = bool(peak_idx in peak_index_set)
+            threshold_passed = bool(
+                peak_idx in peak_index_set
+                or (
+                    (proposal_evidence_boost > 0.0 or float(frontend_persistence["frontend_persistence_integral_bonus"]) > 0.0)
+                    and float(effective_peak_score + proposal_evidence_boost) >= threshold
+                )
+            )
             timestamp_allowed = not (timestamp < min_timestamp and not early_peak_allowed)
             hf_allowed = peak_hf_ratio >= min_hf_ratio
-            score_allowed = early_peak_allowed or peak_score >= min_audio_score
+            score_allowed = early_peak_allowed or (effective_peak_score + proposal_evidence_boost) >= min_audio_score
             pattern_allowed = early_peak_allowed or strong_impulse_candidate or audio_pattern_score >= min_pattern_score
             audio_model_probability = None
             audio_model_allowed = True
@@ -404,6 +652,7 @@ class AudioVisualDiveDetector:
                 audio_model_allowed = audio_model_probability >= audio_model_min_probability
             details["audio_model_probability"] = audio_model_probability if audio_model_probability is not None else details.get("audio_model_probability", 0.0)
             details["audio_pattern_score"] = float(audio_pattern_score)
+            details["frontend_pattern_persistence_bonus"] = float(pattern_persistence_bonus)
             details["early_peak_allowed"] = bool(early_peak_allowed)
             details["strong_impulse_candidate"] = bool(strong_impulse_candidate)
             details["threshold_passed"] = bool(threshold_passed)
@@ -412,7 +661,11 @@ class AudioVisualDiveDetector:
             details["score_allowed"] = bool(score_allowed)
             details["pattern_allowed"] = bool(pattern_allowed)
             details["sustained_noise_reject"] = bool(sustained_noise_reject)
+            details["sustained_noise_exception"] = bool(sustained_noise_exception)
             details["audio_model_allowed"] = bool(audio_model_allowed)
+            details["evidence_threshold_promoted"] = bool(peak_idx not in peak_index_set and threshold_passed)
+            ranking_components = self._proposal_ranking_components(proposal)
+            details.update(ranking_components)
             rejection_stage = "accepted"
             if not threshold_passed:
                 rejection_stage = "below_threshold"
@@ -437,10 +690,13 @@ class AudioVisualDiveDetector:
                     "peak_timestamp_seconds": float(peak_timestamp),
                     "peak_frame_index": int(peak_idx),
                     "backtracked_frame_index": int(backtracked_idx),
-                    "raw_proposal_score": float(peak_score),
+                    "raw_peak_score": float(peak_score),
+                    "raw_proposal_score": float(effective_peak_score),
                     "proposal_threshold": float(threshold),
                     "peak_score_minus_threshold": float(peak_score - threshold),
+                    "frontend_effective_score_minus_threshold": float(effective_peak_score - threshold),
                     "accepted_as_proposal": rejection_stage == "accepted",
+                    "evidence_threshold_promoted": bool(peak_idx not in peak_index_set and threshold_passed),
                     "rejection_stage": rejection_stage,
                     **details,
                 }
@@ -448,7 +704,69 @@ class AudioVisualDiveDetector:
             if rejection_stage == "accepted":
                 proposals.append(proposal)
         duration_seconds = float(features["duration_seconds"])
-        return self._filter_noisy_audio_files(proposals, duration_seconds), raw_rows
+        self._annotate_local_peak_consolidation(proposals)
+        proposal_details_by_id = {
+            self._proposal_identity(proposal): self._proposal_details(proposal)
+            for proposal in proposals
+        }
+        for row in raw_rows:
+            if row.get("rejection_stage") != "accepted":
+                continue
+            details = proposal_details_by_id.get(self._proposal_identity_from_row(row))
+            if not details:
+                continue
+            row.update(
+                {
+                    "tail_persistence_score": float(details.get("tail_persistence_score", 0.0) or 0.0),
+                    "cluster_support_score": float(details.get("cluster_support_score", 0.0) or 0.0),
+                    "proposal_evidence_boost": float(details.get("proposal_evidence_boost", 0.0) or 0.0),
+                    "consolidation_score": float(details.get("consolidation_score", 0.0) or 0.0),
+                    "consolidation_bonus": float(details.get("consolidation_bonus", 0.0) or 0.0),
+                    "consolidation_group_count": int(details.get("consolidation_group_count", 0) or 0),
+                    "consolidation_compactness": float(details.get("consolidation_compactness", 0.0) or 0.0),
+                    "consolidation_persistence": float(details.get("consolidation_persistence", 0.0) or 0.0),
+                    "rank_bonus": float(details.get("rank_bonus", 0.0) or 0.0),
+                    "rank_score": float(details.get("rank_score", row.get("raw_proposal_score", 0.0)) or 0.0),
+                    "dive_likeness": float(details.get("dive_likeness", 0.0) or 0.0),
+                }
+            )
+        filtered_proposals, noisy_filter_events = self._filter_noisy_audio_files_with_events(proposals, duration_seconds)
+        kept_identities = {self._proposal_identity(proposal) for proposal in filtered_proposals}
+        local_rescue_identities = {
+            self._proposal_identity(proposal)
+            for proposal in filtered_proposals
+            if bool(getattr(proposal, "_pre_candidate_local_rescue", False))
+        }
+        protected_identities = {
+            self._proposal_identity(proposal)
+            for proposal in filtered_proposals
+            if bool(getattr(proposal, "_pre_candidate_protected_survivor", False))
+        }
+        dropped_by_cap = {self._proposal_identity_from_event(event) for event in noisy_filter_events}
+        for row in raw_rows:
+            if row["rejection_stage"] != "accepted":
+                row["frontend_candidate_survived"] = False
+                row["pre_candidate_loss_stage"] = row["rejection_stage"]
+                continue
+            row_identity = self._proposal_identity_from_row(row)
+            survived = row_identity in kept_identities
+            local_rescue_survivor = row_identity in local_rescue_identities
+            protected_survivor = row_identity in protected_identities
+            row["frontend_candidate_survived"] = bool(survived)
+            row["local_rescue_survivor"] = bool(local_rescue_survivor)
+            row["protected_survivor"] = bool(protected_survivor)
+            row["pre_candidate_loss_stage"] = (
+                "local_rescue_survivor"
+                if local_rescue_survivor
+                else "protected_survivor"
+                if protected_survivor
+                else "frontend_candidate_survived"
+                if survived
+                else "dropped_by_noisy_session_cap"
+                if row_identity in dropped_by_cap
+                else "filtered_after_accept"
+            )
+        return filtered_proposals, raw_rows
 
     def _classify_audio_candidates(
         self,
@@ -512,47 +830,397 @@ class AudioVisualDiveDetector:
         return scored
 
     def _filter_noisy_audio_files(self, proposals: Sequence[AudioCandidate], duration_seconds: float) -> List[AudioCandidate]:
+        kept, _ = self._filter_noisy_audio_files_with_events(proposals, duration_seconds)
+        return kept
+
+    def _filter_noisy_audio_files_with_events(
+        self,
+        proposals: Sequence[AudioCandidate],
+        duration_seconds: float,
+    ) -> tuple[List[AudioCandidate], List[Dict[str, Any]]]:
         if len(proposals) <= 1:
-            return list(proposals)
+            return list(proposals), []
 
         noisy_peak_count = int(getattr(self.config, "audio_noise_max_peak_count", 5))
         noisy_peak_ratio = float(getattr(self.config, "audio_noise_max_top_ratio", 1.8))
         long_session_seconds = float(getattr(self.config, "audio_long_session_seconds", 120.0))
         long_session_max_candidates = int(getattr(self.config, "audio_long_session_max_candidates", 120))
-        ranked = sorted(proposals, key=lambda p: p.audio_score, reverse=True)
-        if len(ranked) > noisy_peak_count and ranked[1].audio_score > 0:
-            top_ratio = ranked[0].audio_score / ranked[1].audio_score
-            if top_ratio < noisy_peak_ratio:
-                cap = long_session_max_candidates if duration_seconds >= long_session_seconds else max(noisy_peak_count * 3, 12)
-                if cap <= 0:
-                    return []
-                bucket_seconds = float(getattr(self.config, "audio_noise_diversity_bucket_seconds", 0.0) or 0.0)
-                if bucket_seconds > 0.0:
-                    bucket_seconds = max(1.0, bucket_seconds)
-                    buckets: dict[int, list[AudioCandidate]] = {}
-                    for proposal in ranked:
-                        bucket_idx = int(float(proposal.timestamp) // bucket_seconds)
-                        buckets.setdefault(bucket_idx, []).append(proposal)
-                    selected: list[AudioCandidate] = []
-                    bucket_order = sorted(buckets.keys())
-                    round_index = 0
-                    while len(selected) < cap:
-                        added_any = False
-                        for bucket_idx in bucket_order:
-                            bucket_rows = buckets[bucket_idx]
-                            if round_index >= len(bucket_rows):
-                                continue
-                            selected.append(bucket_rows[round_index])
-                            added_any = True
-                            if len(selected) >= cap:
-                                break
-                        if not added_any:
-                            break
-                        round_index += 1
-                    if selected:
-                        return sorted(selected, key=lambda p: p.timestamp)
-                return sorted(ranked[: max(1, cap)], key=lambda p: p.timestamp)
-        return sorted(proposals, key=lambda p: p.timestamp)
+        soft_ratio = float(getattr(self.config, "pre_candidate_soft_ratio", 0.0))
+        max_extra = int(getattr(self.config, "pre_candidate_max_extra_candidates", 0))
+        local_window_seconds = float(getattr(self.config, "pre_candidate_local_window_seconds", 0.0))
+        local_ratio = float(getattr(self.config, "pre_candidate_local_ratio", 0.0))
+        tail_ratio = float(getattr(self.config, "pre_candidate_tail_ratio", 0.0))
+        tail_boost = float(getattr(self.config, "pre_candidate_tail_boost", 0.0))
+        protect_window_seconds = float(getattr(self.config, "pre_candidate_protect_survivor_window_seconds", 0.0))
+        protect_max_per_bucket = max(0, int(getattr(self.config, "pre_candidate_protect_survivor_max_per_bucket", 1)))
+        protect_min_score = float(getattr(self.config, "pre_candidate_protect_survivor_min_score", 0.0))
+        protect_min_dive_likeness = float(getattr(self.config, "pre_candidate_protect_survivor_min_dive_likeness", 0.0))
+        protect_min_prominence = float(getattr(self.config, "pre_candidate_protect_survivor_min_prominence", 0.0))
+        protect_min_tail_ratio = float(getattr(self.config, "pre_candidate_protect_survivor_min_tail_ratio", 0.0))
+        rescue_window_seconds = float(getattr(self.config, "pre_candidate_local_rescue_window_seconds", 0.0))
+        rescue_max_per_bucket = max(0, int(getattr(self.config, "pre_candidate_local_rescue_max_per_bucket", 1)))
+        rescue_max_per_session = max(0, int(getattr(self.config, "pre_candidate_local_rescue_max_per_session", 2)))
+        rescue_anchor_min_rank_score = float(getattr(self.config, "pre_candidate_local_rescue_anchor_min_rank_score", 0.0))
+        rescue_min_score = float(getattr(self.config, "pre_candidate_local_rescue_min_score", 0.0))
+        rescue_min_dive_likeness = float(getattr(self.config, "pre_candidate_local_rescue_min_dive_likeness", 0.0))
+        rescue_min_prominence = float(getattr(self.config, "pre_candidate_local_rescue_min_prominence", 0.0))
+        rescue_min_tail_persistence_score = float(getattr(self.config, "pre_candidate_local_rescue_min_tail_persistence_score", 0.0))
+        rescue_min_cluster_support_score = float(getattr(self.config, "pre_candidate_local_rescue_min_cluster_support_score", 0.0))
+        scored_items: list[dict[str, Any]] = []
+        for proposal in proposals:
+            self._apply_consolidation_centering(proposal)
+            score_value = float(proposal.audio_score)
+            tail_boosted = False
+            if tail_ratio > 0.0 and proposal.post_flux_ratio >= tail_ratio:
+                score_value += tail_boost
+                tail_boosted = True
+            ranking_components = self._proposal_ranking_components(proposal)
+            rank_bonus = float(ranking_components["rank_bonus"])
+            rank_score = score_value + rank_bonus
+            setattr(proposal, "_pre_candidate_score_value", score_value)
+            setattr(proposal, "_pre_candidate_tail_boosted", tail_boosted)
+            setattr(proposal, "_pre_candidate_rank_bonus", rank_bonus)
+            setattr(proposal, "_pre_candidate_rank_score", rank_score)
+            setattr(proposal, "_pre_candidate_dive_likeness", float(ranking_components["dive_likeness"]))
+            setattr(proposal, "_pre_candidate_promotion_eligible", bool(ranking_components["promotion_eligible"]))
+            scored_items.append({"proposal": proposal, "score": rank_score})
+
+        ranked = sorted(scored_items, key=lambda item: item["score"], reverse=True)
+        events: List[Dict[str, Any]] = []
+
+        if len(ranked) <= noisy_peak_count or ranked[1]["score"] <= 0:
+            return sorted(proposals, key=lambda p: p.timestamp), events
+
+        top_ratio = ranked[0]["score"] / ranked[1]["score"]
+        if top_ratio >= noisy_peak_ratio:
+            return sorted(proposals, key=lambda p: p.timestamp), events
+
+        cap = long_session_max_candidates if duration_seconds >= long_session_seconds else max(noisy_peak_count * 3, 12)
+        if cap <= 0:
+            return [], events
+
+        bucket_seconds = float(getattr(self.config, "audio_noise_diversity_bucket_seconds", 0.0) or 0.0)
+        if bucket_seconds > 0.0:
+            bucket_seconds = max(1.0, bucket_seconds)
+            buckets: dict[int, list[AudioCandidate]] = {}
+            for item in ranked:
+                proposal = item["proposal"]
+                bucket_idx = int(float(proposal.timestamp) // bucket_seconds)
+                buckets.setdefault(bucket_idx, []).append(proposal)
+            selected: list[AudioCandidate] = []
+            bucket_order = sorted(buckets.keys())
+            round_index = 0
+            while len(selected) < cap:
+                added_any = False
+                for bucket_idx in bucket_order:
+                    bucket_rows = buckets[bucket_idx]
+                    if round_index >= len(bucket_rows):
+                        continue
+                    selected.append(bucket_rows[round_index])
+                    added_any = True
+                    if len(selected) >= cap:
+                        break
+                if not added_any:
+                    break
+                round_index += 1
+            base_kept = sorted(selected, key=lambda p: p.timestamp) if selected else sorted([item["proposal"] for item in ranked[: max(1, cap)]], key=lambda p: p.timestamp)
+        else:
+            base_kept = sorted([item["proposal"] for item in ranked[: max(1, cap)]], key=lambda p: p.timestamp)
+
+        return self._finalize_pre_candidate_selection(
+            kept_candidates=base_kept,
+            ranked_proposals=[item["proposal"] for item in ranked],
+            cap=cap,
+            top_score=float(ranked[0]["score"]),
+            soft_ratio=soft_ratio,
+            max_extra=max_extra,
+            local_window_seconds=local_window_seconds,
+            local_ratio=local_ratio,
+            protect_window_seconds=protect_window_seconds,
+            protect_max_per_bucket=protect_max_per_bucket,
+            protect_min_score=protect_min_score,
+            protect_min_dive_likeness=protect_min_dive_likeness,
+            protect_min_prominence=protect_min_prominence,
+            protect_min_tail_ratio=protect_min_tail_ratio,
+            rescue_window_seconds=rescue_window_seconds,
+            rescue_max_per_bucket=rescue_max_per_bucket,
+            rescue_max_per_session=rescue_max_per_session,
+            rescue_anchor_min_rank_score=rescue_anchor_min_rank_score,
+            rescue_min_score=rescue_min_score,
+            rescue_min_dive_likeness=rescue_min_dive_likeness,
+            rescue_min_prominence=rescue_min_prominence,
+            rescue_min_tail_persistence_score=rescue_min_tail_persistence_score,
+            rescue_min_cluster_support_score=rescue_min_cluster_support_score,
+            events=events,
+        )
+
+    def _finalize_pre_candidate_selection(
+        self,
+        *,
+        kept_candidates: list[AudioCandidate],
+        ranked_proposals: list[AudioCandidate],
+        cap: int,
+        top_score: float,
+        soft_ratio: float,
+        max_extra: int,
+        local_window_seconds: float,
+        local_ratio: float,
+        protect_window_seconds: float,
+        protect_max_per_bucket: int,
+        protect_min_score: float,
+        protect_min_dive_likeness: float,
+        protect_min_prominence: float,
+        protect_min_tail_ratio: float,
+        rescue_window_seconds: float,
+        rescue_max_per_bucket: int,
+        rescue_max_per_session: int,
+        rescue_anchor_min_rank_score: float,
+        rescue_min_score: float,
+        rescue_min_dive_likeness: float,
+        rescue_min_prominence: float,
+        rescue_min_tail_persistence_score: float,
+        rescue_min_cluster_support_score: float,
+        events: list[dict[str, Any]],
+    ) -> tuple[List[AudioCandidate], List[Dict[str, Any]]]:
+        kept_identities = {self._proposal_identity(candidate) for candidate in kept_candidates}
+        bucket_window = local_window_seconds if local_window_seconds > 0 else 1.0
+        extra_counts: dict[int, int] = defaultdict(int)
+        for proposal in ranked_proposals:
+            identity = self._proposal_identity(proposal)
+            if identity in kept_identities:
+                continue
+            score_value = float(getattr(proposal, "_pre_candidate_score_value", proposal.audio_score))
+            rank_score = float(getattr(proposal, "_pre_candidate_rank_score", score_value))
+            ratio_condition = soft_ratio > 0.0 and top_score > 0.0 and score_value >= top_score * soft_ratio
+            local_condition = False
+            if local_window_seconds > 0.0 and local_ratio > 0.0:
+                has_nearby = any(
+                    abs(kept.timestamp - proposal.timestamp) <= local_window_seconds for kept in kept_candidates
+                )
+                if not has_nearby and score_value >= top_score * local_ratio:
+                    local_condition = True
+            if not (ratio_condition or local_condition):
+                continue
+            bucket_idx = int(proposal.timestamp // bucket_window) if bucket_window > 0.0 else 0
+            if max_extra > 0 and extra_counts[bucket_idx] >= max_extra:
+                continue
+            extra_counts[bucket_idx] += 1
+            kept_candidates.append(proposal)
+            kept_identities.add(identity)
+            selection_mode = "extra_soft_ratio" if ratio_condition else "extra_local_window"
+            events.append(
+                {
+                    "event_type": "extra_candidate",
+                    "selection_mode": selection_mode,
+                    "cap": cap,
+                    "proposal_frontend": getattr(proposal, "proposal_frontend", "unknown"),
+                    "suppressed_timestamp": float(proposal.timestamp),
+                    "rank_score": float(rank_score),
+                    "rank_bonus": float(getattr(proposal, "_pre_candidate_rank_bonus", 0.0)),
+                    "promotion_eligible": bool(getattr(proposal, "_pre_candidate_promotion_eligible", False)),
+                }
+            )
+        if protect_window_seconds > 0.0 and protect_max_per_bucket > 0:
+            protected_by_bucket: dict[int, AudioCandidate] = {}
+            for proposal in ranked_proposals:
+                identity = self._proposal_identity(proposal)
+                if identity in kept_identities:
+                    continue
+                details = self._proposal_details(proposal)
+                dive_likeness = float(details.get("dive_likeness", 0.0) or 0.0)
+                tail_component = float(details.get("tail_component", 0.0) or 0.0)
+                if (
+                    float(proposal.audio_score) < protect_min_score
+                    or float(proposal.local_prominence) < protect_min_prominence
+                    or dive_likeness < protect_min_dive_likeness
+                    or tail_component < protect_min_tail_ratio
+                ):
+                    continue
+                bucket_idx = int(proposal.timestamp // protect_window_seconds)
+                existing = protected_by_bucket.get(bucket_idx)
+                if existing is None:
+                    protected_by_bucket[bucket_idx] = proposal
+                    continue
+                existing_score = float(getattr(existing, "_pre_candidate_rank_score", existing.audio_score))
+                proposal_score = float(getattr(proposal, "_pre_candidate_rank_score", proposal.audio_score))
+                if proposal_score > existing_score:
+                    protected_by_bucket[bucket_idx] = proposal
+            for bucket_idx in sorted(protected_by_bucket.keys()):
+                proposal = protected_by_bucket[bucket_idx]
+                identity = self._proposal_identity(proposal)
+                if identity in kept_identities:
+                    continue
+                same_bucket = [candidate for candidate in kept_candidates if int(candidate.timestamp // protect_window_seconds) == bucket_idx]
+                if same_bucket:
+                    victim = min(same_bucket, key=lambda candidate: float(getattr(candidate, "_pre_candidate_rank_score", candidate.audio_score)))
+                elif kept_candidates:
+                    victim = min(kept_candidates, key=lambda candidate: float(getattr(candidate, "_pre_candidate_rank_score", candidate.audio_score)))
+                else:
+                    victim = None
+                if victim is None:
+                    continue
+                kept_candidates.remove(victim)
+                kept_identities.remove(self._proposal_identity(victim))
+                setattr(proposal, "_pre_candidate_protected_survivor", True)
+                kept_candidates.append(proposal)
+                kept_identities.add(identity)
+                events.append(
+                    {
+                        "event_type": "protected_survivor",
+                        "proposal_frontend": getattr(proposal, "proposal_frontend", "unknown"),
+                        "suppressed_timestamp": float(victim.timestamp),
+                        "survivor_timestamp": float(proposal.timestamp),
+                        "survivor_score": float(getattr(proposal, "_pre_candidate_rank_score", proposal.audio_score)),
+                        "victim_timestamp": float(victim.timestamp),
+                        "victim_score": float(getattr(victim, "_pre_candidate_rank_score", victim.audio_score)),
+                        "bucket_seconds": float(protect_window_seconds),
+                        "bucket_idx": int(bucket_idx),
+                        "rank_score": float(getattr(proposal, "_pre_candidate_rank_score", proposal.audio_score)),
+                        "dive_likeness": float(self._proposal_details(proposal).get("dive_likeness", 0.0) or 0.0),
+                        "tail_component": float(self._proposal_details(proposal).get("tail_component", 0.0) or 0.0),
+                    }
+                )
+        kept_candidates, events = self._apply_local_rescue_survivors(
+            kept_candidates=kept_candidates,
+            ranked_proposals=ranked_proposals,
+            rescue_window_seconds=rescue_window_seconds,
+            rescue_max_per_bucket=rescue_max_per_bucket,
+            rescue_max_per_session=rescue_max_per_session,
+            rescue_anchor_min_rank_score=rescue_anchor_min_rank_score,
+            rescue_min_score=rescue_min_score,
+            rescue_min_dive_likeness=rescue_min_dive_likeness,
+            rescue_min_prominence=rescue_min_prominence,
+            rescue_min_tail_persistence_score=rescue_min_tail_persistence_score,
+            rescue_min_cluster_support_score=rescue_min_cluster_support_score,
+            events=events,
+        )
+        dropped_identities: set[tuple[str, int, int, int]] = set()
+        for proposal in ranked_proposals:
+            identity = self._proposal_identity(proposal)
+            if identity in kept_identities or identity in dropped_identities:
+                continue
+            events.append(self._build_noisy_cap_event(proposal, cap=cap, selection_mode="score_rank"))
+            dropped_identities.add(identity)
+        final_kept = sorted(kept_candidates, key=lambda p: p.timestamp)
+        return final_kept, events
+
+    def _apply_local_rescue_survivors(
+        self,
+        *,
+        kept_candidates: list[AudioCandidate],
+        ranked_proposals: list[AudioCandidate],
+        rescue_window_seconds: float,
+        rescue_max_per_bucket: int,
+        rescue_max_per_session: int,
+        rescue_anchor_min_rank_score: float,
+        rescue_min_score: float,
+        rescue_min_dive_likeness: float,
+        rescue_min_prominence: float,
+        rescue_min_tail_persistence_score: float,
+        rescue_min_cluster_support_score: float,
+        events: list[dict[str, Any]],
+    ) -> tuple[list[AudioCandidate], list[Dict[str, Any]]]:
+        if rescue_window_seconds <= 0.0 or rescue_max_per_bucket <= 0 or rescue_max_per_session <= 0:
+            return kept_candidates, events
+
+        kept_identities = {self._proposal_identity(candidate) for candidate in kept_candidates}
+        rescue_candidates: dict[int, dict[str, Any]] = {}
+        rescue_count = 0
+        for proposal in ranked_proposals:
+            identity = self._proposal_identity(proposal)
+            if identity in kept_identities:
+                continue
+            details = self._proposal_details(proposal)
+            tail_persistence_score = float(details.get("tail_persistence_score", 0.0) or 0.0)
+            cluster_support_score = float(details.get("cluster_support_score", 0.0) or 0.0)
+            dive_likeness = float(details.get("dive_likeness", 0.0) or 0.0)
+            if (
+                float(proposal.audio_score) < rescue_min_score
+                or float(proposal.local_prominence) < rescue_min_prominence
+                or dive_likeness < rescue_min_dive_likeness
+                or tail_persistence_score < rescue_min_tail_persistence_score
+                or cluster_support_score < rescue_min_cluster_support_score
+            ):
+                continue
+            bucket_idx = int(proposal.timestamp // rescue_window_seconds)
+            anchor_candidates = [
+                candidate
+                for candidate in kept_candidates
+                if int(candidate.timestamp // rescue_window_seconds) == bucket_idx
+                and abs(float(candidate.timestamp) - float(proposal.timestamp)) <= rescue_window_seconds
+                and float(getattr(candidate, "_pre_candidate_rank_score", candidate.audio_score)) >= rescue_anchor_min_rank_score
+            ]
+            if not anchor_candidates:
+                continue
+            rescue_priority = float(
+                proposal.audio_score
+                + 0.35 * tail_persistence_score
+                + 0.35 * cluster_support_score
+                + 0.2 * max(dive_likeness, 0.0)
+                + 0.1 * max(float(proposal.local_prominence) - rescue_min_prominence, 0.0)
+            )
+            existing = rescue_candidates.get(bucket_idx)
+            if existing is None or rescue_priority > float(existing["rescue_priority"]):
+                rescue_candidates[bucket_idx] = {
+                    "proposal": proposal,
+                    "anchor": max(
+                        anchor_candidates,
+                        key=lambda candidate: float(getattr(candidate, "_pre_candidate_rank_score", candidate.audio_score)),
+                    ),
+                    "rescue_priority": rescue_priority,
+                    "tail_persistence_score": tail_persistence_score,
+                    "cluster_support_score": cluster_support_score,
+                    "dive_likeness": dive_likeness,
+                }
+
+        for bucket_idx, info in sorted(rescue_candidates.items(), key=lambda item: float(item[1]["rescue_priority"]), reverse=True):
+            if rescue_count >= rescue_max_per_session:
+                break
+            proposal = info["proposal"]
+            identity = self._proposal_identity(proposal)
+            if identity in kept_identities:
+                continue
+            same_bucket = [
+                candidate
+                for candidate in kept_candidates
+                if int(candidate.timestamp // rescue_window_seconds) == bucket_idx
+            ]
+            if not same_bucket:
+                continue
+            if not any(
+                float(getattr(candidate, "_pre_candidate_rank_score", candidate.audio_score)) >= rescue_anchor_min_rank_score
+                for candidate in same_bucket
+            ):
+                continue
+            victim = min(same_bucket, key=lambda candidate: float(getattr(candidate, "_pre_candidate_rank_score", candidate.audio_score)))
+            victim_score = float(getattr(victim, "_pre_candidate_rank_score", victim.audio_score))
+            rescue_priority = float(info["rescue_priority"])
+            if rescue_priority <= victim_score:
+                continue
+            kept_candidates.remove(victim)
+            kept_identities.remove(self._proposal_identity(victim))
+            setattr(proposal, "_pre_candidate_local_rescue", True)
+            setattr(proposal, "_pre_candidate_local_rescue_score", rescue_priority)
+            kept_candidates.append(proposal)
+            kept_identities.add(identity)
+            rescue_count += 1
+            events.append(
+                {
+                    "event_type": "local_rescue_survivor",
+                    "proposal_frontend": getattr(proposal, "proposal_frontend", "unknown"),
+                    "rescue_timestamp": float(proposal.timestamp),
+                    "anchor_timestamp": float(info["anchor"].timestamp),
+                    "victim_timestamp": float(victim.timestamp),
+                    "rescue_window_seconds": float(rescue_window_seconds),
+                    "rescue_priority": float(rescue_priority),
+                    "anchor_rank_score": float(getattr(info["anchor"], "_pre_candidate_rank_score", info["anchor"].audio_score)),
+                    "victim_rank_score": float(victim_score),
+                    "tail_persistence_score": float(info["tail_persistence_score"]),
+                    "cluster_support_score": float(info["cluster_support_score"]),
+                    "dive_likeness": float(info["dive_likeness"]),
+                }
+            )
+        return kept_candidates, events
 
     def _suppress_rebound_precursors(self, proposals: Sequence[AudioCandidate]) -> List[AudioCandidate]:
         kept, _ = self._suppress_rebound_precursors_with_events(proposals)
@@ -947,9 +1615,209 @@ class AudioVisualDiveDetector:
             "rejection_stage",
             "pcen_onset_mean",
             "pcen_onset_peak",
+            "rank_bonus",
+            "rank_score",
+            "tail_component",
+            "asymmetry_component",
+            "broadband_component",
+            "decay_component",
+            "dive_likeness",
+            "promotion_eligible",
+            "protected_survivor",
         ):
             row[key] = details.get(key)
         return row
+
+    def _proposal_identity(self, proposal: AudioCandidate) -> tuple[str, int, int, int]:
+        details = self._proposal_details(proposal)
+        return (
+            str(details.get("proposal_frontend", "unknown")),
+            int(details.get("peak_frame_index", -1) or -1),
+            int(details.get("backtracked_frame_index", -1) or -1),
+            int(round(float(proposal.timestamp) * 1000.0)),
+        )
+
+    def _proposal_identity_from_row(self, row: Dict[str, Any]) -> tuple[str, int, int, int]:
+        return (
+            str(row.get("proposal_frontend", "unknown")),
+            int(row.get("peak_frame_index", -1) or -1),
+            int(row.get("backtracked_frame_index", -1) or -1),
+            int(round(float(row.get("timestamp", row.get("proposal_timestamp_seconds", 0.0)) or 0.0) * 1000.0)),
+        )
+
+    def _proposal_identity_from_event(self, event: Dict[str, Any]) -> tuple[str, int, int, int]:
+        return (
+            str(event.get("proposal_frontend", "unknown")),
+            int(event.get("peak_frame_index", -1) or -1),
+            int(event.get("backtracked_frame_index", -1) or -1),
+            int(round(float(event.get("suppressed_timestamp", 0.0) or 0.0) * 1000.0)),
+        )
+
+    def _build_noisy_cap_event(self, proposal: AudioCandidate, *, cap: int, selection_mode: str) -> Dict[str, Any]:
+        details = self._proposal_details(proposal)
+        return {
+            "event_type": "dropped_by_noisy_session_cap",
+            "suppressed_timestamp": float(proposal.timestamp),
+            "suppressed_score": float(proposal.audio_score),
+            "survivor_timestamp": None,
+            "survivor_score": None,
+            "offset_seconds": None,
+            "selection_mode": str(selection_mode),
+            "cap": int(cap),
+            "proposal_frontend": str(details.get("proposal_frontend", "unknown")),
+            "peak_frame_index": int(details.get("peak_frame_index", -1) or -1),
+            "backtracked_frame_index": int(details.get("backtracked_frame_index", -1) or -1),
+        }
+
+    def _collect_signal_peaks(
+        self,
+        values: np.ndarray,
+        sample_rate: int,
+        *,
+        frontend_name: str,
+        signal_name: str,
+    ) -> List[Dict[str, Any]]:
+        if values.size == 0:
+            return []
+        hop_length = int(getattr(self.config, "audio_hop_length", 256))
+        peak_indices = self._find_peaks(values, threshold=float("-inf"), min_distance=1)
+        rows: List[Dict[str, Any]] = []
+        for peak_idx in peak_indices:
+            timestamp = peak_idx * hop_length / sample_rate
+            rows.append(
+                {
+                    "proposal_frontend": frontend_name,
+                    "transient_signal": signal_name,
+                    "timestamp": float(timestamp),
+                    "frame_index": int(peak_idx),
+                    "value": float(values[peak_idx]),
+                }
+            )
+        return rows
+
+    def _build_frontend_stage_summary(
+        self,
+        *,
+        frontend_name: str,
+        transient_peaks: Sequence[Dict[str, Any]],
+        frontend_score_peaks: Sequence[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        rejection_counts: Dict[str, int] = {}
+        pre_candidate_loss_counts: Dict[str, int] = {}
+        for row in frontend_score_peaks:
+            rejection_stage = str(row.get("rejection_stage") or "unknown")
+            rejection_counts[rejection_stage] = rejection_counts.get(rejection_stage, 0) + 1
+            loss_stage = str(row.get("pre_candidate_loss_stage") or "unknown")
+            pre_candidate_loss_counts[loss_stage] = pre_candidate_loss_counts.get(loss_stage, 0) + 1
+        return {
+            "frontend_name": frontend_name,
+            "transient_peak_count": len(transient_peaks),
+            "frontend_score_peak_count": len(frontend_score_peaks),
+            "selected_by_peak_threshold_count": sum(1 for row in frontend_score_peaks if row.get("selected_by_peak_threshold")),
+            "accepted_pre_candidate_count": sum(1 for row in frontend_score_peaks if row.get("rejection_stage") == "accepted"),
+            "frontend_candidate_survived_count": sum(1 for row in frontend_score_peaks if row.get("frontend_candidate_survived")),
+            "frontend_score_rejection_counts": rejection_counts,
+            "pre_candidate_loss_counts": pre_candidate_loss_counts,
+        }
+
+    def _build_false_negative_neighborhood(
+        self,
+        timestamp_seconds: float,
+        traces: Sequence[Dict[str, Any]],
+        *,
+        source_path: str,
+        window_seconds: float,
+        trace_stride_frames: int,
+    ) -> Dict[str, Any]:
+        sample_rate = int(getattr(self.config, "audio_sample_rate", 16000))
+        hop_length = int(getattr(self.config, "audio_hop_length", 256))
+        stride = max(1, int(trace_stride_frames))
+        frontend_rows: List[Dict[str, Any]] = []
+        for trace in traces:
+            score = np.asarray(trace["score"], dtype=np.float32)
+            center_frame = int(round(float(timestamp_seconds) * sample_rate / hop_length))
+            window_frames = max(1, int(round(float(window_seconds) * sample_rate / hop_length)))
+            start_idx = max(0, center_frame - window_frames)
+            end_idx = min(int(score.size), center_frame + window_frames + 1)
+            trace_points = []
+            for frame_idx in range(start_idx, end_idx, stride):
+                frame_timestamp = frame_idx * hop_length / sample_rate
+                trace_points.append(
+                    {
+                        "frame_index": int(frame_idx),
+                        "timestamp_seconds": float(frame_timestamp),
+                        "offset_seconds": float(frame_timestamp - timestamp_seconds),
+                        "score": float(score[frame_idx]),
+                    }
+                )
+            transient_peaks = [
+                row
+                for row in trace["transient_peaks"]
+                if abs(float(row.get("timestamp", 0.0) or 0.0) - timestamp_seconds) <= window_seconds
+            ]
+            score_peaks = [
+                row
+                for row in trace["frontend_score_peaks"]
+                if abs(float(row.get("timestamp", 0.0) or 0.0) - timestamp_seconds) <= window_seconds
+            ]
+            frontend_candidates = [
+                self._serialize_proposal_candidate(
+                    proposal,
+                    source_path=source_path,
+                    source_file=Path(source_path).name,
+                    detector_id=str(getattr(self.config, "detector_id", "audio_v1_heuristic") or "audio_v1_heuristic"),
+                    pipeline_stage="frontend_candidate",
+                )
+                for proposal in trace["frontend_candidates"]
+                if abs(float(proposal.timestamp) - timestamp_seconds) <= window_seconds
+            ]
+            nearest_transient_peak = min(
+                transient_peaks,
+                key=lambda row: abs(float(row.get("timestamp", 0.0) or 0.0) - timestamp_seconds),
+                default=None,
+            )
+            nearest_score_peak = min(
+                score_peaks,
+                key=lambda row: abs(float(row.get("timestamp", 0.0) or 0.0) - timestamp_seconds),
+                default=None,
+            )
+            nearest_frontend_candidate = min(
+                frontend_candidates,
+                key=lambda row: abs(float(row.get("timestamp", 0.0) or 0.0) - timestamp_seconds),
+                default=None,
+            )
+            local_loss_stage = None
+            if nearest_frontend_candidate is not None:
+                local_loss_stage = "frontend_candidate_survived"
+            elif nearest_score_peak is None:
+                local_loss_stage = "no_frontend_score_peak_nearby"
+            else:
+                local_loss_stage = str(nearest_score_peak.get("pre_candidate_loss_stage") or nearest_score_peak.get("rejection_stage") or "unknown")
+            frontend_rows.append(
+                {
+                    "frontend_name": trace["frontend_name"],
+                    "threshold": float(trace["threshold"]),
+                    "local_trace_max": float(np.max(score[start_idx:end_idx])) if end_idx > start_idx else None,
+                    "local_trace_argmax_offset_seconds": (
+                        ((start_idx + int(np.argmax(score[start_idx:end_idx]))) * hop_length / sample_rate) - timestamp_seconds
+                        if end_idx > start_idx
+                        else None
+                    ),
+                    "trace_points": trace_points,
+                    "transient_peaks": transient_peaks,
+                    "frontend_score_peaks": score_peaks,
+                    "frontend_candidates": frontend_candidates,
+                    "nearest_transient_peak": nearest_transient_peak,
+                    "nearest_frontend_score_peak": nearest_score_peak,
+                    "nearest_frontend_candidate": nearest_frontend_candidate,
+                    "local_loss_stage": local_loss_stage,
+                }
+            )
+        return {
+            "timestamp_seconds": float(timestamp_seconds),
+            "window_seconds": float(window_seconds),
+            "frontends": frontend_rows,
+        }
 
     def _compute_audio_base_features(self, signal: np.ndarray, sample_rate: int) -> Dict[str, np.ndarray]:
         frame_length = int(getattr(self.config, "audio_frame_length", 1024))
@@ -1029,6 +1897,206 @@ class AudioVisualDiveDetector:
             return 0.0
         return float(np.mean(post) / (np.mean(pre) + 1e-6))
 
+    def _tail_persistence_features(
+        self,
+        *,
+        flux: np.ndarray,
+        rms: np.ndarray,
+        peak_idx: int,
+        sample_rate: int,
+        hop_length: int,
+    ) -> Dict[str, Any]:
+        windows_seconds = (
+            float(getattr(self.config, "pre_candidate_tail_persistence_short_seconds", 0.5)),
+            float(getattr(self.config, "pre_candidate_tail_persistence_medium_seconds", 1.0)),
+            float(getattr(self.config, "pre_candidate_tail_persistence_long_seconds", 2.0)),
+        )
+        rows: list[dict[str, Any]] = []
+        scores: list[float] = []
+        for window_seconds in windows_seconds:
+            window_frames = max(1, int(round(window_seconds * sample_rate / max(hop_length, 1))))
+            flux_ratio = self._forward_ratio(flux, peak_idx, window_frames)
+            rms_ratio = self._forward_ratio(rms, peak_idx, window_frames)
+            flux_component = max(flux_ratio - 1.0, 0.0)
+            rms_component = max(rms_ratio - 1.0, 0.0)
+            score = 0.65 * flux_component + 0.35 * rms_component
+            rows.append(
+                {
+                    "window_seconds": float(window_seconds),
+                    "flux_ratio": float(flux_ratio),
+                    "rms_ratio": float(rms_ratio),
+                    "score": float(score),
+                }
+            )
+            scores.append(float(score))
+        return {
+            "tail_persistence_windows": rows,
+            "tail_persistence_score": float(np.mean(scores)) if scores else 0.0,
+        }
+
+    def _frontend_persistence_integral_features(
+        self,
+        *,
+        flux: np.ndarray,
+        onset_sum: np.ndarray | None,
+        peak_idx: int,
+        sample_rate: int,
+        hop_length: int,
+    ) -> Dict[str, Any]:
+        weight = float(getattr(self.config, "frontend_persistence_integral_weight", 0.0))
+        max_bonus = float(getattr(self.config, "frontend_persistence_integral_max_bonus", 0.0))
+        start_seconds = float(getattr(self.config, "frontend_persistence_integral_start_seconds", 0.15))
+        end_seconds = float(getattr(self.config, "frontend_persistence_integral_end_seconds", 0.8))
+        pre_seconds = float(getattr(self.config, "frontend_persistence_integral_pre_seconds", 0.4))
+        pcen_weight = float(getattr(self.config, "frontend_persistence_integral_pcen_weight", 0.6))
+        if weight <= 0.0 or max_bonus <= 0.0 or end_seconds <= start_seconds:
+            return {
+                "frontend_persistence_integral_score": 0.0,
+                "frontend_persistence_integral_bonus": 0.0,
+                "frontend_persistence_flux_ratio": 0.0,
+                "frontend_persistence_pcen_ratio": 0.0,
+                "frontend_persistence_window_start_seconds": float(start_seconds),
+                "frontend_persistence_window_end_seconds": float(end_seconds),
+                "frontend_persistence_pre_seconds": float(pre_seconds),
+            }
+        start_frames = max(1, int(round(start_seconds * sample_rate / max(hop_length, 1))))
+        end_frames = max(start_frames + 1, int(round(end_seconds * sample_rate / max(hop_length, 1))))
+        pre_frames = max(1, int(round(pre_seconds * sample_rate / max(hop_length, 1))))
+
+        post_flux = flux[min(len(flux), peak_idx + start_frames):min(len(flux), peak_idx + end_frames)]
+        pre_flux = flux[max(0, peak_idx - pre_frames):peak_idx]
+        flux_ratio = self._safe_ratio(
+            float(np.mean(post_flux)) if post_flux.size else 0.0,
+            float(np.mean(pre_flux)) if pre_flux.size else 0.0,
+        )
+
+        pcen_ratio = 0.0
+        if onset_sum is not None:
+            post_pcen = onset_sum[min(len(onset_sum), peak_idx + start_frames):min(len(onset_sum), peak_idx + end_frames)]
+            pre_pcen = onset_sum[max(0, peak_idx - pre_frames):peak_idx]
+            pcen_ratio = self._safe_ratio(
+                float(np.mean(post_pcen)) if post_pcen.size else 0.0,
+                float(np.mean(pre_pcen)) if pre_pcen.size else 0.0,
+            )
+
+        flux_component = max(flux_ratio - 1.0, 0.0)
+        pcen_component = max(pcen_ratio - 1.0, 0.0)
+        score = (1.0 - pcen_weight) * flux_component + pcen_weight * pcen_component
+        bonus = min(max_bonus, max(0.0, weight * score))
+        return {
+            "frontend_persistence_integral_score": float(score),
+            "frontend_persistence_integral_bonus": float(bonus),
+            "frontend_persistence_flux_ratio": float(flux_ratio),
+            "frontend_persistence_pcen_ratio": float(pcen_ratio),
+            "frontend_persistence_window_start_seconds": float(start_seconds),
+            "frontend_persistence_window_end_seconds": float(end_seconds),
+            "frontend_persistence_pre_seconds": float(pre_seconds),
+        }
+
+    def _frontend_persistence_integral_features(
+        self,
+        *,
+        flux: np.ndarray,
+        onset_sum: np.ndarray | None,
+        peak_idx: int,
+        sample_rate: int,
+        hop_length: int,
+    ) -> Dict[str, Any]:
+        weight = float(getattr(self.config, "frontend_persistence_integral_weight", 0.0))
+        max_bonus = float(getattr(self.config, "frontend_persistence_integral_max_bonus", 0.0))
+        start_seconds = float(getattr(self.config, "frontend_persistence_integral_start_seconds", 0.15))
+        end_seconds = float(getattr(self.config, "frontend_persistence_integral_end_seconds", 0.8))
+        pre_seconds = float(getattr(self.config, "frontend_persistence_integral_pre_seconds", 0.4))
+        pcen_weight = float(getattr(self.config, "frontend_persistence_integral_pcen_weight", 0.6))
+        if weight <= 0.0 or max_bonus <= 0.0 or end_seconds <= start_seconds:
+            return {
+                "frontend_persistence_integral_score": 0.0,
+                "frontend_persistence_integral_bonus": 0.0,
+                "frontend_persistence_flux_ratio": 0.0,
+                "frontend_persistence_pcen_ratio": 0.0,
+                "frontend_persistence_window_start_seconds": float(start_seconds),
+                "frontend_persistence_window_end_seconds": float(end_seconds),
+                "frontend_persistence_pre_seconds": float(pre_seconds),
+            }
+        start_frames = max(1, int(round(start_seconds * sample_rate / max(hop_length, 1))))
+        end_frames = max(start_frames + 1, int(round(end_seconds * sample_rate / max(hop_length, 1))))
+        pre_frames = max(1, int(round(pre_seconds * sample_rate / max(hop_length, 1))))
+
+        post_flux = flux[min(len(flux), peak_idx + start_frames):min(len(flux), peak_idx + end_frames)]
+        pre_flux = flux[max(0, peak_idx - pre_frames):peak_idx]
+        flux_ratio = self._safe_ratio(
+            float(np.mean(post_flux)) if post_flux.size else 0.0,
+            float(np.mean(pre_flux)) if pre_flux.size else 0.0,
+        )
+
+        pcen_ratio = 0.0
+        if onset_sum is not None:
+            post_pcen = onset_sum[min(len(onset_sum), peak_idx + start_frames):min(len(onset_sum), peak_idx + end_frames)]
+            pre_pcen = onset_sum[max(0, peak_idx - pre_frames):peak_idx]
+            pcen_ratio = self._safe_ratio(
+                float(np.mean(post_pcen)) if post_pcen.size else 0.0,
+                float(np.mean(pre_pcen)) if pre_pcen.size else 0.0,
+            )
+
+        flux_component = max(flux_ratio - 1.0, 0.0)
+        pcen_component = max(pcen_ratio - 1.0, 0.0)
+        score = (1.0 - pcen_weight) * flux_component + pcen_weight * pcen_component
+        bonus = min(max_bonus, max(0.0, weight * score))
+        return {
+            "frontend_persistence_integral_score": float(score),
+            "frontend_persistence_integral_bonus": float(bonus),
+            "frontend_persistence_flux_ratio": float(flux_ratio),
+            "frontend_persistence_pcen_ratio": float(pcen_ratio),
+            "frontend_persistence_window_start_seconds": float(start_seconds),
+            "frontend_persistence_window_end_seconds": float(end_seconds),
+            "frontend_persistence_pre_seconds": float(pre_seconds),
+        }
+
+    def _cluster_support_features(
+        self,
+        *,
+        score: np.ndarray,
+        raw_peaks: Sequence[int],
+        peak_idx: int,
+        sample_rate: int,
+        hop_length: int,
+    ) -> Dict[str, Any]:
+        window_seconds = float(getattr(self.config, "pre_candidate_cluster_support_window_seconds", 1.5))
+        min_peak_ratio = float(getattr(self.config, "pre_candidate_cluster_support_min_peak_ratio", 0.55))
+        window_frames = max(1, int(round(window_seconds * sample_rate / max(hop_length, 1))))
+        peak_score = float(score[peak_idx]) if peak_idx < len(score) else 0.0
+        nearby_rows: list[dict[str, Any]] = []
+        support_scores: list[float] = []
+        for other_idx in raw_peaks:
+            if other_idx == peak_idx:
+                continue
+            if abs(int(other_idx) - int(peak_idx)) > window_frames:
+                continue
+            other_score = float(score[other_idx]) if 0 <= int(other_idx) < len(score) else 0.0
+            if peak_score > 0.0 and other_score < peak_score * min_peak_ratio:
+                continue
+            nearby_rows.append(
+                {
+                    "frame_index": int(other_idx),
+                    "timestamp_seconds": float(other_idx * hop_length / sample_rate),
+                    "score": float(other_score),
+                }
+            )
+            support_scores.append(float(other_score))
+        cluster_mass = float(sum(support_scores))
+        cluster_count = len(support_scores)
+        cluster_mass_ratio = cluster_mass / max(peak_score, 1e-6)
+        cluster_score = cluster_mass_ratio + 0.2 * min(cluster_count, 5)
+        return {
+            "cluster_support_window_seconds": float(window_seconds),
+            "cluster_support_min_peak_ratio": float(min_peak_ratio),
+            "cluster_support_count": int(cluster_count),
+            "cluster_support_mass": float(cluster_mass),
+            "cluster_support_mass_ratio": float(cluster_mass_ratio),
+            "cluster_support_score": float(cluster_score),
+            "cluster_support_peaks": nearby_rows,
+        }
+
     def _local_prominence(self, values: np.ndarray, peak_idx: int, radius: int, guard: int) -> float:
         left = values[max(0, peak_idx - radius):max(0, peak_idx - guard)]
         right = values[min(len(values), peak_idx + guard + 1):min(len(values), peak_idx + radius + 1)]
@@ -1058,11 +2126,376 @@ class AudioVisualDiveDetector:
             - 0.35 * max(float(nearby_peaks_8s) - 1.0, 0.0)
         )
 
+    def _annotate_local_peak_consolidation(self, proposals: Sequence[AudioCandidate]) -> None:
+        weight = float(getattr(self.config, "pre_candidate_consolidation_weight", 0.0))
+        window_seconds = float(getattr(self.config, "pre_candidate_consolidation_window_seconds", 0.0))
+        top_peaks = max(1, int(getattr(self.config, "pre_candidate_consolidation_top_peaks", 3)))
+        min_score = float(getattr(self.config, "pre_candidate_consolidation_min_score", 0.0))
+        min_cluster_size = max(2, int(getattr(self.config, "pre_candidate_consolidation_min_cluster_size", 2)))
+        merge_gap_seconds = float(getattr(self.config, "pre_candidate_consolidation_merge_gap_seconds", 0.12))
+        max_bonus = float(getattr(self.config, "pre_candidate_consolidation_max_bonus", 0.0))
+        group_by_peak_timestamps = bool(
+            getattr(self.config, "pre_candidate_consolidation_group_by_peak_timestamps", False)
+        )
+        if weight <= 0.0 or window_seconds <= 0.0 or max_bonus <= 0.0 or len(proposals) < min_cluster_size:
+            for proposal in proposals:
+                setattr(proposal, "_pre_candidate_consolidation_score", 0.0)
+                setattr(proposal, "_pre_candidate_consolidation_bonus", 0.0)
+                setattr(proposal, "_pre_candidate_consolidation_group_count", 0)
+                setattr(proposal, "_pre_candidate_consolidation_compactness", 0.0)
+                setattr(proposal, "_pre_candidate_consolidation_persistence", 0.0)
+                setattr(proposal, "_pre_candidate_consolidation_center_timestamp", float(proposal.timestamp))
+                setattr(proposal, "_pre_candidate_consolidation_center_shift", 0.0)
+                setattr(proposal, "_pre_candidate_consolidation_anchor_timestamp", float(proposal.timestamp))
+                setattr(proposal, "_pre_candidate_consolidation_peak_centroid_timestamp", float(proposal.timestamp))
+                setattr(proposal, "_pre_candidate_consolidation_proposal_centroid_timestamp", float(proposal.timestamp))
+            return
+
+        def _proposal_group_timestamp(proposal: AudioCandidate) -> float:
+            if group_by_peak_timestamps:
+                details = self._proposal_details(proposal)
+                return float(details.get("peak_timestamp_seconds", proposal.timestamp) or proposal.timestamp)
+            return float(proposal.timestamp)
+
+        sorted_proposals = sorted(proposals, key=_proposal_group_timestamp)
+
+        def _group_neighbors(center: AudioCandidate) -> list[dict[str, Any]]:
+            center_group_timestamp = _proposal_group_timestamp(center)
+            neighbors = [
+                proposal
+                for proposal in sorted_proposals
+                if abs(_proposal_group_timestamp(proposal) - center_group_timestamp) <= window_seconds
+                and float(proposal.audio_score) >= min_score
+            ]
+            if not neighbors:
+                return []
+            groups: list[dict[str, Any]] = []
+            current: list[AudioCandidate] = []
+            for proposal in neighbors:
+                if not current or abs(_proposal_group_timestamp(proposal) - _proposal_group_timestamp(current[-1])) <= merge_gap_seconds:
+                    current.append(proposal)
+                    continue
+                groups.append(self._summarize_consolidation_group(current))
+                current = [proposal]
+            if current:
+                groups.append(self._summarize_consolidation_group(current))
+            return groups
+
+        for proposal in sorted_proposals:
+            groups = _group_neighbors(proposal)
+            if len(groups) < min_cluster_size:
+                setattr(proposal, "_pre_candidate_consolidation_score", 0.0)
+                setattr(proposal, "_pre_candidate_consolidation_bonus", 0.0)
+                setattr(proposal, "_pre_candidate_consolidation_group_count", len(groups))
+                setattr(proposal, "_pre_candidate_consolidation_compactness", 0.0)
+                setattr(proposal, "_pre_candidate_consolidation_persistence", 0.0)
+                setattr(proposal, "_pre_candidate_consolidation_center_timestamp", float(proposal.timestamp))
+                setattr(proposal, "_pre_candidate_consolidation_center_shift", 0.0)
+                setattr(proposal, "_pre_candidate_consolidation_anchor_timestamp", float(proposal.timestamp))
+                setattr(proposal, "_pre_candidate_consolidation_peak_centroid_timestamp", float(proposal.timestamp))
+                setattr(proposal, "_pre_candidate_consolidation_proposal_centroid_timestamp", float(proposal.timestamp))
+                continue
+
+            groups = sorted(groups, key=lambda row: float(row["score"]), reverse=True)[:top_peaks]
+            anchor = max(float(groups[0]["score"]), 1e-6)
+            mass_ratio = max(sum(float(group["score"]) for group in groups) / anchor - 1.0, 0.0)
+            proposal_group_timestamp = _proposal_group_timestamp(proposal)
+            offsets = [abs(float(group["group_timestamp"]) - proposal_group_timestamp) for group in groups[1:]]
+            mean_offset = float(np.mean(offsets)) if offsets else 0.0
+            compactness = max(0.0, 1.0 - (mean_offset / max(window_seconds, 1e-6)))
+            persistence = float(np.mean([float(group["persistence"]) for group in groups]))
+            anchor_timestamp = float(groups[0]["proposal_timestamp"])
+            peak_weights = np.asarray([float(group["score"]) for group in groups], dtype=np.float64)
+            if float(np.sum(peak_weights)) <= 0.0:
+                peak_weights = np.ones(len(groups), dtype=np.float64)
+            proposal_centroid_timestamp = float(
+                np.average(
+                    np.asarray([float(group["proposal_timestamp"]) for group in groups], dtype=np.float64),
+                    weights=peak_weights,
+                )
+            )
+            peak_centroid_timestamp = float(
+                np.average(
+                    np.asarray([float(group["peak_timestamp"]) for group in groups], dtype=np.float64),
+                    weights=peak_weights,
+                )
+            )
+            consolidation_score = max(mass_ratio * compactness * (1.0 + 0.25 * persistence), 0.0)
+            consolidation_bonus = min(max_bonus, weight * consolidation_score)
+            setattr(proposal, "_pre_candidate_consolidation_score", float(consolidation_score))
+            setattr(proposal, "_pre_candidate_consolidation_bonus", float(consolidation_bonus))
+            setattr(proposal, "_pre_candidate_consolidation_group_count", len(groups))
+            setattr(proposal, "_pre_candidate_consolidation_compactness", float(compactness))
+            setattr(proposal, "_pre_candidate_consolidation_persistence", float(persistence))
+            setattr(proposal, "_pre_candidate_consolidation_center_timestamp", float(proposal_centroid_timestamp))
+            setattr(proposal, "_pre_candidate_consolidation_center_shift", float(proposal_centroid_timestamp - float(proposal.timestamp)))
+            setattr(proposal, "_pre_candidate_consolidation_anchor_timestamp", float(anchor_timestamp))
+            setattr(proposal, "_pre_candidate_consolidation_peak_centroid_timestamp", float(peak_centroid_timestamp))
+            setattr(proposal, "_pre_candidate_consolidation_proposal_centroid_timestamp", float(proposal_centroid_timestamp))
+            setattr(proposal, "_pre_candidate_consolidation_grouping_basis", "peak" if group_by_peak_timestamps else "proposal")
+
+        self._annotate_overlap_agreement(sorted_proposals)
+
+    def _summarize_consolidation_group(self, proposals: Sequence[AudioCandidate]) -> Dict[str, Any]:
+        strongest = max(proposals, key=lambda proposal: float(proposal.audio_score))
+        strongest_details = self._proposal_details(strongest)
+        persistence = float(
+            np.mean(
+                [
+                    max(min(float(proposal.post_flux_ratio), float(proposal.post_rms_ratio)) - 1.0, 0.0)
+                    for proposal in proposals
+                ]
+            )
+        )
+        return {
+            "timestamp": float(strongest.timestamp),
+            "group_timestamp": float(strongest_details.get("peak_timestamp_seconds", strongest.timestamp) or strongest.timestamp),
+            "proposal_timestamp": float(strongest.timestamp),
+            "peak_timestamp": float(strongest_details.get("peak_timestamp_seconds", strongest.timestamp) or strongest.timestamp),
+            "score": float(max(float(proposal.audio_score) for proposal in proposals)),
+            "persistence": persistence,
+        }
+
+    def _annotate_overlap_agreement(self, proposals: Sequence[AudioCandidate]) -> None:
+        weight = float(getattr(self.config, "pre_candidate_overlap_agreement_weight", 0.0))
+        window_seconds = float(getattr(self.config, "pre_candidate_overlap_window_seconds", 0.12))
+        min_pcen_persistence = float(getattr(self.config, "pre_candidate_overlap_min_pcen_persistence", 0.0))
+        min_total_score = float(getattr(self.config, "pre_candidate_overlap_min_total_score", 0.0))
+        pcen_center_weight = float(getattr(self.config, "pre_candidate_overlap_pcen_center_weight", 0.0))
+
+        def _peak_timestamp(proposal: AudioCandidate) -> float:
+            details = self._proposal_details(proposal)
+            return float(details.get("peak_timestamp_seconds", proposal.timestamp) or proposal.timestamp)
+
+        if weight <= 0.0 or window_seconds <= 0.0 or len(proposals) < 2:
+            for proposal in proposals:
+                setattr(proposal, "_pre_candidate_overlap_agreement_bonus", 0.0)
+                setattr(proposal, "_pre_candidate_overlap_agreement_score", 0.0)
+                setattr(proposal, "_pre_candidate_overlap_center_timestamp", float(proposal.timestamp))
+                setattr(proposal, "_pre_candidate_overlap_center_shift", 0.0)
+                setattr(proposal, "_pre_candidate_overlap_member_count", 0)
+                setattr(proposal, "_pre_candidate_overlap_pcen_score_mass", 0.0)
+                setattr(proposal, "_pre_candidate_overlap_total_score_mass", 0.0)
+            return
+
+        for proposal in proposals:
+            frontend = str(self._proposal_details(proposal).get("proposal_frontend", "unknown"))
+            center_peak_timestamp = _peak_timestamp(proposal)
+            neighbors = [
+                neighbor
+                for neighbor in proposals
+                if neighbor is not proposal
+                and abs(_peak_timestamp(neighbor) - center_peak_timestamp) <= window_seconds
+            ]
+            mixed = [proposal, *neighbors]
+            frontends = {str(self._proposal_details(candidate).get("proposal_frontend", "unknown")) for candidate in mixed}
+            if "heuristic" not in frontends or "pcen_multiband" not in frontends:
+                setattr(proposal, "_pre_candidate_overlap_agreement_bonus", 0.0)
+                setattr(proposal, "_pre_candidate_overlap_agreement_score", 0.0)
+                setattr(proposal, "_pre_candidate_overlap_center_timestamp", float(proposal.timestamp))
+                setattr(proposal, "_pre_candidate_overlap_center_shift", 0.0)
+                setattr(proposal, "_pre_candidate_overlap_member_count", len(mixed))
+                setattr(proposal, "_pre_candidate_overlap_pcen_score_mass", 0.0)
+                setattr(proposal, "_pre_candidate_overlap_total_score_mass", float(sum(float(candidate.audio_score) for candidate in mixed)))
+                continue
+
+            pcen_members = [
+                candidate
+                for candidate in mixed
+                if str(self._proposal_details(candidate).get("proposal_frontend", "unknown")) == "pcen_multiband"
+                and max(min(float(candidate.post_flux_ratio), float(candidate.post_rms_ratio)) - 1.0, 0.0) >= min_pcen_persistence
+            ]
+            if not pcen_members:
+                setattr(proposal, "_pre_candidate_overlap_agreement_bonus", 0.0)
+                setattr(proposal, "_pre_candidate_overlap_agreement_score", 0.0)
+                setattr(proposal, "_pre_candidate_overlap_center_timestamp", float(proposal.timestamp))
+                setattr(proposal, "_pre_candidate_overlap_center_shift", 0.0)
+                setattr(proposal, "_pre_candidate_overlap_member_count", len(mixed))
+                setattr(proposal, "_pre_candidate_overlap_pcen_score_mass", 0.0)
+                setattr(proposal, "_pre_candidate_overlap_total_score_mass", float(sum(float(candidate.audio_score) for candidate in mixed)))
+                continue
+
+            total_score_mass = float(sum(float(candidate.audio_score) for candidate in mixed))
+            pcen_score_mass = float(sum(float(candidate.audio_score) for candidate in pcen_members))
+            if total_score_mass < min_total_score:
+                overlap_score = 0.0
+                overlap_bonus = 0.0
+            else:
+                offsets = [abs(_peak_timestamp(candidate) - center_peak_timestamp) for candidate in mixed if candidate is not proposal]
+                mean_offset = float(np.mean(offsets)) if offsets else 0.0
+                compactness = max(0.0, 1.0 - (mean_offset / max(window_seconds, 1e-6)))
+                pcen_ratio = pcen_score_mass / max(total_score_mass, 1e-6)
+                overlap_score = max(compactness * pcen_ratio, 0.0)
+                overlap_bonus = max(weight * overlap_score, 0.0)
+
+            weighted_members: list[tuple[float, float]] = []
+            for candidate in mixed:
+                candidate_frontend = str(self._proposal_details(candidate).get("proposal_frontend", "unknown"))
+                candidate_weight = float(candidate.audio_score)
+                if candidate_frontend == "pcen_multiband":
+                    candidate_weight *= (1.0 + pcen_center_weight)
+                weighted_members.append((float(candidate.timestamp), max(candidate_weight, 1e-6)))
+            overlap_center_timestamp = float(
+                np.average(
+                    np.asarray([timestamp for timestamp, _ in weighted_members], dtype=np.float64),
+                    weights=np.asarray([weight for _, weight in weighted_members], dtype=np.float64),
+                )
+            )
+            setattr(proposal, "_pre_candidate_overlap_agreement_bonus", float(overlap_bonus))
+            setattr(proposal, "_pre_candidate_overlap_agreement_score", float(overlap_score))
+            setattr(proposal, "_pre_candidate_overlap_center_timestamp", float(overlap_center_timestamp))
+            setattr(proposal, "_pre_candidate_overlap_center_shift", float(overlap_center_timestamp - float(proposal.timestamp)))
+            setattr(proposal, "_pre_candidate_overlap_member_count", len(mixed))
+            setattr(proposal, "_pre_candidate_overlap_pcen_score_mass", float(pcen_score_mass))
+            setattr(proposal, "_pre_candidate_overlap_total_score_mass", float(total_score_mass))
+
+    def _apply_consolidation_centering(self, proposal: AudioCandidate) -> None:
+        centering_weight = float(getattr(self.config, "pre_candidate_consolidation_centering_weight", 0.0))
+        center_timestamp = float(
+            getattr(proposal, "_pre_candidate_consolidation_center_timestamp", float(proposal.timestamp))
+        )
+        overlap_center_timestamp = float(
+            getattr(proposal, "_pre_candidate_overlap_center_timestamp", center_timestamp)
+        )
+        overlap_bonus = float(getattr(proposal, "_pre_candidate_overlap_agreement_bonus", 0.0))
+        original_timestamp = float(getattr(proposal, "_original_timestamp", float(proposal.timestamp)))
+        setattr(proposal, "_original_timestamp", original_timestamp)
+        if centering_weight <= 0.0:
+            setattr(proposal, "_pre_candidate_consolidation_applied_timestamp", float(proposal.timestamp))
+            setattr(proposal, "_pre_candidate_consolidation_applied_shift", float(float(proposal.timestamp) - original_timestamp))
+            return
+        group_count = int(getattr(proposal, "_pre_candidate_consolidation_group_count", 0))
+        if group_count < 2:
+            setattr(proposal, "_pre_candidate_consolidation_applied_timestamp", float(proposal.timestamp))
+            setattr(proposal, "_pre_candidate_consolidation_applied_shift", float(float(proposal.timestamp) - original_timestamp))
+            return
+        if overlap_bonus > 0.0:
+            center_timestamp = overlap_center_timestamp
+        centered_timestamp = (
+            (1.0 - centering_weight) * float(proposal.timestamp)
+            + centering_weight * center_timestamp
+        )
+        proposal.timestamp = float(centered_timestamp)
+        setattr(proposal, "_pre_candidate_consolidation_applied_timestamp", float(centered_timestamp))
+        setattr(proposal, "_pre_candidate_consolidation_applied_shift", float(centered_timestamp - original_timestamp))
+
+    def _proposal_ranking_components(self, proposal: AudioCandidate) -> Dict[str, Any]:
+        tail_component = max(float(proposal.post_flux_ratio) - 1.0, 0.0)
+        asymmetry_component = abs(float(proposal.post_flux_ratio) - float(proposal.post_rms_ratio))
+        broadband_component = max(float(proposal.spectral_flatness), 0.0)
+        decay_component = max(float(proposal.local_prominence) - 4.0, 0.0)
+        dive_likeness = float(
+            tail_component
+            + asymmetry_component
+            + broadband_component
+            + 0.1 * decay_component
+        )
+        rank_tail_weight = float(getattr(self.config, "pre_candidate_rank_tail_weight", 0.0))
+        rank_asymmetry_weight = float(getattr(self.config, "pre_candidate_rank_asymmetry_weight", 0.0))
+        rank_broadband_weight = float(getattr(self.config, "pre_candidate_rank_broadband_weight", 0.0))
+        rank_decay_weight = float(getattr(self.config, "pre_candidate_rank_decay_weight", 0.0))
+        tail_persistence_weight = float(getattr(self.config, "pre_candidate_tail_persistence_weight", 0.0))
+        cluster_support_weight = float(getattr(self.config, "pre_candidate_cluster_support_weight", 0.0))
+        tail_persistence_score = float(getattr(proposal, "_pre_candidate_tail_persistence_score", 0.0))
+        cluster_support_score = float(getattr(proposal, "_pre_candidate_cluster_support_score", 0.0))
+        consolidation_score = float(getattr(proposal, "_pre_candidate_consolidation_score", 0.0))
+        consolidation_bonus = float(getattr(proposal, "_pre_candidate_consolidation_bonus", 0.0))
+        consolidation_group_count = int(getattr(proposal, "_pre_candidate_consolidation_group_count", 0))
+        consolidation_compactness = float(getattr(proposal, "_pre_candidate_consolidation_compactness", 0.0))
+        consolidation_persistence = float(getattr(proposal, "_pre_candidate_consolidation_persistence", 0.0))
+        consolidation_center_timestamp = float(
+            getattr(proposal, "_pre_candidate_consolidation_center_timestamp", float(proposal.timestamp))
+        )
+        consolidation_center_shift = float(getattr(proposal, "_pre_candidate_consolidation_center_shift", 0.0))
+        consolidation_anchor_timestamp = float(
+            getattr(proposal, "_pre_candidate_consolidation_anchor_timestamp", float(proposal.timestamp))
+        )
+        consolidation_peak_centroid_timestamp = float(
+            getattr(proposal, "_pre_candidate_consolidation_peak_centroid_timestamp", float(proposal.timestamp))
+        )
+        consolidation_proposal_centroid_timestamp = float(
+            getattr(proposal, "_pre_candidate_consolidation_proposal_centroid_timestamp", float(proposal.timestamp))
+        )
+        consolidation_applied_timestamp = float(
+            getattr(proposal, "_pre_candidate_consolidation_applied_timestamp", float(proposal.timestamp))
+        )
+        consolidation_applied_shift = float(
+            getattr(proposal, "_pre_candidate_consolidation_applied_shift", 0.0)
+        )
+        consolidation_grouping_basis = str(
+            getattr(proposal, "_pre_candidate_consolidation_grouping_basis", "proposal")
+        )
+        overlap_agreement_bonus = float(getattr(proposal, "_pre_candidate_overlap_agreement_bonus", 0.0))
+        overlap_agreement_score = float(getattr(proposal, "_pre_candidate_overlap_agreement_score", 0.0))
+        overlap_center_timestamp = float(getattr(proposal, "_pre_candidate_overlap_center_timestamp", float(proposal.timestamp)))
+        overlap_center_shift = float(getattr(proposal, "_pre_candidate_overlap_center_shift", 0.0))
+        overlap_member_count = int(getattr(proposal, "_pre_candidate_overlap_member_count", 0))
+        overlap_pcen_score_mass = float(getattr(proposal, "_pre_candidate_overlap_pcen_score_mass", 0.0))
+        overlap_total_score_mass = float(getattr(proposal, "_pre_candidate_overlap_total_score_mass", 0.0))
+        proposal_evidence_boost = (
+            tail_persistence_weight * tail_persistence_score
+            + cluster_support_weight * cluster_support_score
+            + consolidation_bonus
+            + overlap_agreement_bonus
+        )
+        promotion_bonus = float(getattr(self.config, "pre_candidate_rank_promotion_bonus", 0.0))
+        promotion_min_score = float(getattr(self.config, "pre_candidate_rank_promotion_min_score", 0.0))
+        promotion_min_dive_likeness = float(getattr(self.config, "pre_candidate_rank_promotion_min_dive_likeness", 0.0))
+        promotion_min_prominence = float(getattr(self.config, "pre_candidate_rank_promotion_min_prominence", 0.0))
+        promotion_min_nearby_peaks = int(getattr(self.config, "pre_candidate_rank_promotion_min_nearby_peaks", 0))
+        rank_bonus = (
+            rank_tail_weight * tail_component
+            + rank_asymmetry_weight * asymmetry_component
+            + rank_broadband_weight * broadband_component
+            + rank_decay_weight * decay_component
+            + proposal_evidence_boost
+        )
+        promotion_eligible = (
+            promotion_bonus > 0.0
+            and float(proposal.audio_score) >= promotion_min_score
+            and float(proposal.local_prominence) >= promotion_min_prominence
+            and int(proposal.nearby_peaks_8s) >= promotion_min_nearby_peaks
+            and dive_likeness >= promotion_min_dive_likeness
+        )
+        if promotion_eligible:
+            rank_bonus += promotion_bonus
+        return {
+            "tail_component": float(tail_component),
+            "asymmetry_component": float(asymmetry_component),
+            "broadband_component": float(broadband_component),
+            "decay_component": float(decay_component),
+            "tail_persistence_score": float(tail_persistence_score),
+            "cluster_support_score": float(cluster_support_score),
+            "consolidation_score": float(consolidation_score),
+            "consolidation_bonus": float(consolidation_bonus),
+            "consolidation_group_count": int(consolidation_group_count),
+            "consolidation_compactness": float(consolidation_compactness),
+            "consolidation_persistence": float(consolidation_persistence),
+            "consolidation_center_timestamp": float(consolidation_center_timestamp),
+            "consolidation_center_shift": float(consolidation_center_shift),
+            "consolidation_anchor_timestamp": float(consolidation_anchor_timestamp),
+            "consolidation_peak_centroid_timestamp": float(consolidation_peak_centroid_timestamp),
+            "consolidation_proposal_centroid_timestamp": float(consolidation_proposal_centroid_timestamp),
+            "consolidation_applied_timestamp": float(consolidation_applied_timestamp),
+            "consolidation_applied_shift": float(consolidation_applied_shift),
+            "consolidation_grouping_basis": consolidation_grouping_basis,
+            "overlap_agreement_score": float(overlap_agreement_score),
+            "overlap_agreement_bonus": float(overlap_agreement_bonus),
+            "overlap_center_timestamp": float(overlap_center_timestamp),
+            "overlap_center_shift": float(overlap_center_shift),
+            "overlap_member_count": int(overlap_member_count),
+            "overlap_pcen_score_mass": float(overlap_pcen_score_mass),
+            "overlap_total_score_mass": float(overlap_total_score_mass),
+            "proposal_evidence_boost": float(proposal_evidence_boost),
+            "dive_likeness": float(dive_likeness),
+            "rank_bonus": float(rank_bonus),
+            "rank_score": float(proposal.audio_score + rank_bonus),
+            "promotion_eligible": bool(promotion_eligible),
+        }
+
     def _proposal_details(self, proposal: AudioCandidate) -> Dict[str, Any]:
         details = getattr(proposal, "details", None)
-        if isinstance(details, dict):
-            return dict(details)
-        return {
+        base = dict(details) if isinstance(details, dict) else {
             "audio_score": proposal.audio_score,
             "spectral_flux": proposal.spectral_flux,
             "rms": proposal.rms,
@@ -1074,7 +2507,31 @@ class AudioVisualDiveDetector:
             "local_prominence": proposal.local_prominence,
             "nearby_peaks_8s": proposal.nearby_peaks_8s,
             "audio_model_probability": self._audio_model_probability(proposal),
+            "tail_persistence_score": float(getattr(proposal, "_pre_candidate_tail_persistence_score", 0.0)),
+            "cluster_support_score": float(getattr(proposal, "_pre_candidate_cluster_support_score", 0.0)),
+            "consolidation_score": float(getattr(proposal, "_pre_candidate_consolidation_score", 0.0)),
+            "consolidation_bonus": float(getattr(proposal, "_pre_candidate_consolidation_bonus", 0.0)),
+            "consolidation_group_count": int(getattr(proposal, "_pre_candidate_consolidation_group_count", 0)),
+            "consolidation_compactness": float(getattr(proposal, "_pre_candidate_consolidation_compactness", 0.0)),
+            "consolidation_persistence": float(getattr(proposal, "_pre_candidate_consolidation_persistence", 0.0)),
+            "original_proposal_timestamp_seconds": float(getattr(proposal, "_original_timestamp", proposal.timestamp)),
+            "consolidation_center_applied": bool(
+                float(getattr(proposal, "_pre_candidate_consolidation_applied_shift", 0.0)) != 0.0
+            ),
+            "overlap_agreement_bonus": float(getattr(proposal, "_pre_candidate_overlap_agreement_bonus", 0.0)),
+            "overlap_agreement_score": float(getattr(proposal, "_pre_candidate_overlap_agreement_score", 0.0)),
+            "overlap_center_timestamp": float(getattr(proposal, "_pre_candidate_overlap_center_timestamp", proposal.timestamp)),
+            "overlap_center_shift": float(getattr(proposal, "_pre_candidate_overlap_center_shift", 0.0)),
+            "overlap_member_count": int(getattr(proposal, "_pre_candidate_overlap_member_count", 0)),
+            "overlap_pcen_score_mass": float(getattr(proposal, "_pre_candidate_overlap_pcen_score_mass", 0.0)),
+            "overlap_total_score_mass": float(getattr(proposal, "_pre_candidate_overlap_total_score_mass", 0.0)),
+            "proposal_evidence_boost": float(getattr(proposal, "_pre_candidate_evidence_boost", 0.0)),
         }
+        base.update(self._proposal_ranking_components(proposal))
+        base["local_rescue_survivor"] = bool(getattr(proposal, "_pre_candidate_local_rescue", False))
+        base["local_rescue_score"] = float(getattr(proposal, "_pre_candidate_local_rescue_score", 0.0))
+        base["protected_survivor"] = bool(getattr(proposal, "_pre_candidate_protected_survivor", False))
+        return base
 
     def _attach_details(self, proposal: AudioCandidate, details: Dict[str, Any]) -> AudioCandidate:
         setattr(proposal, "details", details)

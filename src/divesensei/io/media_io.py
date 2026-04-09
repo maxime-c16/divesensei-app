@@ -263,30 +263,35 @@ def generate_review_proxy_ffmpeg(
     temp_output_path = _temp_media_output_path(output_path)
     if temp_output_path.exists():
         temp_output_path.unlink()
-    cmd = [
-        _resolve_binary("ffmpeg"),
+    filter_chain = _review_scale_filter(max_dimension=max_dimension, target_fps=target_fps)
+
+    def _run_proxy(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(cmd, capture_output=True, text=True, check=False)
+
+    ffmpeg_bin = _resolve_binary("ffmpeg")
+    common_input = [
+        ffmpeg_bin,
         "-v",
         "error",
         "-nostdin",
         "-y",
+        "-ignore_unknown",
         "-threads",
         str(max(0, int(ffmpeg_threads))),
         "-i",
         str(video_path),
+        "-map",
+        "0:v:0",
+        "-map",
+        "0:a:0?",
+        "-dn",
+        "-sn",
         "-vf",
-        _review_scale_filter(max_dimension=max_dimension, target_fps=target_fps),
-        "-c:v",
-        "libx264",
-        "-profile:v",
-        "high",
-        "-level:v",
-        "4.1",
+        filter_chain,
+    ]
+    common_output = [
         "-pix_fmt",
         "yuv420p",
-        "-preset",
-        preset,
-        "-crf",
-        "24",
         "-c:a",
         "aac",
         "-b:a",
@@ -295,10 +300,62 @@ def generate_review_proxy_ffmpeg(
         "+faststart",
         str(temp_output_path),
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
-    if result.returncode != 0:
+    commands: list[list[str]] = []
+    if shutil.which("ffmpeg") and shutil.which("ffmpeg") and Path("/usr/bin/uname").exists():
+        try:
+            system_name = subprocess.run(
+                ["/usr/bin/uname", "-s"], capture_output=True, text=True, check=False
+            ).stdout.strip()
+        except Exception:
+            system_name = ""
+    else:
+        system_name = ""
+    if system_name == "Darwin" and "h264_videotoolbox" in (
+        subprocess.run(
+            [ffmpeg_bin, "-hide_banner", "-encoders"], capture_output=True, text=True, check=False
+        ).stdout
+    ):
+        commands.append(
+            common_input
+            + [
+                "-c:v",
+                "h264_videotoolbox",
+                "-profile:v",
+                "high",
+                "-tag:v",
+                "avc1",
+                "-b:v",
+                "2500k",
+                "-maxrate",
+                "4000k",
+                "-bufsize",
+                "8000k",
+            ]
+            + common_output
+        )
+    commands.append(
+        common_input
+        + [
+            "-c:v",
+            "libx264",
+            "-profile:v",
+            "high",
+            "-level:v",
+            "4.1",
+            "-preset",
+            preset,
+            "-crf",
+            "24",
+        ]
+        + common_output
+    )
+    last_error = "unknown ffmpeg error"
+    for cmd in commands:
+        result = _run_proxy(cmd)
+        if result.returncode == 0:
+            os.replace(temp_output_path, output_path)
+            return
         if temp_output_path.exists():
             temp_output_path.unlink()
-        stderr = result.stderr.strip() or "unknown ffmpeg error"
-        raise RuntimeError(f"ffmpeg review proxy failed for {output_path.name}: {stderr}")
-    os.replace(temp_output_path, output_path)
+        last_error = result.stderr.strip() or "unknown ffmpeg error"
+    raise RuntimeError(f"ffmpeg review proxy failed for {output_path.name}: {last_error}")

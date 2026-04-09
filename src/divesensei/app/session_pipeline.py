@@ -81,6 +81,76 @@ def build_config(args: argparse.Namespace):
         audio_noise_max_peak_count=args.audio_noise_max_peak_count,
         audio_noise_max_top_ratio=args.audio_noise_max_top_ratio,
         audio_noise_diversity_bucket_seconds=args.audio_noise_diversity_bucket_seconds,
+        pre_candidate_soft_ratio=args.pre_candidate_soft_ratio,
+        pre_candidate_max_extra_candidates=args.pre_candidate_max_extra_candidates,
+        pre_candidate_local_window_seconds=args.pre_candidate_local_window_seconds,
+        pre_candidate_local_ratio=args.pre_candidate_local_ratio,
+        pre_candidate_tail_ratio=args.pre_candidate_tail_ratio,
+        pre_candidate_tail_boost=args.pre_candidate_tail_boost,
+        pre_candidate_rank_tail_weight=args.pre_candidate_rank_tail_weight,
+        pre_candidate_rank_asymmetry_weight=args.pre_candidate_rank_asymmetry_weight,
+        pre_candidate_rank_broadband_weight=args.pre_candidate_rank_broadband_weight,
+        pre_candidate_rank_decay_weight=args.pre_candidate_rank_decay_weight,
+        pre_candidate_rank_promotion_bonus=args.pre_candidate_rank_promotion_bonus,
+        pre_candidate_rank_promotion_min_score=args.pre_candidate_rank_promotion_min_score,
+        pre_candidate_rank_promotion_min_dive_likeness=args.pre_candidate_rank_promotion_min_dive_likeness,
+        pre_candidate_rank_promotion_min_prominence=args.pre_candidate_rank_promotion_min_prominence,
+        pre_candidate_rank_promotion_min_nearby_peaks=args.pre_candidate_rank_promotion_min_nearby_peaks,
+        pre_candidate_protect_survivor_window_seconds=args.pre_candidate_protect_survivor_window_seconds,
+        pre_candidate_protect_survivor_max_per_bucket=args.pre_candidate_protect_survivor_max_per_bucket,
+        pre_candidate_protect_survivor_min_score=args.pre_candidate_protect_survivor_min_score,
+        pre_candidate_protect_survivor_min_dive_likeness=args.pre_candidate_protect_survivor_min_dive_likeness,
+        pre_candidate_protect_survivor_min_prominence=args.pre_candidate_protect_survivor_min_prominence,
+        pre_candidate_protect_survivor_min_tail_ratio=args.pre_candidate_protect_survivor_min_tail_ratio,
+        pre_candidate_local_rescue_window_seconds=args.pre_candidate_local_rescue_window_seconds,
+        pre_candidate_local_rescue_max_per_bucket=args.pre_candidate_local_rescue_max_per_bucket,
+        pre_candidate_local_rescue_max_per_session=args.pre_candidate_local_rescue_max_per_session,
+        pre_candidate_local_rescue_anchor_min_rank_score=args.pre_candidate_local_rescue_anchor_min_rank_score,
+        pre_candidate_local_rescue_min_score=args.pre_candidate_local_rescue_min_score,
+        pre_candidate_local_rescue_min_dive_likeness=args.pre_candidate_local_rescue_min_dive_likeness,
+        pre_candidate_local_rescue_min_prominence=args.pre_candidate_local_rescue_min_prominence,
+        pre_candidate_local_rescue_min_tail_persistence_score=args.pre_candidate_local_rescue_min_tail_persistence_score,
+        pre_candidate_local_rescue_min_cluster_support_score=args.pre_candidate_local_rescue_min_cluster_support_score,
+        pre_candidate_tail_persistence_weight=args.pre_candidate_tail_persistence_weight,
+        pre_candidate_tail_persistence_short_seconds=args.pre_candidate_tail_persistence_short_seconds,
+        pre_candidate_tail_persistence_medium_seconds=args.pre_candidate_tail_persistence_medium_seconds,
+        pre_candidate_tail_persistence_long_seconds=args.pre_candidate_tail_persistence_long_seconds,
+        pre_candidate_cluster_support_weight=args.pre_candidate_cluster_support_weight,
+        pre_candidate_cluster_support_window_seconds=args.pre_candidate_cluster_support_window_seconds,
+        pre_candidate_cluster_support_min_peak_ratio=args.pre_candidate_cluster_support_min_peak_ratio,
+        pre_candidate_consolidation_weight=args.pre_candidate_consolidation_weight,
+        pre_candidate_consolidation_window_seconds=args.pre_candidate_consolidation_window_seconds,
+        pre_candidate_consolidation_top_peaks=args.pre_candidate_consolidation_top_peaks,
+        pre_candidate_consolidation_min_score=args.pre_candidate_consolidation_min_score,
+        pre_candidate_consolidation_min_cluster_size=args.pre_candidate_consolidation_min_cluster_size,
+        pre_candidate_consolidation_merge_gap_seconds=args.pre_candidate_consolidation_merge_gap_seconds,
+        pre_candidate_consolidation_max_bonus=args.pre_candidate_consolidation_max_bonus,
+        pre_candidate_consolidation_centering_weight=args.pre_candidate_consolidation_centering_weight,
+        pre_candidate_consolidation_group_by_peak_timestamps=args.pre_candidate_consolidation_group_by_peak_timestamps,
+        pre_candidate_overlap_agreement_weight=args.pre_candidate_overlap_agreement_weight,
+        pre_candidate_overlap_window_seconds=args.pre_candidate_overlap_window_seconds,
+        pre_candidate_overlap_min_pcen_persistence=args.pre_candidate_overlap_min_pcen_persistence,
+        pre_candidate_overlap_min_total_score=args.pre_candidate_overlap_min_total_score,
+        pre_candidate_overlap_pcen_center_weight=args.pre_candidate_overlap_pcen_center_weight,
+        frontend_persistence_integral_weight=args.frontend_persistence_integral_weight,
+        frontend_persistence_integral_start_seconds=args.frontend_persistence_integral_start_seconds,
+        frontend_persistence_integral_end_seconds=args.frontend_persistence_integral_end_seconds,
+        frontend_persistence_integral_pre_seconds=args.frontend_persistence_integral_pre_seconds,
+        frontend_persistence_integral_pcen_weight=args.frontend_persistence_integral_pcen_weight,
+        frontend_persistence_integral_max_bonus=args.frontend_persistence_integral_max_bonus,
+        frontend_sustained_noise_exception_enabled=args.frontend_sustained_noise_exception_enabled,
+        frontend_sustained_noise_exception_min_bonus=args.frontend_sustained_noise_exception_min_bonus,
+        frontend_sustained_noise_exception_min_flux_ratio=args.frontend_sustained_noise_exception_min_flux_ratio,
+        frontend_sustained_noise_exception_min_post_flux_ratio=args.frontend_sustained_noise_exception_min_post_flux_ratio,
+        frontend_sustained_noise_exception_min_post_rms_ratio=args.frontend_sustained_noise_exception_min_post_rms_ratio,
+        frontend_sustained_noise_exception_min_prominence=args.frontend_sustained_noise_exception_min_prominence,
+        frontend_sustained_noise_exception_min_pcen_ratio=args.frontend_sustained_noise_exception_min_pcen_ratio,
+        frontend_pattern_persistence_bonus_weight=args.frontend_pattern_persistence_bonus_weight,
+        frontend_pattern_persistence_bonus_max=args.frontend_pattern_persistence_bonus_max,
+        frontend_pattern_persistence_bonus_min_bonus=args.frontend_pattern_persistence_bonus_min_bonus,
+        frontend_pattern_persistence_bonus_min_post_flux_ratio=args.frontend_pattern_persistence_bonus_min_post_flux_ratio,
+        frontend_pattern_persistence_bonus_min_post_rms_ratio=args.frontend_pattern_persistence_bonus_min_post_rms_ratio,
+        frontend_pattern_persistence_bonus_min_prominence=args.frontend_pattern_persistence_bonus_min_prominence,
         audio_long_session_seconds=args.audio_long_session_seconds,
         audio_long_session_max_candidates=args.audio_long_session_max_candidates,
         audio_model_path=args.audio_model_path,
@@ -222,6 +292,76 @@ def build_parser() -> argparse.ArgumentParser:
     internal.add_argument("--audio-noise-max-peak-count", type=int, default=5, help=argparse.SUPPRESS)
     internal.add_argument("--audio-noise-max-top-ratio", type=float, default=1.8, help=argparse.SUPPRESS)
     internal.add_argument("--audio-noise-diversity-bucket-seconds", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-soft-ratio", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-max-extra-candidates", type=int, default=2, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-local-window-seconds", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-local-ratio", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-tail-ratio", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-tail-boost", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-rank-tail-weight", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-rank-asymmetry-weight", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-rank-broadband-weight", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-rank-decay-weight", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-rank-promotion-bonus", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-rank-promotion-min-score", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-rank-promotion-min-dive-likeness", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-rank-promotion-min-prominence", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-rank-promotion-min-nearby-peaks", type=int, default=0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-protect-survivor-window-seconds", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-protect-survivor-max-per-bucket", type=int, default=1, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-protect-survivor-min-score", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-protect-survivor-min-dive-likeness", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-protect-survivor-min-prominence", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-protect-survivor-min-tail-ratio", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-local-rescue-window-seconds", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-local-rescue-max-per-bucket", type=int, default=1, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-local-rescue-max-per-session", type=int, default=2, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-local-rescue-anchor-min-rank-score", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-local-rescue-min-score", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-local-rescue-min-dive-likeness", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-local-rescue-min-prominence", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-local-rescue-min-tail-persistence-score", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-local-rescue-min-cluster-support-score", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-tail-persistence-weight", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-tail-persistence-short-seconds", type=float, default=0.5, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-tail-persistence-medium-seconds", type=float, default=1.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-tail-persistence-long-seconds", type=float, default=2.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-cluster-support-weight", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-cluster-support-window-seconds", type=float, default=1.5, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-cluster-support-min-peak-ratio", type=float, default=0.55, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-consolidation-weight", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-consolidation-window-seconds", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-consolidation-top-peaks", type=int, default=3, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-consolidation-min-score", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-consolidation-min-cluster-size", type=int, default=2, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-consolidation-merge-gap-seconds", type=float, default=0.12, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-consolidation-max-bonus", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-consolidation-centering-weight", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-consolidation-group-by-peak-timestamps", action="store_true", help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-overlap-agreement-weight", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-overlap-window-seconds", type=float, default=0.12, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-overlap-min-pcen-persistence", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-overlap-min-total-score", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-overlap-pcen-center-weight", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-persistence-integral-weight", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-persistence-integral-start-seconds", type=float, default=0.15, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-persistence-integral-end-seconds", type=float, default=0.8, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-persistence-integral-pre-seconds", type=float, default=0.4, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-persistence-integral-pcen-weight", type=float, default=0.6, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-persistence-integral-max-bonus", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-sustained-noise-exception-enabled", action="store_true", help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-sustained-noise-exception-min-bonus", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-sustained-noise-exception-min-flux-ratio", type=float, default=1.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-sustained-noise-exception-min-post-flux-ratio", type=float, default=1.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-sustained-noise-exception-min-post-rms-ratio", type=float, default=1.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-sustained-noise-exception-min-prominence", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-sustained-noise-exception-min-pcen-ratio", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-pattern-persistence-bonus-weight", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-pattern-persistence-bonus-max", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-pattern-persistence-bonus-min-bonus", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-pattern-persistence-bonus-min-post-flux-ratio", type=float, default=1.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-pattern-persistence-bonus-min-post-rms-ratio", type=float, default=1.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-pattern-persistence-bonus-min-prominence", type=float, default=0.0, help=argparse.SUPPRESS)
     internal.add_argument("--audio-long-session-seconds", type=float, default=120.0, help=argparse.SUPPRESS)
     internal.add_argument("--audio-long-session-max-candidates", type=int, default=120, help=argparse.SUPPRESS)
     internal.add_argument("--audio-model-path", default="", help=argparse.SUPPRESS)

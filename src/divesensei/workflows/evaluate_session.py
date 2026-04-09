@@ -160,6 +160,57 @@ def main(argv: Sequence[str] | None = None) -> int:
     review_proxy_status = "skipped" if args.skip_review_proxy else "pending"
     review_proxy_error = None
 
+    peak_rss_kb = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+    evaluation_review_path = output_dir / "evaluation_review.json"
+    if not evaluation_review_path.exists():
+        evaluation_review_path.write_text(json.dumps({"schemaVersion": "1.0.0", "decisions": [], "falseNegatives": []}, indent=2))
+    report = build_report(
+        video_path=video_path,
+        audio_path=prepared_audio_path,
+        output_dir=output_dir,
+        args=args,
+        config=config,
+        candidates=candidates,
+        detect_seconds=detect_seconds,
+        audio_extract_seconds=audio_extract_seconds,
+        review_proxy_path=review_proxy_path,
+        review_proxy_status=review_proxy_status,
+        review_proxy_error=review_proxy_error,
+    )
+    report["detections_csv"] = str(csv_path)
+    report["extract_seconds"] = 0.0
+    report["peak_rss_kb"] = peak_rss_kb
+    report["manifest_ready_seconds"] = time.time() - audio_extract_started
+    report["total_runtime_seconds"] = report["manifest_ready_seconds"]
+    report["extraction_error_count"] = 0
+    report["extraction_errors"] = []
+    report["extracted_paths"] = []
+
+    report_path, ui_manifest_path = write_session_outputs(
+        video_path=video_path,
+        output_dir=output_dir,
+        profile=args.profile,
+        report=report,
+        candidates=candidates,
+        extracted_paths=[],
+        status_override="evaluation_ready",
+        session_mode="evaluation",
+        source_audio_path=str(prepared_audio_path),
+        review_proxy_path=None,
+        evaluation_review_path=str(evaluation_review_path),
+    )
+    logger.log(
+        "evaluation_manifest_ready",
+        report_path=report_path,
+        ui_manifest_path=ui_manifest_path,
+        detections_csv=csv_path,
+        candidate_count=len(candidates),
+        manifest_ready_seconds=report["manifest_ready_seconds"],
+        peak_rss_kb=peak_rss_kb,
+        review_proxy_status=review_proxy_status,
+        session_mode="evaluation",
+    )
+
     if not args.skip_review_proxy:
         logger.log("review_proxy_start", output_path=review_proxy_path)
         try:
@@ -176,10 +227,6 @@ def main(argv: Sequence[str] | None = None) -> int:
             review_proxy_error = str(exc)
             logger.log("review_proxy_error", output_path=review_proxy_path, error=review_proxy_error)
 
-    peak_rss_kb = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
-    evaluation_review_path = output_dir / "evaluation_review.json"
-    if not evaluation_review_path.exists():
-        evaluation_review_path.write_text(json.dumps({"schemaVersion": "1.0.0", "decisions": [], "falseNegatives": []}, indent=2))
     report = build_report(
         video_path=video_path,
         audio_path=prepared_audio_path,
@@ -203,9 +250,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     proposal_rows = list(proposal_trace.get("final_proposals", []))
     proposal_diagnostics_path = write_jsonl(output_dir / "proposal_diagnostics.jsonl", proposal_rows)
+    proposal_transient_peaks_path = write_jsonl(output_dir / "proposal_transient_peaks.jsonl", proposal_trace.get("transient_peaks", []))
     proposal_raw_peaks_path = write_jsonl(output_dir / "proposal_raw_peaks.jsonl", proposal_trace.get("raw_peaks", []))
     proposal_frontend_candidates_path = write_jsonl(output_dir / "proposal_frontend_candidates.jsonl", proposal_trace.get("frontend_candidates", []))
     proposal_suppression_events_path = write_jsonl(output_dir / "proposal_suppression_events.jsonl", proposal_trace.get("suppression_events", []))
+    proposal_frontend_stage_summary_path = write_json(output_dir / "proposal_frontend_stage_summary.json", proposal_trace.get("frontend_stage_summaries", []))
     proposal_summary = dict(proposal_trace.get("summary", {}) or {})
     proposal_summary.update(
         {
@@ -219,9 +268,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     proposal_summary_path = write_json(output_dir / "proposal_diagnostics_summary.json", proposal_summary)
     report["proposal_diagnostics_path"] = str(proposal_diagnostics_path)
+    report["proposal_transient_peaks_path"] = str(proposal_transient_peaks_path)
     report["proposal_raw_peaks_path"] = str(proposal_raw_peaks_path)
     report["proposal_frontend_candidates_path"] = str(proposal_frontend_candidates_path)
     report["proposal_suppression_events_path"] = str(proposal_suppression_events_path)
+    report["proposal_frontend_stage_summary_path"] = str(proposal_frontend_stage_summary_path)
     report["proposal_diagnostics_summary_path"] = str(proposal_summary_path)
     report["extract_seconds"] = 0.0
     report["peak_rss_kb"] = peak_rss_kb
@@ -250,9 +301,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         ui_manifest_path=ui_manifest_path,
         detections_csv=csv_path,
         proposal_diagnostics_path=str(proposal_diagnostics_path),
+        proposal_transient_peaks_path=str(proposal_transient_peaks_path),
         proposal_raw_peaks_path=str(proposal_raw_peaks_path),
         proposal_frontend_candidates_path=str(proposal_frontend_candidates_path),
         proposal_suppression_events_path=str(proposal_suppression_events_path),
+        proposal_frontend_stage_summary_path=str(proposal_frontend_stage_summary_path),
         candidate_count=len(candidates),
         extracted_count=0,
         extraction_error_count=0,
@@ -283,9 +336,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         ui_manifest_path=ui_manifest_path,
         detections_csv=csv_path,
         proposal_diagnostics_path=str(proposal_diagnostics_path),
+        proposal_transient_peaks_path=str(proposal_transient_peaks_path),
         proposal_raw_peaks_path=str(proposal_raw_peaks_path),
         proposal_frontend_candidates_path=str(proposal_frontend_candidates_path),
         proposal_suppression_events_path=str(proposal_suppression_events_path),
+        proposal_frontend_stage_summary_path=str(proposal_frontend_stage_summary_path),
         candidate_count=len(candidates),
         extracted_count=0,
         extraction_error_count=0,
