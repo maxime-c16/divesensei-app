@@ -1074,6 +1074,9 @@ class AudioVisualDiveDetector:
         rescue_min_prominence = float(getattr(self.config, "pre_candidate_local_rescue_min_prominence", 0.0))
         rescue_min_tail_persistence_score = float(getattr(self.config, "pre_candidate_local_rescue_min_tail_persistence_score", 0.0))
         rescue_min_cluster_support_score = float(getattr(self.config, "pre_candidate_local_rescue_min_cluster_support_score", 0.0))
+        cluster_delay_enabled = bool(getattr(self.config, "pre_candidate_cluster_delay_enabled", False))
+        cluster_delay_seconds = float(getattr(self.config, "pre_candidate_cluster_delay_seconds", 0.0))
+        cluster_delay_min_cluster_size = max(2, int(getattr(self.config, "pre_candidate_cluster_delay_min_cluster_size", 2)))
         self._prepare_dive_trend_rank_bonus(proposals)
         scored_items: list[dict[str, Any]] = []
         for proposal in proposals:
@@ -1161,6 +1164,9 @@ class AudioVisualDiveDetector:
             rescue_min_prominence=rescue_min_prominence,
             rescue_min_tail_persistence_score=rescue_min_tail_persistence_score,
             rescue_min_cluster_support_score=rescue_min_cluster_support_score,
+            cluster_delay_enabled=cluster_delay_enabled,
+            cluster_delay_seconds=cluster_delay_seconds,
+            cluster_delay_min_cluster_size=cluster_delay_min_cluster_size,
             events=events,
         )
 
@@ -1190,6 +1196,9 @@ class AudioVisualDiveDetector:
         rescue_min_prominence: float,
         rescue_min_tail_persistence_score: float,
         rescue_min_cluster_support_score: float,
+        cluster_delay_enabled: bool,
+        cluster_delay_seconds: float,
+        cluster_delay_min_cluster_size: int,
         events: list[dict[str, Any]],
     ) -> tuple[List[AudioCandidate], List[Dict[str, Any]]]:
         kept_identities = {self._proposal_identity(candidate) for candidate in kept_candidates}
@@ -1302,8 +1311,19 @@ class AudioVisualDiveDetector:
             rescue_min_prominence=rescue_min_prominence,
             rescue_min_tail_persistence_score=rescue_min_tail_persistence_score,
             rescue_min_cluster_support_score=rescue_min_cluster_support_score,
+            cluster_delay_enabled=cluster_delay_enabled,
+            cluster_delay_seconds=cluster_delay_seconds,
+            cluster_delay_min_cluster_size=cluster_delay_min_cluster_size,
             events=events,
         )
+        if cluster_delay_enabled and cluster_delay_seconds > 0.0 and len(kept_candidates) > 1:
+            kept_candidates, delayed_events = self._apply_cluster_delayed_selection(
+                kept_candidates=kept_candidates,
+                cluster_delay_seconds=cluster_delay_seconds,
+                cluster_delay_min_cluster_size=cluster_delay_min_cluster_size,
+            )
+            kept_identities = {self._proposal_identity(candidate) for candidate in kept_candidates}
+            events.extend(delayed_events)
         dropped_identities: set[tuple[str, int, int, int]] = set()
         for proposal in ranked_proposals:
             identity = self._proposal_identity(proposal)
@@ -1313,6 +1333,63 @@ class AudioVisualDiveDetector:
             dropped_identities.add(identity)
         final_kept = sorted(kept_candidates, key=lambda p: p.timestamp)
         return final_kept, events
+
+    def _apply_cluster_delayed_selection(
+        self,
+        *,
+        kept_candidates: list[AudioCandidate],
+        cluster_delay_seconds: float,
+        cluster_delay_min_cluster_size: int,
+    ) -> tuple[list[AudioCandidate], list[Dict[str, Any]]]:
+        if cluster_delay_seconds <= 0.0 or len(kept_candidates) < cluster_delay_min_cluster_size:
+            return kept_candidates, []
+
+        sorted_kept = sorted(kept_candidates, key=lambda proposal: proposal.timestamp)
+        clusters: list[list[AudioCandidate]] = []
+        current_cluster: list[AudioCandidate] = [sorted_kept[0]]
+        for proposal in sorted_kept[1:]:
+            if float(proposal.timestamp) - float(current_cluster[-1].timestamp) <= cluster_delay_seconds:
+                current_cluster.append(proposal)
+            else:
+                clusters.append(current_cluster)
+                current_cluster = [proposal]
+        if current_cluster:
+            clusters.append(current_cluster)
+
+        selected: list[AudioCandidate] = []
+        events: list[Dict[str, Any]] = []
+        for cluster in clusters:
+            if len(cluster) < cluster_delay_min_cluster_size:
+                selected.extend(cluster)
+                continue
+            best = max(
+                cluster,
+                key=lambda proposal: (
+                    float(getattr(proposal, "_pre_candidate_rank_score", proposal.audio_score)),
+                    float(getattr(proposal, "_pre_candidate_dive_trend_rank_bonus", 0.0)),
+                    float(getattr(proposal, "_pre_candidate_dive_trend_bonus", 0.0)),
+                    float(proposal.local_prominence),
+                    -float(proposal.timestamp),
+                ),
+            )
+            selected.append(best)
+            for victim in cluster:
+                if victim is best:
+                    continue
+                events.append(
+                    {
+                        "event_type": "cluster_delayed_selection",
+                        "cluster_delay_seconds": float(cluster_delay_seconds),
+                        "suppressed_timestamp": float(victim.timestamp),
+                        "survivor_timestamp": float(best.timestamp),
+                        "suppressed_score": float(getattr(victim, "_pre_candidate_rank_score", victim.audio_score)),
+                        "survivor_score": float(getattr(best, "_pre_candidate_rank_score", best.audio_score)),
+                        "suppressed_frontend": getattr(victim, "proposal_frontend", "unknown"),
+                        "survivor_frontend": getattr(best, "proposal_frontend", "unknown"),
+                        "cluster_size": len(cluster),
+                    }
+                )
+        return selected, events
 
     def _apply_local_rescue_survivors(
         self,
@@ -1328,6 +1405,9 @@ class AudioVisualDiveDetector:
         rescue_min_prominence: float,
         rescue_min_tail_persistence_score: float,
         rescue_min_cluster_support_score: float,
+        cluster_delay_enabled: bool,
+        cluster_delay_seconds: float,
+        cluster_delay_min_cluster_size: int,
         events: list[dict[str, Any]],
     ) -> tuple[list[AudioCandidate], list[Dict[str, Any]]]:
         if rescue_window_seconds <= 0.0 or rescue_max_per_bucket <= 0 or rescue_max_per_session <= 0:

@@ -160,6 +160,9 @@ def build_config(args: argparse.Namespace):
         frontend_dive_trend_enabled=args.frontend_dive_trend_enabled,
         frontend_dive_trend_weight=args.frontend_dive_trend_weight,
         frontend_dive_trend_max_bonus=args.frontend_dive_trend_max_bonus,
+        pre_candidate_cluster_delay_enabled=args.pre_candidate_cluster_delay_enabled,
+        pre_candidate_cluster_delay_seconds=args.pre_candidate_cluster_delay_seconds,
+        pre_candidate_cluster_delay_min_cluster_size=args.pre_candidate_cluster_delay_min_cluster_size,
         frontend_region_pattern_exception_enabled=args.frontend_region_pattern_exception_enabled,
         frontend_region_pattern_exception_min_score=args.frontend_region_pattern_exception_min_score,
         frontend_region_pattern_exception_min_prominence=args.frontend_region_pattern_exception_min_prominence,
@@ -420,6 +423,9 @@ def build_parser() -> argparse.ArgumentParser:
     internal.add_argument("--frontend-dive-trend-enabled", action="store_true", help=argparse.SUPPRESS)
     internal.add_argument("--frontend-dive-trend-weight", type=float, default=0.0, help=argparse.SUPPRESS)
     internal.add_argument("--frontend-dive-trend-max-bonus", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-cluster-delay-enabled", action="store_true", help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-cluster-delay-seconds", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--pre-candidate-cluster-delay-min-cluster-size", type=int, default=2, help=argparse.SUPPRESS)
     internal.add_argument("--frontend-region-pattern-exception-enabled", action="store_true", help=argparse.SUPPRESS)
     internal.add_argument("--frontend-region-pattern-exception-min-score", type=float, default=0.0, help=argparse.SUPPRESS)
     internal.add_argument("--frontend-region-pattern-exception-min-prominence", type=float, default=0.0, help=argparse.SUPPRESS)
