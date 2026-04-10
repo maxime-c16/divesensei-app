@@ -1,0 +1,102 @@
+{
+  "generated_at": "2026-04-10",
+  "root": "/Users/mcauchy/divesensei-app",
+  "artifacts": [
+    {
+      "category": "model",
+      "path": ".divesensei-runtime/models/audio_clip_model_insep_20260409.json",
+      "absolute_path": "/Users/mcauchy/divesensei-app/.divesensei-runtime/models/audio_clip_model_insep_20260409.json",
+      "exists": true,
+      "kind": "file",
+      "size_bytes": 10111
+    },
+    {
+      "category": "model",
+      "path": ".divesensei-runtime/models/audio_clip_model_champigny_20260406.json",
+      "absolute_path": "/Users/mcauchy/divesensei-app/.divesensei-runtime/models/audio_clip_model_champigny_20260406.json",
+      "exists": true,
+      "kind": "file",
+      "size_bytes": 10101
+    },
+    {
+      "category": "reviewed_session",
+      "path": "outputs/evaluation_insep_quick_9015_20260409_ui",
+      "absolute_path": "/Users/mcauchy/divesensei-app/outputs/evaluation_insep_quick_9015_20260409_ui",
+      "exists": true,
+      "kind": "directory",
+      "size_bytes_recursive": 146921342
+    },
+    {
+      "category": "reviewed_session",
+      "path": "outputs/evaluation_champigny_20260406-labelling",
+      "absolute_path": "/Users/mcauchy/divesensei-app/outputs/evaluation_champigny_20260406-labelling",
+      "exists": true,
+      "kind": "directory",
+      "size_bytes_recursive": 558674840
+    },
+    {
+      "category": "validated_output",
+      "path": "outputs/evaluation_insep_quick_9015_20260409_region_tiebreak_band020_validate",
+      "absolute_path": "/Users/mcauchy/divesensei-app/outputs/evaluation_insep_quick_9015_20260409_region_tiebreak_band020_validate",
+      "exists": true,
+      "kind": "directory",
+      "size_bytes_recursive": 83910853
+    },
+    {
+      "category": "validated_output",
+      "path": "outputs/evaluation_champigny_region_tiebreak_band020_validate",
+      "absolute_path": "/Users/mcauchy/divesensei-app/outputs/evaluation_champigny_region_tiebreak_band020_validate",
+      "exists": true,
+      "kind": "directory",
+      "size_bytes_recursive": 672926313
+    },
+    {
+      "category": "validated_output",
+      "path": "outputs/evaluation_insep_quick_9015_20260410_tailimbalance_417",
+      "absolute_path": "/Users/mcauchy/divesensei-app/outputs/evaluation_insep_quick_9015_20260410_tailimbalance_417",
+      "exists": true,
+      "kind": "directory",
+      "size_bytes_recursive": 86646634
+    },
+    {
+      "category": "validated_output",
+      "path": "outputs/evaluation_champigny_20260410_tailimbalance_417",
+      "absolute_path": "/Users/mcauchy/divesensei-app/outputs/evaluation_champigny_20260410_tailimbalance_417",
+      "exists": true,
+      "kind": "directory",
+      "size_bytes_recursive": 139429
+    },
+    {
+      "category": "experimental_output",
+      "path": "outputs/evaluation_insep_quick_9015_20260410_shortregion_145",
+      "absolute_path": "/Users/mcauchy/divesensei-app/outputs/evaluation_insep_quick_9015_20260410_shortregion_145",
+      "exists": true,
+      "kind": "directory",
+      "size_bytes_recursive": 87522405
+    },
+    {
+      "category": "experimental_output",
+      "path": "outputs/evaluation_champigny_20260410_shortregion_145",
+      "absolute_path": "/Users/mcauchy/divesensei-app/outputs/evaluation_champigny_20260410_shortregion_145",
+      "exists": true,
+      "kind": "directory",
+      "size_bytes_recursive": 696196998
+    },
+    {
+      "category": "springboard_validated",
+      "path": "outputs/evaluation_insep_15min_validated",
+      "absolute_path": "/Users/mcauchy/divesensei-app/outputs/evaluation_insep_15min_validated",
+      "exists": true,
+      "kind": "directory",
+      "size_bytes_recursive": 169182480
+    },
+    {
+      "category": "springboard_experimental",
+      "path": "outputs/evaluation_insep_15min_experimental_145",
+      "absolute_path": "/Users/mcauchy/divesensei-app/outputs/evaluation_insep_15min_experimental_145",
+      "exists": true,
+      "kind": "directory",
+      "size_bytes_recursive": 169187278
+    }
+  ]
+}

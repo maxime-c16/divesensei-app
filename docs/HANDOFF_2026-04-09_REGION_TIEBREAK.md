@@ -357,3 +357,129 @@ Do NOT modify the region descriptor further.
 Do NOT restart heuristic exploration on this machine.
 
 The next step is evaluation on the Mac with full replay/export capability.
+
+## 10. Post-Validation Follow-Up: True Unresolved INSEP Misses
+
+After evaluation cleanup, the active unresolved INSEP detector-side misses were:
+
+- `23.778071s`
+- `48.656411s`
+- `145.714040s`
+- `157.576774s`
+- `417.488888s`
+
+The cleaned boundary also established:
+
+- `114.350347s` is already detector-side solved and should not be optimized further
+- `398.422697s` has nearby proposal formation but remains an ambiguous downstream classifier case and should not be forced through acceptance
+
+### One bounded follow-up experiment that worked
+
+Implemented a new opt-in weak-pattern escape hatch for threshold-passed, region-supported, splash-like moderate events:
+
+New config flags:
+
+- `--frontend-region-pattern-exception-enabled`
+- `--frontend-region-pattern-exception-min-score`
+- `--frontend-region-pattern-exception-min-prominence`
+- `--frontend-region-pattern-exception-min-post-flux-ratio`
+- `--frontend-region-pattern-exception-min-post-rms-ratio`
+- `--frontend-region-pattern-exception-min-bonus`
+
+Tested configuration:
+
+```bash
+--frontend-region-descriptor-enabled \
+--frontend-region-descriptor-weight 2.0 \
+--frontend-region-descriptor-max-bonus 0.6 \
+--frontend-region-descriptor-pre-seconds 0.2 \
+--frontend-region-descriptor-post-seconds 0.8 \
+--frontend-region-descriptor-pattern-tiebreak-band 0.20 \
+--frontend-region-pattern-exception-enabled \
+--frontend-region-pattern-exception-min-score 6.0 \
+--frontend-region-pattern-exception-min-prominence 6.0 \
+--frontend-region-pattern-exception-min-post-flux-ratio 1.5 \
+--frontend-region-pattern-exception-min-post-rms-ratio 1.6 \
+--frontend-region-pattern-exception-min-bonus 0.25
+```
+
+### Measured INSEP result
+
+Baseline validated region tie-break run:
+
+- candidate count: `19`
+- false negatives: `7`
+- nearby frontend candidates: `2`
+- nearby final proposals: `2`
+- practical `±1.0s` accepted detections: `1`
+- practical `±1.0s` unresolved: `5`
+- reviewed FP/min: `0.13769931976536035`
+- replay coverage: `0.22535211267605634`
+
+Bounded region-pattern exception run:
+
+- candidate count: `22`
+- false negatives: `7`
+- nearby frontend candidates: `3`
+- nearby final proposals: `3`
+- practical `±1.0s` accepted detections: `2`
+- practical `±1.0s` unresolved: `4`
+- reviewed FP/min: `0.13769931976536035`
+- replay coverage: `0.22535211267605634`
+
+Exact recovered unresolved case:
+
+- `48.656411s` -> nearby accepted detection at `48.096s`
+- offset: `-0.5604108979997378s`
+- frontend: `pcen_multiband`
+- practical resolution bucket at `±1.0s`: `nearby_accepted_detection`
+
+This is a real bounded detector-side improvement on a previously unresolved miss.
+
+### Champigny sanity check
+
+Run: `outputs/evaluation_champigny_region_exception_48`
+
+Measured result:
+
+- candidate count: `14` (unchanged)
+- false negatives: `3` (unchanged)
+- nearby frontend candidates: `0` (unchanged)
+- nearby final proposals: `0` (unchanged)
+- practical accepted detections at `±1.0s`: `0`
+- reviewed FP/min: `0.01660957126544171` (unchanged)
+- replay coverage: `0.12612612612612611` (unchanged)
+
+So the exception improved INSEP without measurable Champigny regression.
+
+### Current best branch after this follow-up
+
+Preferred current experimental path is now:
+
+1. validated region descriptor tie-break baseline
+2. plus the bounded region-pattern exception above
+
+### Remaining true unresolved detector-side targets after the new run
+
+At `±1.0s`, these remain unresolved in INSEP:
+
+- `23.778071s`
+- `145.714040s`
+- `157.576774s`
+- `417.488888s`
+
+And this remains proposal-formed but downstream ambiguous:
+
+- `398.422697s`
+
+### Recommendation
+
+Continue only if targeting one of the four remaining unresolved cases above.
+
+Do not spend more work on:
+
+- `114.350347s`
+- `48.656411s`
+- `398.422697s`
+
+The next highest-value unresolved target is still likely `417.488888s` if staying in the same heuristic family, but the recent bounded exception already shows the family is not exhausted yet.

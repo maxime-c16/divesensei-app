@@ -208,6 +208,68 @@ def _local_score_max(rows: Sequence[dict[str, Any]], timestamp: float, key_name:
     return max(values) if values else None
 
 
+PRACTICAL_FALSE_NEGATIVE_TOLERANCES: tuple[float, ...] = (0.5, 1.0, 1.5)
+
+
+def _resolution_bucket_for_tolerance(
+    *,
+    accepted_detection: dict[str, Any] | None,
+    accepted_proposal: dict[str, Any] | None,
+    frontend_candidate: dict[str, Any] | None,
+) -> str:
+    if accepted_detection is not None:
+        return "nearby_accepted_detection"
+    if accepted_proposal is not None:
+        return "nearby_accepted_proposal_but_not_detection"
+    if frontend_candidate is not None:
+        return "nearby_frontend_candidate_only"
+    return "no_nearby_accepted_detection"
+
+
+def _practical_false_negative_resolution(
+    *,
+    timestamp: float,
+    proposal_rows: Sequence[dict[str, Any]],
+    frontend_candidate_rows: Sequence[dict[str, Any]],
+) -> dict[str, Any]:
+    accepted_detection_rows = [
+        row
+        for row in proposal_rows
+        if str(row.get("pipeline_stage", "")) == "final_selected" and row.get("final_detection_id")
+    ]
+    accepted_proposal_rows = [
+        row
+        for row in proposal_rows
+        if str(row.get("pipeline_stage", "")) in {"final_selected", "ambiguous_case", "threshold_rejected"}
+    ]
+    results: dict[str, Any] = {}
+    for tolerance in PRACTICAL_FALSE_NEGATIVE_TOLERANCES:
+        key = f"{tolerance:.1f}s"
+        accepted_detection = _nearest_row(accepted_detection_rows, timestamp, "timestamp", tolerance)
+        accepted_proposal = _nearest_row(accepted_proposal_rows, timestamp, "timestamp", tolerance)
+        frontend_candidate = _nearest_row(frontend_candidate_rows, timestamp, "timestamp", tolerance)
+        results[key] = {
+            "tolerance_seconds": tolerance,
+            "resolution_bucket": _resolution_bucket_for_tolerance(
+                accepted_detection=accepted_detection,
+                accepted_proposal=accepted_proposal,
+                frontend_candidate=frontend_candidate,
+            ),
+            "accepted_detection_timestamp_seconds": float(accepted_detection.get("timestamp", 0.0)) if accepted_detection else None,
+            "accepted_detection_offset_seconds": (float(accepted_detection.get("timestamp", 0.0)) - timestamp) if accepted_detection else None,
+            "accepted_detection_id": accepted_detection.get("final_detection_id") if accepted_detection else None,
+            "accepted_detection_frontend": accepted_detection.get("proposal_frontend") if accepted_detection else None,
+            "accepted_proposal_timestamp_seconds": float(accepted_proposal.get("timestamp", 0.0)) if accepted_proposal else None,
+            "accepted_proposal_offset_seconds": (float(accepted_proposal.get("timestamp", 0.0)) - timestamp) if accepted_proposal else None,
+            "accepted_proposal_stage": accepted_proposal.get("pipeline_stage") if accepted_proposal else None,
+            "accepted_proposal_frontend": accepted_proposal.get("proposal_frontend") if accepted_proposal else None,
+            "frontend_candidate_timestamp_seconds": float(frontend_candidate.get("timestamp", 0.0)) if frontend_candidate else None,
+            "frontend_candidate_offset_seconds": (float(frontend_candidate.get("timestamp", 0.0)) - timestamp) if frontend_candidate else None,
+            "frontend_candidate_frontend": frontend_candidate.get("proposal_frontend") if frontend_candidate else None,
+        }
+    return results
+
+
 def _label_audio_command(row: dict[str, Any], *, pre_seconds: float, post_seconds: float) -> str:
     note_bits = ["hard negative mined from evaluation"]
     subtype = row.get("subtype")
@@ -315,6 +377,11 @@ def _attribute_false_negative(
     analysis_window_seconds: float,
 ) -> dict[str, Any]:
     timestamp = float(annotation.get("timestampSeconds", 0.0) or 0.0)
+    practical_resolution = _practical_false_negative_resolution(
+        timestamp=timestamp,
+        proposal_rows=proposal_rows,
+        frontend_candidate_rows=frontend_candidate_rows,
+    )
     matched = _nearest_row(proposal_rows, timestamp, "timestamp", tolerance_seconds)
     nearest_proposal = _nearest_row(proposal_rows, timestamp, "timestamp", analysis_window_seconds)
     nearest_transient_peak = _nearest_row(transient_peak_rows, timestamp, "timestamp", analysis_window_seconds)
@@ -478,6 +545,10 @@ def _attribute_false_negative(
         "nearest_suppression_offset_seconds": (float(nearest_suppression.get("suppressed_timestamp", 0.0)) - timestamp) if nearest_suppression else None,
         "nearest_suppressed_timestamp_seconds": float(nearest_suppression.get("suppressed_timestamp", 0.0)) if nearest_suppression else None,
         "nearest_survivor_timestamp_seconds": float(nearest_suppression.get("survivor_timestamp", 0.0)) if nearest_suppression else None,
+        "practical_resolution": practical_resolution,
+        "practical_resolution_bucket_0_5s": practical_resolution["0.5s"]["resolution_bucket"],
+        "practical_resolution_bucket_1_0s": practical_resolution["1.0s"]["resolution_bucket"],
+        "practical_resolution_bucket_1_5s": practical_resolution["1.5s"]["resolution_bucket"],
     }
     if matched is not None:
         for feature_name in AUDIO_CLIP_FEATURES:
@@ -552,6 +623,25 @@ def _proposal_recall_summary(reviewed_candidates: Sequence[dict[str, Any]], fals
         "false_negative_nearby_frontend_candidate_count": sum(1 for row in false_negatives if row.get("nearest_frontend_candidate_timestamp_seconds") is not None),
         "false_negative_nearby_final_proposal_count": sum(1 for row in false_negatives if row.get("nearest_proposal_timestamp_seconds") is not None),
     }
+
+
+def _practical_resolution_summary(false_negatives: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    summary: dict[str, Any] = {}
+    for tolerance in PRACTICAL_FALSE_NEGATIVE_TOLERANCES:
+        key = f"{tolerance:.1f}s"
+        bucket_counts: dict[str, int] = {}
+        for row in false_negatives:
+            bucket = str((row.get("practical_resolution") or {}).get(key, {}).get("resolution_bucket") or "unknown")
+            bucket_counts[bucket] = bucket_counts.get(bucket, 0) + 1
+        summary[key] = {
+            "tolerance_seconds": tolerance,
+            "resolution_bucket_counts": bucket_counts,
+            "accepted_detection_count": bucket_counts.get("nearby_accepted_detection", 0),
+            "accepted_proposal_only_count": bucket_counts.get("nearby_accepted_proposal_but_not_detection", 0),
+            "frontend_candidate_only_count": bucket_counts.get("nearby_frontend_candidate_only", 0),
+            "unresolved_count": bucket_counts.get("no_nearby_accepted_detection", 0),
+        }
+    return summary
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -648,6 +738,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     for row in false_negatives:
         key = str(row.get("nearest_frontend_score_peak_pre_candidate_loss_stage") or "unknown")
         pre_candidate_stage_counts[key] = pre_candidate_stage_counts.get(key, 0) + 1
+    practical_resolution_summary = _practical_resolution_summary(false_negatives)
 
     summary = {
         "session_id": manifest["session"]["id"],
@@ -671,6 +762,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "proposal_failure_attribution": proposal_failure_counts,
         "false_negative_pattern_attribution": pattern_counts,
         "pre_candidate_stage_attribution": pre_candidate_stage_counts,
+        "practical_false_negative_resolution": practical_resolution_summary,
         "per_session_metrics": [_per_session_metrics(manifest, reviewed_candidates, false_negatives)],
         "proposal_recall_summary": _proposal_recall_summary(reviewed_candidates, false_negatives),
         "replay_mapping_quality": replay_metadata,

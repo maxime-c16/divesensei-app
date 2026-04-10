@@ -659,6 +659,94 @@ class AudioVisualDiveDetector:
             )
             sustained_noise_reject = sustained_noise_reject and not sustained_noise_exception
             strong_impulse_candidate = effective_peak_score >= 8.0 and local_prominence >= 7.5
+            region_pattern_exception = (
+                bool(getattr(self.config, "frontend_region_pattern_exception_enabled", False))
+                and threshold_passed
+                and timestamp_allowed
+                and hf_allowed
+                and score_allowed
+                and not early_peak_allowed
+                and not strong_impulse_candidate
+                and effective_peak_score >= float(getattr(self.config, "frontend_region_pattern_exception_min_score", 0.0))
+                and local_prominence >= float(getattr(self.config, "frontend_region_pattern_exception_min_prominence", 0.0))
+                and post_flux_ratio >= float(getattr(self.config, "frontend_region_pattern_exception_min_post_flux_ratio", 1.0))
+                and post_rms_ratio >= float(getattr(self.config, "frontend_region_pattern_exception_min_post_rms_ratio", 1.0))
+                and float(region_descriptor["frontend_region_descriptor_bonus"])
+                >= float(getattr(self.config, "frontend_region_pattern_exception_min_bonus", 0.0))
+            )
+            dense_pcen_pattern_exception = (
+                bool(getattr(self.config, "frontend_dense_pcen_pattern_exception_enabled", False))
+                and str(frontend_name) == "pcen_multiband"
+                and threshold_passed
+                and timestamp_allowed
+                and hf_allowed
+                and score_allowed
+                and not early_peak_allowed
+                and not strong_impulse_candidate
+                and effective_peak_score >= float(getattr(self.config, "frontend_dense_pcen_pattern_exception_min_score", 0.0))
+                and local_prominence >= float(getattr(self.config, "frontend_dense_pcen_pattern_exception_min_prominence", 0.0))
+                and post_flux_ratio >= float(getattr(self.config, "frontend_dense_pcen_pattern_exception_min_post_flux_ratio", 1.0))
+                and post_rms_ratio >= float(getattr(self.config, "frontend_dense_pcen_pattern_exception_min_post_rms_ratio", 1.0))
+                and int(nearby_peaks_8s) >= int(getattr(self.config, "frontend_dense_pcen_pattern_exception_min_nearby_peaks", 0))
+                and peak_flatness <= float(getattr(self.config, "frontend_dense_pcen_pattern_exception_max_flatness", 1.0))
+            )
+            region_tail_imbalance_exception = (
+                bool(getattr(self.config, "frontend_region_tail_imbalance_exception_enabled", False))
+                and str(frontend_name) == "pcen_multiband"
+                and threshold_passed
+                and timestamp_allowed
+                and hf_allowed
+                and score_allowed
+                and not early_peak_allowed
+                and not strong_impulse_candidate
+                and effective_peak_score >= float(getattr(self.config, "frontend_region_tail_imbalance_exception_min_score", 0.0))
+                and local_prominence >= float(getattr(self.config, "frontend_region_tail_imbalance_exception_min_prominence", 0.0))
+                and post_flux_ratio >= float(getattr(self.config, "frontend_region_tail_imbalance_exception_min_post_flux_ratio", 1.0))
+                and post_rms_ratio >= float(getattr(self.config, "frontend_region_tail_imbalance_exception_min_post_rms_ratio", 1.0))
+                and post_rms_ratio <= float(getattr(self.config, "frontend_region_tail_imbalance_exception_max_post_rms_ratio", 999.0))
+                and float(region_descriptor["frontend_region_descriptor_bonus"])
+                >= float(getattr(self.config, "frontend_region_tail_imbalance_exception_min_bonus", 0.0))
+                and float(region_descriptor["frontend_region_late_over_early"])
+                >= float(getattr(self.config, "frontend_region_tail_imbalance_exception_min_late_over_early", 0.0))
+                and float(region_descriptor["frontend_region_duration_above_1p10"])
+                >= float(getattr(self.config, "frontend_region_tail_imbalance_exception_min_duration_above_1p10", 0.0))
+                and float(region_descriptor["frontend_region_time_to_peak"])
+                >= float(getattr(self.config, "frontend_region_tail_imbalance_exception_min_time_to_peak", 0.0))
+                and float(region_descriptor["frontend_region_time_to_peak"])
+                <= float(getattr(self.config, "frontend_region_tail_imbalance_exception_max_time_to_peak", 999.0))
+                and peak_flatness <= float(getattr(self.config, "frontend_region_tail_imbalance_exception_max_flatness", 1.0))
+            )
+            short_region_tail_exception = (
+                bool(getattr(self.config, "frontend_short_region_tail_exception_enabled", False))
+                and str(frontend_name) == "pcen_multiband"
+                and threshold_passed
+                and timestamp_allowed
+                and hf_allowed
+                and score_allowed
+                and not early_peak_allowed
+                and not strong_impulse_candidate
+                and effective_peak_score >= float(getattr(self.config, "frontend_short_region_tail_exception_min_score", 0.0))
+                and local_prominence >= float(getattr(self.config, "frontend_short_region_tail_exception_min_prominence", 0.0))
+                and post_flux_ratio >= float(getattr(self.config, "frontend_short_region_tail_exception_min_post_flux_ratio", 1.0))
+                and post_rms_ratio >= float(getattr(self.config, "frontend_short_region_tail_exception_min_post_rms_ratio", 1.0))
+                and float(region_descriptor["frontend_region_descriptor_bonus"])
+                >= float(getattr(self.config, "frontend_short_region_tail_exception_min_bonus", 0.0))
+                and float(region_descriptor["frontend_region_descriptor_bonus"])
+                <= float(getattr(self.config, "frontend_short_region_tail_exception_max_bonus", 999.0))
+                and float(region_descriptor["frontend_region_late_over_early"])
+                >= float(getattr(self.config, "frontend_short_region_tail_exception_min_late_over_early", 0.0))
+                and float(region_descriptor["frontend_region_duration_above_1p10"])
+                >= float(getattr(self.config, "frontend_short_region_tail_exception_min_duration_above_1p10", 0.0))
+                and float(region_descriptor["frontend_region_duration_above_1p10"])
+                <= float(getattr(self.config, "frontend_short_region_tail_exception_max_duration_above_1p10", 999.0))
+                and int(nearby_peaks_8s) >= int(getattr(self.config, "frontend_short_region_tail_exception_min_nearby_peaks", 0))
+                and int(nearby_peaks_8s) <= int(getattr(self.config, "frontend_short_region_tail_exception_max_nearby_peaks", 999))
+                and float(region_descriptor["frontend_region_time_to_peak"])
+                >= float(getattr(self.config, "frontend_short_region_tail_exception_min_time_to_peak", 0.0))
+                and float(region_descriptor["frontend_region_time_to_peak"])
+                <= float(getattr(self.config, "frontend_short_region_tail_exception_max_time_to_peak", 999.0))
+                and peak_flatness <= float(getattr(self.config, "frontend_short_region_tail_exception_max_flatness", 1.0))
+            )
             proposal = AudioCandidate(
                 timestamp=timestamp,
                 audio_score=effective_peak_score,
@@ -707,7 +795,15 @@ class AudioVisualDiveDetector:
                 details["pcen_onset_mean"] = float(onset_sum[peak_idx])
             if onset_peak is not None:
                 details["pcen_onset_peak"] = float(onset_peak[peak_idx])
-            pattern_allowed = early_peak_allowed or strong_impulse_candidate or audio_pattern_score >= min_pattern_score
+            pattern_allowed = (
+                early_peak_allowed
+                or strong_impulse_candidate
+                or region_pattern_exception
+                or dense_pcen_pattern_exception
+                or region_tail_imbalance_exception
+                or short_region_tail_exception
+                or audio_pattern_score >= min_pattern_score
+            )
             audio_model_probability = None
             audio_model_allowed = True
             if self.audio_candidate_model is not None and not early_peak_allowed:
@@ -720,6 +816,10 @@ class AudioVisualDiveDetector:
             details["frontend_region_pattern_tiebreak_bonus"] = float(region_pattern_tiebreak_bonus)
             details["frontend_region_pattern_tiebreak_applied"] = bool(region_pattern_tiebreak_applied)
             details["frontend_region_pattern_tiebreak_band"] = float(region_pattern_tiebreak_band)
+            details["frontend_region_pattern_exception"] = bool(region_pattern_exception)
+            details["frontend_dense_pcen_pattern_exception"] = bool(dense_pcen_pattern_exception)
+            details["frontend_region_tail_imbalance_exception"] = bool(region_tail_imbalance_exception)
+            details["frontend_short_region_tail_exception"] = bool(short_region_tail_exception)
             details["early_peak_allowed"] = bool(early_peak_allowed)
             details["strong_impulse_candidate"] = bool(strong_impulse_candidate)
             details["threshold_passed"] = bool(threshold_passed)

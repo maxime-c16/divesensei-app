@@ -157,6 +157,46 @@ def build_config(args: argparse.Namespace):
         frontend_region_descriptor_pre_seconds=args.frontend_region_descriptor_pre_seconds,
         frontend_region_descriptor_post_seconds=args.frontend_region_descriptor_post_seconds,
         frontend_region_descriptor_pattern_tiebreak_band=args.frontend_region_descriptor_pattern_tiebreak_band,
+        frontend_region_pattern_exception_enabled=args.frontend_region_pattern_exception_enabled,
+        frontend_region_pattern_exception_min_score=args.frontend_region_pattern_exception_min_score,
+        frontend_region_pattern_exception_min_prominence=args.frontend_region_pattern_exception_min_prominence,
+        frontend_region_pattern_exception_min_post_flux_ratio=args.frontend_region_pattern_exception_min_post_flux_ratio,
+        frontend_region_pattern_exception_min_post_rms_ratio=args.frontend_region_pattern_exception_min_post_rms_ratio,
+        frontend_region_pattern_exception_min_bonus=args.frontend_region_pattern_exception_min_bonus,
+        frontend_dense_pcen_pattern_exception_enabled=args.frontend_dense_pcen_pattern_exception_enabled,
+        frontend_dense_pcen_pattern_exception_min_score=args.frontend_dense_pcen_pattern_exception_min_score,
+        frontend_dense_pcen_pattern_exception_min_prominence=args.frontend_dense_pcen_pattern_exception_min_prominence,
+        frontend_dense_pcen_pattern_exception_min_post_flux_ratio=args.frontend_dense_pcen_pattern_exception_min_post_flux_ratio,
+        frontend_dense_pcen_pattern_exception_min_post_rms_ratio=args.frontend_dense_pcen_pattern_exception_min_post_rms_ratio,
+        frontend_dense_pcen_pattern_exception_min_nearby_peaks=args.frontend_dense_pcen_pattern_exception_min_nearby_peaks,
+        frontend_dense_pcen_pattern_exception_max_flatness=args.frontend_dense_pcen_pattern_exception_max_flatness,
+        frontend_region_tail_imbalance_exception_enabled=args.frontend_region_tail_imbalance_exception_enabled,
+        frontend_region_tail_imbalance_exception_min_score=args.frontend_region_tail_imbalance_exception_min_score,
+        frontend_region_tail_imbalance_exception_min_prominence=args.frontend_region_tail_imbalance_exception_min_prominence,
+        frontend_region_tail_imbalance_exception_min_post_flux_ratio=args.frontend_region_tail_imbalance_exception_min_post_flux_ratio,
+        frontend_region_tail_imbalance_exception_min_post_rms_ratio=args.frontend_region_tail_imbalance_exception_min_post_rms_ratio,
+        frontend_region_tail_imbalance_exception_max_post_rms_ratio=args.frontend_region_tail_imbalance_exception_max_post_rms_ratio,
+        frontend_region_tail_imbalance_exception_min_bonus=args.frontend_region_tail_imbalance_exception_min_bonus,
+        frontend_region_tail_imbalance_exception_min_late_over_early=args.frontend_region_tail_imbalance_exception_min_late_over_early,
+        frontend_region_tail_imbalance_exception_min_duration_above_1p10=args.frontend_region_tail_imbalance_exception_min_duration_above_1p10,
+        frontend_region_tail_imbalance_exception_min_time_to_peak=args.frontend_region_tail_imbalance_exception_min_time_to_peak,
+        frontend_region_tail_imbalance_exception_max_time_to_peak=args.frontend_region_tail_imbalance_exception_max_time_to_peak,
+        frontend_region_tail_imbalance_exception_max_flatness=args.frontend_region_tail_imbalance_exception_max_flatness,
+        frontend_short_region_tail_exception_enabled=args.frontend_short_region_tail_exception_enabled,
+        frontend_short_region_tail_exception_min_score=args.frontend_short_region_tail_exception_min_score,
+        frontend_short_region_tail_exception_min_prominence=args.frontend_short_region_tail_exception_min_prominence,
+        frontend_short_region_tail_exception_min_post_flux_ratio=args.frontend_short_region_tail_exception_min_post_flux_ratio,
+        frontend_short_region_tail_exception_min_post_rms_ratio=args.frontend_short_region_tail_exception_min_post_rms_ratio,
+        frontend_short_region_tail_exception_min_bonus=args.frontend_short_region_tail_exception_min_bonus,
+        frontend_short_region_tail_exception_max_bonus=args.frontend_short_region_tail_exception_max_bonus,
+        frontend_short_region_tail_exception_min_late_over_early=args.frontend_short_region_tail_exception_min_late_over_early,
+        frontend_short_region_tail_exception_min_duration_above_1p10=args.frontend_short_region_tail_exception_min_duration_above_1p10,
+        frontend_short_region_tail_exception_max_duration_above_1p10=args.frontend_short_region_tail_exception_max_duration_above_1p10,
+        frontend_short_region_tail_exception_min_nearby_peaks=args.frontend_short_region_tail_exception_min_nearby_peaks,
+        frontend_short_region_tail_exception_max_nearby_peaks=args.frontend_short_region_tail_exception_max_nearby_peaks,
+        frontend_short_region_tail_exception_min_time_to_peak=args.frontend_short_region_tail_exception_min_time_to_peak,
+        frontend_short_region_tail_exception_max_time_to_peak=args.frontend_short_region_tail_exception_max_time_to_peak,
+        frontend_short_region_tail_exception_max_flatness=args.frontend_short_region_tail_exception_max_flatness,
         audio_long_session_seconds=args.audio_long_session_seconds,
         audio_long_session_max_candidates=args.audio_long_session_max_candidates,
         audio_model_path=args.audio_model_path,
@@ -374,6 +414,46 @@ def build_parser() -> argparse.ArgumentParser:
     internal.add_argument("--frontend-region-descriptor-pre-seconds", type=float, default=0.2, help=argparse.SUPPRESS)
     internal.add_argument("--frontend-region-descriptor-post-seconds", type=float, default=0.8, help=argparse.SUPPRESS)
     internal.add_argument("--frontend-region-descriptor-pattern-tiebreak-band", type=float, default=0.35, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-region-pattern-exception-enabled", action="store_true", help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-region-pattern-exception-min-score", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-region-pattern-exception-min-prominence", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-region-pattern-exception-min-post-flux-ratio", type=float, default=1.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-region-pattern-exception-min-post-rms-ratio", type=float, default=1.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-region-pattern-exception-min-bonus", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-dense-pcen-pattern-exception-enabled", action="store_true", help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-dense-pcen-pattern-exception-min-score", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-dense-pcen-pattern-exception-min-prominence", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-dense-pcen-pattern-exception-min-post-flux-ratio", type=float, default=1.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-dense-pcen-pattern-exception-min-post-rms-ratio", type=float, default=1.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-dense-pcen-pattern-exception-min-nearby-peaks", type=int, default=0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-dense-pcen-pattern-exception-max-flatness", type=float, default=1.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-region-tail-imbalance-exception-enabled", action="store_true", help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-region-tail-imbalance-exception-min-score", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-region-tail-imbalance-exception-min-prominence", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-region-tail-imbalance-exception-min-post-flux-ratio", type=float, default=1.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-region-tail-imbalance-exception-min-post-rms-ratio", type=float, default=1.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-region-tail-imbalance-exception-max-post-rms-ratio", type=float, default=999.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-region-tail-imbalance-exception-min-bonus", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-region-tail-imbalance-exception-min-late-over-early", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-region-tail-imbalance-exception-min-duration-above-1p10", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-region-tail-imbalance-exception-min-time-to-peak", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-region-tail-imbalance-exception-max-time-to-peak", type=float, default=999.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-region-tail-imbalance-exception-max-flatness", type=float, default=1.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-short-region-tail-exception-enabled", action="store_true", help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-short-region-tail-exception-min-score", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-short-region-tail-exception-min-prominence", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-short-region-tail-exception-min-post-flux-ratio", type=float, default=1.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-short-region-tail-exception-min-post-rms-ratio", type=float, default=1.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-short-region-tail-exception-min-bonus", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-short-region-tail-exception-max-bonus", type=float, default=999.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-short-region-tail-exception-min-late-over-early", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-short-region-tail-exception-min-duration-above-1p10", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-short-region-tail-exception-max-duration-above-1p10", type=float, default=999.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-short-region-tail-exception-min-nearby-peaks", type=int, default=0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-short-region-tail-exception-max-nearby-peaks", type=int, default=999, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-short-region-tail-exception-min-time-to-peak", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-short-region-tail-exception-max-time-to-peak", type=float, default=999.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-short-region-tail-exception-max-flatness", type=float, default=1.0, help=argparse.SUPPRESS)
     internal.add_argument("--audio-long-session-seconds", type=float, default=120.0, help=argparse.SUPPRESS)
     internal.add_argument("--audio-long-session-max-candidates", type=int, default=120, help=argparse.SUPPRESS)
     internal.add_argument("--audio-model-path", default="", help=argparse.SUPPRESS)
