@@ -2802,6 +2802,7 @@ class AudioVisualDiveDetector:
                 setattr(proposal, "_pre_candidate_dive_trend_raw_score", 0.0)
                 setattr(proposal, "_pre_candidate_dive_trend_probability", 0.0)
                 setattr(proposal, "_pre_candidate_dive_trend_bonus", 0.0)
+                setattr(proposal, "_pre_candidate_dive_trend_rank_bonus", 0.0)
             return
         feature_values: dict[str, list[float]] = {name: [] for name in feature_names}
         for proposal in proposals:
@@ -2835,6 +2836,37 @@ class AudioVisualDiveDetector:
             setattr(proposal, "_pre_candidate_dive_trend_raw_score", float(raw_score))
             setattr(proposal, "_pre_candidate_dive_trend_probability", float(probability))
             setattr(proposal, "_pre_candidate_dive_trend_bonus", float(bonus))
+            setattr(proposal, "_pre_candidate_dive_trend_rank_bonus", 0.0)
+
+        cluster_window_seconds = 0.75
+        cluster_bonuses: dict[int, float] = {}
+        for i, proposal in enumerate(proposals):
+            center_timestamp = float(proposal.timestamp)
+            cluster = [
+                peer
+                for peer in proposals
+                if abs(float(peer.timestamp) - center_timestamp) <= cluster_window_seconds
+            ]
+            if len(cluster) < 2:
+                cluster_bonuses[id(proposal)] = 0.0
+                continue
+            cluster_raw_scores = np.asarray(
+                [float(getattr(peer, "_pre_candidate_dive_trend_raw_score", 0.0)) for peer in cluster],
+                dtype=np.float64,
+            )
+            cluster_mean = float(np.mean(cluster_raw_scores)) if cluster_raw_scores.size else 0.0
+            cluster_std = float(np.std(cluster_raw_scores)) if cluster_raw_scores.size else 1.0
+            cluster_std = max(cluster_std, 1e-6)
+            proposal_raw = float(getattr(proposal, "_pre_candidate_dive_trend_raw_score", 0.0))
+            normalized = (proposal_raw - cluster_mean) / cluster_std
+            rank_bonus = float(np.clip(weight * normalized, -max_bonus, max_bonus))
+            cluster_bonuses[id(proposal)] = rank_bonus
+        for proposal in proposals:
+            setattr(
+                proposal,
+                "_pre_candidate_dive_trend_rank_bonus",
+                float(cluster_bonuses.get(id(proposal), 0.0)),
+            )
 
     def _apply_consolidation_centering(self, proposal: AudioCandidate) -> None:
         centering_weight = float(getattr(self.config, "pre_candidate_consolidation_centering_weight", 0.0))
@@ -2928,6 +2960,7 @@ class AudioVisualDiveDetector:
         dive_trend_raw_score = float(getattr(proposal, "_pre_candidate_dive_trend_raw_score", 0.0))
         dive_trend_probability = float(getattr(proposal, "_pre_candidate_dive_trend_probability", 0.0))
         dive_trend_bonus = float(getattr(proposal, "_pre_candidate_dive_trend_bonus", 0.0))
+        dive_trend_rank_bonus = float(getattr(proposal, "_pre_candidate_dive_trend_rank_bonus", 0.0))
         proposal_evidence_boost = (
             tail_persistence_weight * tail_persistence_score
             + cluster_support_weight * cluster_support_score
@@ -2945,7 +2978,7 @@ class AudioVisualDiveDetector:
             + rank_broadband_weight * broadband_component
             + rank_decay_weight * decay_component
             + proposal_evidence_boost
-            + dive_trend_bonus
+            + dive_trend_rank_bonus
         )
         promotion_eligible = (
             promotion_bonus > 0.0
@@ -2992,6 +3025,7 @@ class AudioVisualDiveDetector:
             "frontend_dive_trend_raw_score": float(dive_trend_raw_score),
             "frontend_dive_trend_probability": float(dive_trend_probability),
             "frontend_dive_trend_bonus": float(dive_trend_bonus),
+            "frontend_dive_trend_rank_bonus": float(dive_trend_rank_bonus),
             "proposal_evidence_boost": float(proposal_evidence_boost),
             "dive_likeness": float(dive_likeness),
             "rank_bonus": float(rank_bonus),
