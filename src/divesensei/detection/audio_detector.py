@@ -454,6 +454,7 @@ class AudioVisualDiveDetector:
         tail_persistence_weight = float(getattr(self.config, "pre_candidate_tail_persistence_weight", 0.0))
         cluster_support_weight = float(getattr(self.config, "pre_candidate_cluster_support_weight", 0.0))
         region_descriptor_enabled = bool(getattr(self.config, "frontend_region_descriptor_enabled", False))
+        dive_trend_enabled = bool(getattr(self.config, "frontend_dive_trend_enabled", False))
         region_env = (
             self._frontend_region_descriptor_envelope(
                 flux=features["flux"],
@@ -461,7 +462,7 @@ class AudioVisualDiveDetector:
                 sample_rate=sample_rate,
                 hop_length=hop_length,
             )
-            if region_descriptor_enabled
+            if region_descriptor_enabled or dive_trend_enabled
             else None
         )
         peak_index_set = set(peaks)
@@ -541,6 +542,31 @@ class AudioVisualDiveDetector:
                     "frontend_region_late_energy": 0.0,
                     "frontend_region_late_over_early": 0.0,
                     "frontend_region_duration_above_1p10": 0.0,
+                }
+            )
+            dive_trend = (
+                self._frontend_dive_trend_features(
+                    flux=features["flux"],
+                    rms=features["rms"],
+                    onset_sum=onset_sum,
+                    hf_ratio=features["hf_ratio"],
+                    spectral_centroid_hz=features["spectral_centroid_hz"],
+                    spectral_flatness=features["spectral_flatness"],
+                    raw_peaks=raw_peaks,
+                    peak_idx=peak_idx,
+                    sample_rate=sample_rate,
+                    hop_length=hop_length,
+                )
+                if dive_trend_enabled and region_env is not None
+                else {
+                    "frontend_dive_trend_flatness_slope": 0.0,
+                    "frontend_dive_trend_centroid_slope": 0.0,
+                    "frontend_dive_trend_hf_lf_slope": 0.0,
+                    "frontend_dive_trend_time_to_peak": 0.0,
+                    "frontend_dive_trend_cluster_density": 0.0,
+                    "frontend_dive_trend_raw_score": 0.0,
+                    "frontend_dive_trend_probability": 0.0,
+                    "frontend_dive_trend_bonus": 0.0,
                 }
             )
             proposal_evidence_boost = (
@@ -767,6 +793,14 @@ class AudioVisualDiveDetector:
                 "_pre_candidate_region_descriptor_bonus",
                 float(region_descriptor["frontend_region_descriptor_bonus"]),
             )
+            setattr(proposal, "_pre_candidate_dive_trend_flatness_slope", float(dive_trend["frontend_dive_trend_flatness_slope"]))
+            setattr(proposal, "_pre_candidate_dive_trend_centroid_slope", float(dive_trend["frontend_dive_trend_centroid_slope"]))
+            setattr(proposal, "_pre_candidate_dive_trend_hf_lf_slope", float(dive_trend["frontend_dive_trend_hf_lf_slope"]))
+            setattr(proposal, "_pre_candidate_dive_trend_time_to_peak", float(dive_trend["frontend_dive_trend_time_to_peak"]))
+            setattr(proposal, "_pre_candidate_dive_trend_cluster_density", float(dive_trend["frontend_dive_trend_cluster_density"]))
+            setattr(proposal, "_pre_candidate_dive_trend_raw_score", 0.0)
+            setattr(proposal, "_pre_candidate_dive_trend_probability", 0.0)
+            setattr(proposal, "_pre_candidate_dive_trend_bonus", 0.0)
             setattr(proposal, "_pre_candidate_evidence_boost", float(proposal_evidence_boost))
             details = self._proposal_details(proposal)
             details["proposal_frontend"] = frontend_name
@@ -790,6 +824,7 @@ class AudioVisualDiveDetector:
             details["cluster_support_score"] = float(cluster_support["cluster_support_score"])
             details["cluster_support_peaks"] = cluster_support["cluster_support_peaks"]
             details.update(region_descriptor)
+            details.update(dive_trend)
             details["proposal_evidence_boost"] = float(proposal_evidence_boost)
             if onset_sum is not None:
                 details["pcen_onset_mean"] = float(onset_sum[peak_idx])
@@ -1039,6 +1074,7 @@ class AudioVisualDiveDetector:
         rescue_min_prominence = float(getattr(self.config, "pre_candidate_local_rescue_min_prominence", 0.0))
         rescue_min_tail_persistence_score = float(getattr(self.config, "pre_candidate_local_rescue_min_tail_persistence_score", 0.0))
         rescue_min_cluster_support_score = float(getattr(self.config, "pre_candidate_local_rescue_min_cluster_support_score", 0.0))
+        self._prepare_dive_trend_rank_bonus(proposals)
         scored_items: list[dict[str, Any]] = []
         for proposal in proposals:
             self._apply_consolidation_centering(proposal)
@@ -1056,6 +1092,7 @@ class AudioVisualDiveDetector:
             setattr(proposal, "_pre_candidate_rank_score", rank_score)
             setattr(proposal, "_pre_candidate_dive_likeness", float(ranking_components["dive_likeness"]))
             setattr(proposal, "_pre_candidate_promotion_eligible", bool(ranking_components["promotion_eligible"]))
+            self._proposal_details(proposal).update(ranking_components)
             scored_items.append({"proposal": proposal, "score": rank_score})
 
         ranked = sorted(scored_items, key=lambda item: item["score"], reverse=True)
@@ -1790,6 +1827,14 @@ class AudioVisualDiveDetector:
             "pcen_onset_peak",
             "rank_bonus",
             "rank_score",
+            "frontend_dive_trend_flatness_slope",
+            "frontend_dive_trend_centroid_slope",
+            "frontend_dive_trend_hf_lf_slope",
+            "frontend_dive_trend_time_to_peak",
+            "frontend_dive_trend_cluster_density",
+            "frontend_dive_trend_raw_score",
+            "frontend_dive_trend_probability",
+            "frontend_dive_trend_bonus",
             "tail_component",
             "asymmetry_component",
             "broadband_component",
@@ -2322,6 +2367,75 @@ class AudioVisualDiveDetector:
             "frontend_region_duration_above_1p10": float(feature_values["duration_above_1p10"]),
         }
 
+    def _frontend_dive_trend_features(
+        self,
+        *,
+        flux: np.ndarray,
+        rms: np.ndarray,
+        onset_sum: np.ndarray | None,
+        hf_ratio: np.ndarray,
+        spectral_centroid_hz: np.ndarray,
+        spectral_flatness: np.ndarray,
+        raw_peaks: List[int],
+        peak_idx: int,
+        sample_rate: int,
+        hop_length: int,
+    ) -> Dict[str, Any]:
+        start_seconds = -1.0
+        end_seconds = 2.0
+        start_frames = int(round(start_seconds * sample_rate / max(hop_length, 1)))
+        end_frames = int(round(end_seconds * sample_rate / max(hop_length, 1)))
+        window_start = max(0, peak_idx + start_frames)
+        window_end = min(len(flux), peak_idx + end_frames)
+        base = {
+            "frontend_dive_trend_flatness_slope": 0.0,
+            "frontend_dive_trend_centroid_slope": 0.0,
+            "frontend_dive_trend_hf_lf_slope": 0.0,
+            "frontend_dive_trend_time_to_peak": 0.0,
+            "frontend_dive_trend_cluster_density": 0.0,
+            "frontend_dive_trend_raw_score": 0.0,
+            "frontend_dive_trend_probability": 0.0,
+            "frontend_dive_trend_bonus": 0.0,
+        }
+        if window_end <= window_start:
+            return base
+        flux_window = flux[window_start:window_end]
+        rms_window = rms[window_start:window_end]
+        centroid_window = spectral_centroid_hz[window_start:window_end]
+        flatness_window = spectral_flatness[window_start:window_end]
+        hf_window = hf_ratio[window_start:window_end]
+        onset_window = onset_sum[window_start:window_end] if onset_sum is not None else np.zeros_like(flux_window)
+        if flux_window.size == 0:
+            return base
+        flux_base = self._ema_series(flux_window, 0.35, sample_rate, hop_length) + 1e-6
+        rms_base = self._ema_series(rms_window, 0.35, sample_rate, hop_length) + 1e-6
+        onset_base = self._ema_series(onset_window, 0.35, sample_rate, hop_length) + 1e-6
+        combined_env = (
+            0.4 * (flux_window / flux_base)
+            + 0.3 * (rms_window / rms_base)
+            + 0.3 * (onset_window / onset_base)
+        ).astype(np.float32)
+        time_axis = np.arange(combined_env.size, dtype=np.float32) * hop_length / sample_rate + float(start_seconds)
+        peak_time = float(time_axis[int(np.argmax(combined_env))]) if combined_env.size else 0.0
+        nearby_peak_count = sum(1 for raw_peak in raw_peaks if window_start <= int(raw_peak) <= window_end)
+        cluster_density = float(nearby_peak_count / max(end_seconds - start_seconds, 1e-6))
+        return {
+            "frontend_dive_trend_flatness_slope": self._linear_fit_slope(time_axis, flatness_window),
+            "frontend_dive_trend_centroid_slope": self._linear_fit_slope(time_axis, centroid_window),
+            "frontend_dive_trend_hf_lf_slope": self._linear_fit_slope(time_axis, hf_window),
+            "frontend_dive_trend_time_to_peak": float(peak_time),
+            "frontend_dive_trend_cluster_density": float(cluster_density),
+            "frontend_dive_trend_raw_score": 0.0,
+            "frontend_dive_trend_probability": 0.0,
+            "frontend_dive_trend_bonus": 0.0,
+        }
+
+    def _linear_fit_slope(self, x: np.ndarray, y: np.ndarray) -> float:
+        if x.size < 2 or y.size < 2:
+            return 0.0
+        coeffs = np.polyfit(x.astype(np.float64), y.astype(np.float64), 1)
+        return float(coeffs[0])
+
     def _frontend_persistence_integral_features(
         self,
         *,
@@ -2678,6 +2792,50 @@ class AudioVisualDiveDetector:
             setattr(proposal, "_pre_candidate_overlap_pcen_score_mass", float(pcen_score_mass))
             setattr(proposal, "_pre_candidate_overlap_total_score_mass", float(total_score_mass))
 
+    def _prepare_dive_trend_rank_bonus(self, proposals: Sequence[AudioCandidate]) -> None:
+        enabled = bool(getattr(self.config, "frontend_dive_trend_enabled", False))
+        weight = float(getattr(self.config, "frontend_dive_trend_weight", 0.0))
+        max_bonus = float(getattr(self.config, "frontend_dive_trend_max_bonus", 0.0))
+        feature_names = ("flatness_slope", "centroid_slope", "hf_lf_slope", "time_to_peak", "cluster_density")
+        if not enabled or weight <= 0.0 or max_bonus <= 0.0 or not proposals:
+            for proposal in proposals:
+                setattr(proposal, "_pre_candidate_dive_trend_raw_score", 0.0)
+                setattr(proposal, "_pre_candidate_dive_trend_probability", 0.0)
+                setattr(proposal, "_pre_candidate_dive_trend_bonus", 0.0)
+            return
+        feature_values: dict[str, list[float]] = {name: [] for name in feature_names}
+        for proposal in proposals:
+            feature_values["flatness_slope"].append(float(getattr(proposal, "_pre_candidate_dive_trend_flatness_slope", 0.0)))
+            feature_values["centroid_slope"].append(float(getattr(proposal, "_pre_candidate_dive_trend_centroid_slope", 0.0)))
+            feature_values["hf_lf_slope"].append(float(getattr(proposal, "_pre_candidate_dive_trend_hf_lf_slope", 0.0)))
+            feature_values["time_to_peak"].append(float(getattr(proposal, "_pre_candidate_dive_trend_time_to_peak", 0.0)))
+            feature_values["cluster_density"].append(float(getattr(proposal, "_pre_candidate_dive_trend_cluster_density", 0.0)))
+        feature_stats = {
+            name: (
+                float(np.mean(np.asarray(values, dtype=np.float64))) if values else 0.0,
+                float(np.std(np.asarray(values, dtype=np.float64))) if values else 1.0,
+            )
+            for name, values in feature_values.items()
+        }
+        for proposal in proposals:
+            flatness_slope = float(getattr(proposal, "_pre_candidate_dive_trend_flatness_slope", 0.0))
+            centroid_slope = float(getattr(proposal, "_pre_candidate_dive_trend_centroid_slope", 0.0))
+            hf_lf_slope = float(getattr(proposal, "_pre_candidate_dive_trend_hf_lf_slope", 0.0))
+            time_to_peak = float(getattr(proposal, "_pre_candidate_dive_trend_time_to_peak", 0.0))
+            cluster_density = float(getattr(proposal, "_pre_candidate_dive_trend_cluster_density", 0.0))
+            raw_score = (
+                0.30 * ((flatness_slope - feature_stats["flatness_slope"][0]) / max(feature_stats["flatness_slope"][1], 1e-6))
+                + 0.30 * ((centroid_slope - feature_stats["centroid_slope"][0]) / max(feature_stats["centroid_slope"][1], 1e-6))
+                + 0.20 * ((hf_lf_slope - feature_stats["hf_lf_slope"][0]) / max(feature_stats["hf_lf_slope"][1], 1e-6))
+                - 0.20 * ((time_to_peak - feature_stats["time_to_peak"][0]) / max(feature_stats["time_to_peak"][1], 1e-6))
+                - 0.15 * ((cluster_density - feature_stats["cluster_density"][0]) / max(feature_stats["cluster_density"][1], 1e-6))
+            )
+            probability = float(1.0 / (1.0 + np.exp(-np.clip(raw_score, -40.0, 40.0))))
+            bonus = min(max_bonus, max(0.0, weight * max((probability - 0.5) * 2.0, 0.0)))
+            setattr(proposal, "_pre_candidate_dive_trend_raw_score", float(raw_score))
+            setattr(proposal, "_pre_candidate_dive_trend_probability", float(probability))
+            setattr(proposal, "_pre_candidate_dive_trend_bonus", float(bonus))
+
     def _apply_consolidation_centering(self, proposal: AudioCandidate) -> None:
         centering_weight = float(getattr(self.config, "pre_candidate_consolidation_centering_weight", 0.0))
         center_timestamp = float(
@@ -2762,6 +2920,14 @@ class AudioVisualDiveDetector:
         overlap_member_count = int(getattr(proposal, "_pre_candidate_overlap_member_count", 0))
         overlap_pcen_score_mass = float(getattr(proposal, "_pre_candidate_overlap_pcen_score_mass", 0.0))
         overlap_total_score_mass = float(getattr(proposal, "_pre_candidate_overlap_total_score_mass", 0.0))
+        dive_trend_flatness_slope = float(getattr(proposal, "_pre_candidate_dive_trend_flatness_slope", 0.0))
+        dive_trend_centroid_slope = float(getattr(proposal, "_pre_candidate_dive_trend_centroid_slope", 0.0))
+        dive_trend_hf_lf_slope = float(getattr(proposal, "_pre_candidate_dive_trend_hf_lf_slope", 0.0))
+        dive_trend_time_to_peak = float(getattr(proposal, "_pre_candidate_dive_trend_time_to_peak", 0.0))
+        dive_trend_cluster_density = float(getattr(proposal, "_pre_candidate_dive_trend_cluster_density", 0.0))
+        dive_trend_raw_score = float(getattr(proposal, "_pre_candidate_dive_trend_raw_score", 0.0))
+        dive_trend_probability = float(getattr(proposal, "_pre_candidate_dive_trend_probability", 0.0))
+        dive_trend_bonus = float(getattr(proposal, "_pre_candidate_dive_trend_bonus", 0.0))
         proposal_evidence_boost = (
             tail_persistence_weight * tail_persistence_score
             + cluster_support_weight * cluster_support_score
@@ -2779,6 +2945,7 @@ class AudioVisualDiveDetector:
             + rank_broadband_weight * broadband_component
             + rank_decay_weight * decay_component
             + proposal_evidence_boost
+            + dive_trend_bonus
         )
         promotion_eligible = (
             promotion_bonus > 0.0
@@ -2817,6 +2984,14 @@ class AudioVisualDiveDetector:
             "overlap_member_count": int(overlap_member_count),
             "overlap_pcen_score_mass": float(overlap_pcen_score_mass),
             "overlap_total_score_mass": float(overlap_total_score_mass),
+            "frontend_dive_trend_flatness_slope": float(dive_trend_flatness_slope),
+            "frontend_dive_trend_centroid_slope": float(dive_trend_centroid_slope),
+            "frontend_dive_trend_hf_lf_slope": float(dive_trend_hf_lf_slope),
+            "frontend_dive_trend_time_to_peak": float(dive_trend_time_to_peak),
+            "frontend_dive_trend_cluster_density": float(dive_trend_cluster_density),
+            "frontend_dive_trend_raw_score": float(dive_trend_raw_score),
+            "frontend_dive_trend_probability": float(dive_trend_probability),
+            "frontend_dive_trend_bonus": float(dive_trend_bonus),
             "proposal_evidence_boost": float(proposal_evidence_boost),
             "dive_likeness": float(dive_likeness),
             "rank_bonus": float(rank_bonus),

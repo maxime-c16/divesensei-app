@@ -157,6 +157,9 @@ def build_config(args: argparse.Namespace):
         frontend_region_descriptor_pre_seconds=args.frontend_region_descriptor_pre_seconds,
         frontend_region_descriptor_post_seconds=args.frontend_region_descriptor_post_seconds,
         frontend_region_descriptor_pattern_tiebreak_band=args.frontend_region_descriptor_pattern_tiebreak_band,
+        frontend_dive_trend_enabled=args.frontend_dive_trend_enabled,
+        frontend_dive_trend_weight=args.frontend_dive_trend_weight,
+        frontend_dive_trend_max_bonus=args.frontend_dive_trend_max_bonus,
         frontend_region_pattern_exception_enabled=args.frontend_region_pattern_exception_enabled,
         frontend_region_pattern_exception_min_score=args.frontend_region_pattern_exception_min_score,
         frontend_region_pattern_exception_min_prominence=args.frontend_region_pattern_exception_min_prominence,
@@ -414,6 +417,9 @@ def build_parser() -> argparse.ArgumentParser:
     internal.add_argument("--frontend-region-descriptor-pre-seconds", type=float, default=0.2, help=argparse.SUPPRESS)
     internal.add_argument("--frontend-region-descriptor-post-seconds", type=float, default=0.8, help=argparse.SUPPRESS)
     internal.add_argument("--frontend-region-descriptor-pattern-tiebreak-band", type=float, default=0.35, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-dive-trend-enabled", action="store_true", help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-dive-trend-weight", type=float, default=0.0, help=argparse.SUPPRESS)
+    internal.add_argument("--frontend-dive-trend-max-bonus", type=float, default=0.0, help=argparse.SUPPRESS)
     internal.add_argument("--frontend-region-pattern-exception-enabled", action="store_true", help=argparse.SUPPRESS)
     internal.add_argument("--frontend-region-pattern-exception-min-score", type=float, default=0.0, help=argparse.SUPPRESS)
     internal.add_argument("--frontend-region-pattern-exception-min-prominence", type=float, default=0.0, help=argparse.SUPPRESS)
