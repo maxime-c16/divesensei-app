@@ -1362,16 +1362,29 @@ class AudioVisualDiveDetector:
             if len(cluster) < cluster_delay_min_cluster_size:
                 selected.extend(cluster)
                 continue
+            representative_details_by_id = {
+                id(proposal): self._cluster_representative_score(proposal, cluster)
+                for proposal in cluster
+            }
             best = max(
                 cluster,
                 key=lambda proposal: (
+                    float(representative_details_by_id[id(proposal)]["cluster_representative_score"]),
                     float(getattr(proposal, "_pre_candidate_rank_score", proposal.audio_score)),
                     float(getattr(proposal, "_pre_candidate_dive_trend_rank_bonus", 0.0)),
                     float(getattr(proposal, "_pre_candidate_dive_trend_bonus", 0.0)),
                     float(proposal.local_prominence),
-                    -float(proposal.timestamp),
+                    -float(self._proposal_details(proposal).get("peak_timestamp_seconds", proposal.timestamp) or proposal.timestamp),
                 ),
             )
+            for proposal in cluster:
+                details = self._proposal_details(proposal)
+                details.update(representative_details_by_id[id(proposal)])
+                setattr(proposal, "_pre_candidate_cluster_representative_score", float(representative_details_by_id[id(proposal)]["cluster_representative_score"]))
+                setattr(proposal, "_pre_candidate_cluster_representative_raw_z", float(representative_details_by_id[id(proposal)]["cluster_representative_raw_z"]))
+                setattr(proposal, "_pre_candidate_cluster_representative_pattern_z", float(representative_details_by_id[id(proposal)]["cluster_representative_pattern_z"]))
+                setattr(proposal, "_pre_candidate_cluster_representative_region_z", float(representative_details_by_id[id(proposal)]["cluster_representative_region_z"]))
+                setattr(proposal, "_pre_candidate_cluster_representative_late_z", float(representative_details_by_id[id(proposal)]["cluster_representative_late_z"]))
             selected.append(best)
             for victim in cluster:
                 if victim is best:
@@ -1384,6 +1397,8 @@ class AudioVisualDiveDetector:
                         "survivor_timestamp": float(best.timestamp),
                         "suppressed_score": float(getattr(victim, "_pre_candidate_rank_score", victim.audio_score)),
                         "survivor_score": float(getattr(best, "_pre_candidate_rank_score", best.audio_score)),
+                        "suppressed_representative_score": float(representative_details_by_id[id(victim)]["cluster_representative_score"]),
+                        "survivor_representative_score": float(representative_details_by_id[id(best)]["cluster_representative_score"]),
                         "suppressed_frontend": getattr(victim, "proposal_frontend", "unknown"),
                         "survivor_frontend": getattr(best, "proposal_frontend", "unknown"),
                         "cluster_size": len(cluster),
@@ -1920,6 +1935,11 @@ class AudioVisualDiveDetector:
             "broadband_component",
             "decay_component",
             "dive_likeness",
+            "cluster_representative_score",
+            "cluster_representative_raw_z",
+            "cluster_representative_pattern_z",
+            "cluster_representative_region_z",
+            "cluster_representative_late_z",
             "promotion_eligible",
             "protected_survivor",
         ):
@@ -3148,10 +3168,71 @@ class AudioVisualDiveDetector:
             "proposal_evidence_boost": float(getattr(proposal, "_pre_candidate_evidence_boost", 0.0)),
         }
         base.update(self._proposal_ranking_components(proposal))
+        base["cluster_representative_score"] = float(
+            base.get("cluster_representative_score", getattr(proposal, "_pre_candidate_cluster_representative_score", 0.0))
+        )
+        base["cluster_representative_raw_z"] = float(
+            base.get("cluster_representative_raw_z", getattr(proposal, "_pre_candidate_cluster_representative_raw_z", 0.0))
+        )
+        base["cluster_representative_pattern_z"] = float(
+            base.get("cluster_representative_pattern_z", getattr(proposal, "_pre_candidate_cluster_representative_pattern_z", 0.0))
+        )
+        base["cluster_representative_region_z"] = float(
+            base.get("cluster_representative_region_z", getattr(proposal, "_pre_candidate_cluster_representative_region_z", 0.0))
+        )
+        base["cluster_representative_late_z"] = float(
+            base.get("cluster_representative_late_z", getattr(proposal, "_pre_candidate_cluster_representative_late_z", 0.0))
+        )
         base["local_rescue_survivor"] = bool(getattr(proposal, "_pre_candidate_local_rescue", False))
         base["local_rescue_score"] = float(getattr(proposal, "_pre_candidate_local_rescue_score", 0.0))
         base["protected_survivor"] = bool(getattr(proposal, "_pre_candidate_protected_survivor", False))
         return base
+
+    def _cluster_representative_score(self, proposal: AudioCandidate, cluster: Sequence[AudioCandidate]) -> Dict[str, float]:
+        weight = float(getattr(self.config, "pre_candidate_cluster_representative_weight", 0.0))
+        details = self._proposal_details(proposal)
+        raw_score = float(getattr(proposal, "_pre_candidate_score_value", proposal.audio_score))
+        pattern_score = float(details.get("audio_pattern_score", 0.0) or 0.0)
+        region_bonus = float(details.get("frontend_region_descriptor_bonus", 0.0) or 0.0)
+        peak_time = float(details.get("peak_timestamp_seconds", proposal.timestamp) or proposal.timestamp)
+        if weight <= 0.0 or len(cluster) < 2:
+            return {
+                "cluster_representative_score": float(raw_score),
+                "cluster_representative_raw_z": 0.0,
+                "cluster_representative_pattern_z": 0.0,
+                "cluster_representative_region_z": 0.0,
+                "cluster_representative_late_z": 0.0,
+            }
+
+        cluster_raw_scores = np.asarray(
+            [float(getattr(candidate, "_pre_candidate_score_value", candidate.audio_score)) for candidate in cluster],
+            dtype=np.float64,
+        )
+        cluster_pattern_scores = np.asarray(
+            [float(self._proposal_details(candidate).get("audio_pattern_score", 0.0) or 0.0) for candidate in cluster],
+            dtype=np.float64,
+        )
+        cluster_region_bonuses = np.asarray(
+            [float(self._proposal_details(candidate).get("frontend_region_descriptor_bonus", 0.0) or 0.0) for candidate in cluster],
+            dtype=np.float64,
+        )
+        cluster_peak_times = np.asarray(
+            [float(self._proposal_details(candidate).get("peak_timestamp_seconds", candidate.timestamp) or candidate.timestamp) for candidate in cluster],
+            dtype=np.float64,
+        )
+
+        raw_z = (raw_score - float(np.mean(cluster_raw_scores))) / max(float(np.std(cluster_raw_scores)), 1e-6)
+        pattern_z = (pattern_score - float(np.mean(cluster_pattern_scores))) / max(float(np.std(cluster_pattern_scores)), 1e-6)
+        region_z = (region_bonus - float(np.mean(cluster_region_bonuses))) / max(float(np.std(cluster_region_bonuses)), 1e-6)
+        late_z = (peak_time - float(np.mean(cluster_peak_times))) / max(float(np.std(cluster_peak_times)), 1e-6)
+        rep_score = raw_score + weight * (0.45 * raw_z + 0.30 * pattern_z + 0.15 * region_z + 0.10 * late_z)
+        return {
+            "cluster_representative_score": float(rep_score),
+            "cluster_representative_raw_z": float(raw_z),
+            "cluster_representative_pattern_z": float(pattern_z),
+            "cluster_representative_region_z": float(region_z),
+            "cluster_representative_late_z": float(late_z),
+        }
 
     def _attach_details(self, proposal: AudioCandidate, details: Dict[str, Any]) -> AudioCandidate:
         setattr(proposal, "details", details)

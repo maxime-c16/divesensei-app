@@ -156,3 +156,7 @@ The validated branch remains the reference baseline for:
 - Champigny
 - future replay/export comparisons
 
+## 8. Post-Check Note
+
+This cluster-selection experiment is safe and inert. It produced no final winner changes, no suppression changes, and no recall gain. The cluster-selection line looks close to exhausted unless a less bounded or different structural approach is justified later.
+

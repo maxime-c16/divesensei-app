@@ -146,6 +146,7 @@ class DetectionConfig:
     pre_candidate_cluster_delay_enabled: bool = False
     pre_candidate_cluster_delay_seconds: float = 0.0
     pre_candidate_cluster_delay_min_cluster_size: int = 2
+    pre_candidate_cluster_representative_weight: float = 0.0
     frontend_region_pattern_exception_enabled: bool = False
     frontend_region_pattern_exception_min_score: float = 0.0
     frontend_region_pattern_exception_min_prominence: float = 0.0
