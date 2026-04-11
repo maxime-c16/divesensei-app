@@ -1,0 +1,154 @@
+{
+  "examples": {
+    "noise_or_other": [
+      {
+        "anchor": 123.872,
+        "candidate_id": "det-0019",
+        "provenance": "subtype_mapped",
+        "reason": "negative subtype mapped from voice_whistle"
+      },
+      {
+        "anchor": 209.088,
+        "candidate_id": "det-0031",
+        "provenance": "subtype_mapped",
+        "reason": "negative subtype mapped from voice_whistle"
+      },
+      {
+        "anchor": 209.84,
+        "candidate_id": "det-0032",
+        "provenance": "subtype_mapped",
+        "reason": "negative subtype mapped from voice_whistle"
+      },
+      {
+        "anchor": 210.816,
+        "candidate_id": "det-0033",
+        "provenance": "subtype_mapped",
+        "reason": "negative subtype mapped from voice_whistle"
+      },
+      {
+        "anchor": 377.824,
+        "candidate_id": "det-0060",
+        "provenance": "subtype_mapped",
+        "reason": "negative subtype mapped from voice_whistle"
+      }
+    ],
+    "platform_dive": [
+      {
+        "anchor": 15.792,
+        "candidate_id": "det-0003",
+        "provenance": "session_type_inferred",
+        "reason": "dive with no rebound-like context"
+      },
+      {
+        "anchor": 33.712,
+        "candidate_id": "det-0004",
+        "provenance": "session_type_inferred",
+        "reason": "dive with no rebound-like context"
+      },
+      {
+        "anchor": 50.976,
+        "candidate_id": "det-0006",
+        "provenance": "session_type_inferred",
+        "reason": "dive with no rebound-like context"
+      },
+      {
+        "anchor": 79.488,
+        "candidate_id": "det-0010",
+        "provenance": "session_type_inferred",
+        "reason": "dive with no rebound-like context"
+      },
+      {
+        "anchor": 135.696,
+        "candidate_id": "det-0021",
+        "provenance": "session_type_inferred",
+        "reason": "dive with no rebound-like context"
+      }
+    ],
+    "springboard_dive": [
+      {
+        "anchor": 13.888,
+        "candidate_id": "det-0002",
+        "provenance": "subtype_mapped",
+        "reason": "board rebound with delayed-entry-like candidate"
+      },
+      {
+        "anchor": 58.8,
+        "candidate_id": "det-0008",
+        "provenance": "subtype_mapped",
+        "reason": "board rebound with delayed-entry-like candidate"
+      },
+      {
+        "anchor": 59.84,
+        "candidate_id": "det-0009",
+        "provenance": "session_type_inferred",
+        "reason": "springboard dive with rebound context"
+      },
+      {
+        "anchor": 92.832,
+        "candidate_id": "det-0011",
+        "provenance": "subtype_mapped",
+        "reason": "board rebound with delayed-entry-like candidate"
+      },
+      {
+        "anchor": 93.552,
+        "candidate_id": "det-0012",
+        "provenance": "subtype_mapped",
+        "reason": "board rebound with delayed-entry-like candidate"
+      }
+    ],
+    "springboard_rebound_only": [
+      {
+        "anchor": 13.216,
+        "candidate_id": "det-0001",
+        "provenance": "subtype_mapped",
+        "reason": "board rebound with no plausible delayed entry"
+      },
+      {
+        "anchor": 41.072,
+        "candidate_id": "det-0005",
+        "provenance": "subtype_mapped",
+        "reason": "board rebound with no plausible delayed entry"
+      },
+      {
+        "anchor": 57.408,
+        "candidate_id": "det-0007",
+        "provenance": "subtype_mapped",
+        "reason": "board rebound with no plausible delayed entry"
+      },
+      {
+        "anchor": 132.272,
+        "candidate_id": "det-0020",
+        "provenance": "subtype_mapped",
+        "reason": "board rebound with no plausible delayed entry"
+      },
+      {
+        "anchor": 243.92,
+        "candidate_id": "det-0040",
+        "provenance": "subtype_mapped",
+        "reason": "board rebound with no plausible delayed entry"
+      }
+    ],
+    "uncertain": []
+  },
+  "has_delayed_entry_candidate_count": 116,
+  "has_preceding_rebound_context_count": 97,
+  "row_count": 149,
+  "session_id": "evaluation_insep_15min_validated",
+  "session_type": "springboard",
+  "session_type_provenance": "direct_review",
+  "source_root": "/Users/mcauchy/divesensei-app/outputs/evaluation_insep_15min_validated",
+  "suggested_event_label_counts": {
+    "noise_or_other": 20,
+    "platform_dive": 33,
+    "springboard_dive": 79,
+    "springboard_rebound_only": 17
+  },
+  "suggested_event_label_reason_counts": {
+    "board rebound with delayed-entry-like candidate": 51,
+    "board rebound with no plausible delayed entry": 17,
+    "dive with no rebound-like context": 33,
+    "negative subtype mapped from voice_whistle": 20,
+    "springboard dive with rebound context": 28
+  },
+  "uncertainty_count": 0
+}

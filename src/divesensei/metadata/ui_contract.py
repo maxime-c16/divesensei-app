@@ -123,6 +123,8 @@ def build_ui_session_manifest(
             "source_audio": source_audio_path,
             "review_proxy": review_proxy_path,
             "evaluation_review": evaluation_review_path,
+            "event_review_support": report.get("event_review_support_path"),
+            "event_review_support_summary": report.get("event_review_support_summary_path"),
             "proposal_diagnostics": report.get("proposal_diagnostics_path"),
             "proposal_diagnostics_summary": report.get("proposal_diagnostics_summary_path"),
             "proposal_transient_peaks": report.get("proposal_transient_peaks_path"),
