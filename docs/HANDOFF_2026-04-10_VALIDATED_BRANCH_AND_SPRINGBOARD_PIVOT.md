@@ -95,7 +95,7 @@ This session is springboard-only and is dominated by:
 
 - board rebound
 - voice / whistle / clap-like confusers
-- close misses where the detector lands on the last board rebound instead of the splash
+- close misses where the detector lands on the last board rebound rather than the splash
 
 Review makeup:
 
@@ -221,90 +221,16 @@ Experimental 145 branch roots:
 - [outputs/evaluation_insep_quick_9015_20260410_shortregion_145](/Users/mcauchy/divesensei-app/outputs/evaluation_insep_quick_9015_20260410_shortregion_145)
 - [outputs/evaluation_champigny_20260410_shortregion_145](/Users/mcauchy/divesensei-app/outputs/evaluation_champigny_20260410_shortregion_145)
 
-New springboard-heavy validation roots:
+New springboard session outputs:
 
 - [outputs/evaluation_insep_15min_raw](/Users/mcauchy/divesensei-app/outputs/evaluation_insep_15min_raw)
 - [outputs/evaluation_insep_15min_validated](/Users/mcauchy/divesensei-app/outputs/evaluation_insep_15min_validated)
 - [outputs/evaluation_insep_15min_experimental_145](/Users/mcauchy/divesensei-app/outputs/evaluation_insep_15min_experimental_145)
 
-Important note:
+## FINAL STATUS UPDATE
 
-- these models and outputs are intentionally not tracked by git
-- transfer them from the listed local paths to the school machine separately
+- validated branch confirmation: the region-descriptor tie-break branch at band `0.20` remains the official working detector
+- experimental branch status: `frontend_short_region_tail_exception` remains experimental and session-specific
+- event-level integration failure summary: reranking, score blending, representative selection, delayed cluster selection, cluster winner replacement, and merge-stage veto all failed to integrate safely
+- stop decision: this family is closed for the current architecture; do not keep adding local event-level cluster modifications to the peak-first detector
 
-## 8. Exact Commands To Resume From The Validated Branch
-
-Validated default branch evaluation command skeleton:
-
-```bash
-PYTHONPATH=src python3 -m divesensei.cli evaluate-session \
-  <reviewable-video-path> \
-  --prepared-audio-path <cached-audio-wav> \
-  --profile long-session \
-  --detector-id audio_v2_pcen_classifier \
-  --output-dir <target-output-dir> \
-  --skip-review-proxy \
-  --debug \
-  --json \
-  --frontend-region-descriptor-enabled \
-  --frontend-region-descriptor-weight 2.0 \
-  --frontend-region-descriptor-max-bonus 0.6 \
-  --frontend-region-descriptor-pre-seconds 0.2 \
-  --frontend-region-descriptor-post-seconds 0.8 \
-  --frontend-region-descriptor-pattern-tiebreak-band 0.20 \
-  --frontend-region-pattern-exception-enabled \
-  --frontend-region-pattern-exception-min-score 6.0 \
-  --frontend-region-pattern-exception-min-prominence 6.0 \
-  --frontend-region-pattern-exception-min-post-flux-ratio 1.5 \
-  --frontend-region-pattern-exception-min-post-rms-ratio 1.6 \
-  --frontend-region-pattern-exception-min-bonus 0.25 \
-  --frontend-dense-pcen-pattern-exception-enabled \
-  --frontend-dense-pcen-pattern-exception-min-score 7.0 \
-  --frontend-dense-pcen-pattern-exception-min-prominence 7.0 \
-  --frontend-dense-pcen-pattern-exception-min-post-flux-ratio 1.8 \
-  --frontend-dense-pcen-pattern-exception-min-post-rms-ratio 2.3 \
-  --frontend-dense-pcen-pattern-exception-min-nearby-peaks 15 \
-  --frontend-dense-pcen-pattern-exception-max-flatness 0.5 \
-  --frontend-region-tail-imbalance-exception-enabled \
-  --frontend-region-tail-imbalance-exception-min-score 6.0 \
-  --frontend-region-tail-imbalance-exception-min-prominence 5.8 \
-  --frontend-region-tail-imbalance-exception-min-post-flux-ratio 1.9 \
-  --frontend-region-tail-imbalance-exception-min-post-rms-ratio 1.2 \
-  --frontend-region-tail-imbalance-exception-max-post-rms-ratio 1.35 \
-  --frontend-region-tail-imbalance-exception-min-bonus 0.25 \
-  --frontend-region-tail-imbalance-exception-min-late-over-early 2.8 \
-  --frontend-region-tail-imbalance-exception-min-duration-above-1p10 0.14 \
-  --frontend-region-tail-imbalance-exception-min-time-to-peak 0.18 \
-  --frontend-region-tail-imbalance-exception-max-time-to-peak 0.24 \
-  --frontend-region-tail-imbalance-exception-max-flatness 0.55
-```
-
-Replay/export skeleton:
-
-```bash
-PYTHONPATH=src python3 -m divesensei.cli replay-evaluation-review \
-  <reviewed-session-source> \
-  <new-run-target>
-
-PYTHONPATH=src python3 -m divesensei.cli export-evaluation-review \
-  <new-run-target>
-```
-
-## 9. Bottom-Line Decision
-
-Default branch on the school machine:
-
-- validated region tie-break + validated bounded exceptions
-
-Do not promote:
-
-- `frontend_short_region_tail_exception`
-
-Next school-machine work:
-
-- start from the validated default branch
-- treat the short-region branch as reference only
-- begin a new family aimed at:
-  - below-threshold misses
-  - pre-candidate capping / suppression
-  - springboard-heavy confuser regime

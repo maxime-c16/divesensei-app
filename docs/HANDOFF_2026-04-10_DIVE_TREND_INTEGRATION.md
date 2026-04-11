@@ -160,3 +160,10 @@ The validated branch remains the reference baseline for:
 
 This cluster-selection experiment is safe and inert. It produced no final winner changes, no suppression changes, and no recall gain. The cluster-selection line looks close to exhausted unless a less bounded or different structural approach is justified later.
 
+## FINAL STATUS UPDATE
+
+- validated branch confirmation: the region-descriptor tie-break branch at band `0.20` remains the production reference
+- experimental branch status: `frontend_short_region_tail_exception` remains experimental only and is not promoted
+- event-level integration failure summary: event-level reranking, score blending, representative selection, delayed cluster selection, cluster winner replacement, and merge-stage veto all failed to integrate safely into the live detector
+- stop decision: this family is closed for the current architecture; do not continue adding event-level local cluster modifications to the peak-first funnel
+
