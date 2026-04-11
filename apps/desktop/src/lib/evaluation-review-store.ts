@@ -62,6 +62,7 @@ export function saveEvaluationReviewDecision(
   analysisRunId: string,
   detectionId: string,
   label: Extract<ReviewDecisionLabel, "dive" | "non_dive" | "unsure">,
+  eventLabel: ReviewDecision["eventLabel"] = null,
   subtype: EvaluationReviewSubtype | null = null,
   notes = "",
 ): ReviewDecision {
@@ -73,6 +74,7 @@ export function saveEvaluationReviewDecision(
     analysisRunId,
     detectionId,
     label,
+    eventLabel,
     subtype,
     notes,
     createdAt: existing?.createdAt ?? now,

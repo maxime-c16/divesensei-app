@@ -37,12 +37,13 @@ export const POST: APIRoute = async ({ request }) => {
   const body = await request.json().catch(() => null) as
     | {
         analysisRunId?: string;
-        detectionId?: string;
-        label?: "keep" | "reject" | "unsure" | "dive" | "non_dive" | "false_negative";
-        subtype?: EvaluationReviewSubtype | null;
-        notes?: string;
-        timestampSeconds?: number;
-      }
+      detectionId?: string;
+      label?: "keep" | "reject" | "unsure" | "dive" | "non_dive" | "false_negative";
+      eventLabel?: "springboard_dive" | "springboard_rebound_only" | "platform_dive" | "noise_or_other" | "uncertain" | null;
+      subtype?: EvaluationReviewSubtype | null;
+      notes?: string;
+      timestampSeconds?: number;
+    }
     | null;
 
   if (!body?.analysisRunId || !body.label) {
@@ -69,12 +70,14 @@ export const POST: APIRoute = async ({ request }) => {
       if (!["dive", "non_dive", "unsure"].includes(body.label)) {
         return Response.json({ error: "Invalid evaluation label." }, { status: 400 });
       }
+      const evaluationLabel = body.label as "dive" | "non_dive" | "unsure";
       const decision = saveEvaluationReviewDecision(
         manifest,
         body.analysisRunId,
         body.detectionId,
-        body.label,
-        body.label === "non_dive" ? body.subtype ?? null : null,
+        evaluationLabel,
+        body.eventLabel ?? null,
+        evaluationLabel === "non_dive" ? body.subtype ?? null : null,
         body.notes ?? "",
       );
       return Response.json({ decision, mode: "evaluation" });
@@ -83,7 +86,8 @@ export const POST: APIRoute = async ({ request }) => {
     if (!body.detectionId || !["keep", "reject", "unsure"].includes(body.label)) {
       return Response.json({ error: "analysisRunId, detectionId, and a standard review label are required." }, { status: 400 });
     }
-    const decision = saveReviewDecision(body.analysisRunId, body.detectionId, body.label, body.notes ?? "");
+    const standardLabel = body.label as "keep" | "reject" | "unsure";
+    const decision = saveReviewDecision(body.analysisRunId, body.detectionId, standardLabel, body.notes ?? "");
     return Response.json({ decision, mode: "standard" });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "Failed to save review decision." }, { status: 400 });

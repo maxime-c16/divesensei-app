@@ -28,6 +28,14 @@ function safePreview(filePath: string): string {
   }
 }
 
+function readJsonlFile<T>(filePath: string): T[] {
+  try {
+    return fs.readFileSync(filePath, "utf-8").split("\n").filter(Boolean).map((line) => JSON.parse(line) as T);
+  } catch {
+    return [];
+  }
+}
+
 function readLogs(filePath: string): DebugLogEntry[] {
   try {
     return fs.readFileSync(filePath, "utf-8").split("\n").filter(Boolean).slice(-10).map((line, index) => {
@@ -181,15 +189,23 @@ export function getUiData(selectedSessionId?: string): UiDataBundle {
         .map((manifestPath) => readJsonFile<SessionManifest>(manifestPath))
         .filter((item): item is SessionManifest => item !== null);
   const manifest = manifestPool.length > 0 ? pickPrimaryManifest(manifestPool, selectedSessionId) : fallbackManifest;
+  const eventReviewSupportPath = manifest.artifacts?.event_review_support;
+  const eventReviewSupportSummaryPath = manifest.artifacts?.event_review_support_summary;
+  const eventReviewSupport = eventReviewSupportPath ? readJsonlFile<Record<string, unknown>>(eventReviewSupportPath) : [];
+  const eventReviewSupportSummary = eventReviewSupportSummaryPath ? readJsonFile<Record<string, unknown>>(eventReviewSupportSummaryPath) ?? null : null;
   return {
     library,
     manifest,
     selectedSessionId: manifest.session.id,
-    logs: readLogs(manifest.artifacts.session_pipeline_log),
+    logs: readLogs(manifest.artifacts.session_pipeline_log ?? ""),
     artifactsPreview: {
-      session_pipeline_report: safePreview(manifest.artifacts.session_pipeline_report),
-      session_debug_summary: safePreview(manifest.artifacts.session_debug_summary),
+      session_pipeline_report: safePreview(manifest.artifacts.session_pipeline_report ?? ""),
+      session_debug_summary: safePreview(manifest.artifacts.session_debug_summary ?? ""),
+      event_review_support: eventReviewSupportPath ? safePreview(eventReviewSupportPath) : "",
+      event_review_support_summary: eventReviewSupportSummaryPath ? safePreview(eventReviewSupportSummaryPath) : "",
     },
+    eventReviewSupport,
+    eventReviewSupportSummary,
   };
 }
 

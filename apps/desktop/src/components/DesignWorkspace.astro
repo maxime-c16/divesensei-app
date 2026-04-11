@@ -27,7 +27,9 @@ const requestedTab = Astro.url.searchParams.get("tab");
 const requestedJob = Astro.url.searchParams.get("job");
 const activeTabIndex = Number.parseInt(requestedTab ?? "0", 10);
 const initialTabIndex = Number.isNaN(activeTabIndex) ? 0 : Math.max(0, Math.min(theme.tabs.length - 1, activeTabIndex));
-const { library, manifest, selectedSessionId } = getUiData(requestedSession);
+const uiData = getUiData(requestedSession);
+const { library, manifest, selectedSessionId, eventReviewSupport } = uiData;
+const eventReviewSupportRows = Array.isArray(eventReviewSupport) ? eventReviewSupport : [];
 const hasSession = library.session_count > 0;
 const session = manifest.session;
 const sessionMode = session.mode ?? "standard";
@@ -144,6 +146,7 @@ const clientBundle = JSON.stringify({
   session,
   sessionMode,
   detections,
+  eventReviewSupportRows,
   primaryVideoUrl,
   sourceVideoUrl,
   rangeStart,
@@ -315,9 +318,32 @@ const clientBundle = JSON.stringify({
                 <option value="unknown_transient">Unknown transient</option>
               </select>
             )}
+            {isEvaluationSession && (
+              <select class="review-decisions__subtype" data-event-label aria-label="Event label">
+                <option value="">Event label (optional)</option>
+                <option value="springboard_dive">Springboard dive</option>
+                <option value="springboard_rebound_only">Springboard rebound only</option>
+                <option value="platform_dive">Platform dive</option>
+                <option value="noise_or_other">Noise or other</option>
+                <option value="uncertain">Uncertain</option>
+              </select>
+            )}
             <input type="text" class="review-decisions__note" data-decision-notes placeholder="Note (optional)" />
           </div>
         </div>
+        {isEvaluationSession && (
+          <div class="review-support-card" data-event-support-card>
+            <div class="review-support-card__header">
+              <strong>Event review support</strong>
+              <span data-event-support-confidence>Suggestion confidence unavailable</span>
+            </div>
+            <p data-event-support-label>Suggested event label: none</p>
+            <p data-event-support-reason>Reason: unavailable</p>
+            <p data-event-support-context>Session context: unavailable</p>
+            <p data-event-support-window>Window: unavailable</p>
+            <p class="review-support-card__meta" data-event-support-flags>Rebound context: n/a · Delayed entry: n/a · No rebound context: n/a</p>
+          </div>
+        )}
         <div class="review-main__timeline">
           <div class="tl" data-timeline-viewport>
             <div class="tl__scale">
@@ -631,6 +657,14 @@ const clientBundle = JSON.stringify({
     const decisionStatus = document.querySelector("[data-decision-status]");
     const decisionNotes = document.querySelector("[data-decision-notes]");
     const decisionSubtype = document.querySelector("[data-decision-subtype]");
+    const eventLabelSelect = document.querySelector("[data-event-label]");
+    const eventSupportCard = document.querySelector("[data-event-support-card]");
+    const eventSupportConfidence = document.querySelector("[data-event-support-confidence]");
+    const eventSupportLabel = document.querySelector("[data-event-support-label]");
+    const eventSupportReason = document.querySelector("[data-event-support-reason]");
+    const eventSupportContext = document.querySelector("[data-event-support-context]");
+    const eventSupportWindow = document.querySelector("[data-event-support-window]");
+    const eventSupportFlags = document.querySelector("[data-event-support-flags]");
     const reviewCompleteNotice = document.querySelector("[data-review-complete]");
     const reviewCompleteTitle = document.querySelector("[data-review-complete-title]");
     const reviewCompleteCopy = document.querySelector("[data-review-complete-copy]");
@@ -767,6 +801,27 @@ const clientBundle = JSON.stringify({
       return decisions.find((entry) => entry.detectionId === detectionId) ?? null;
     }
 
+    function supportFor(detectionId) {
+      return eventReviewSupportRows.find((item) => String(item.legacy_candidate_id ?? "") === String(detectionId)) ?? null;
+    }
+
+    function syncEventSupportUi(currentId) {
+      const support = supportFor(currentId);
+      if (!support) {
+        if (eventSupportCard) eventSupportCard.hidden = true;
+        return;
+      }
+      if (eventSupportCard) eventSupportCard.hidden = false;
+      if (eventSupportConfidence) eventSupportConfidence.textContent = `Suggestion confidence: ${String(support.suggested_event_label_confidence ?? "unknown")}`;
+      if (eventSupportLabel) eventSupportLabel.textContent = `Suggested event label: ${String(support.suggested_event_label ?? "uncertain")}`;
+      if (eventSupportReason) eventSupportReason.textContent = `Reason: ${String(support.suggested_event_label_reason ?? "unavailable")}`;
+      if (eventSupportContext) eventSupportContext.textContent = `Session context: ${String(support.suggested_session_type_context ?? "unknown")} · provenance: ${String(support.session_type_provenance ?? "unknown")}`;
+      if (eventSupportWindow) eventSupportWindow.textContent = `Window: ${formatSeconds(Number(support.event_window_start_seconds ?? 0))} to ${formatSeconds(Number(support.event_window_end_seconds ?? 0))}`;
+      if (eventSupportFlags) {
+        eventSupportFlags.textContent = `Rebound context: ${support.has_preceding_rebound_context ? "yes" : "no"} · Delayed entry: ${support.has_delayed_entry_candidate ? "yes" : "no"} · No rebound context: ${support.no_rebound_context_detected ? "yes" : "no"}`;
+      }
+    }
+
     function decisionLabelFor(detectionId) {
       if (String(detectionId).startsWith("fn-")) return "false_negative";
       return decisionFor(detectionId)?.label ?? "pending";
@@ -807,6 +862,8 @@ const clientBundle = JSON.stringify({
         decisionDetailLabel && (decisionDetailLabel.textContent = `Decision ${currentDecision.label}`);
         if (decisionNotes) decisionNotes.value = currentDecision.notes ?? "";
         if (decisionSubtype) decisionSubtype.value = currentDecision.subtype ?? "";
+        if (eventLabelSelect) eventLabelSelect.value = String(currentDecision.eventLabel ?? "");
+        syncEventSupportUi(current.id);
         return;
       }
       if (String(current?.id ?? "").startsWith("fn-")) {
@@ -814,12 +871,16 @@ const clientBundle = JSON.stringify({
         decisionDetailLabel && (decisionDetailLabel.textContent = "Decision false_negative");
         if (decisionNotes) decisionNotes.value = String(current?.notes ?? "");
         if (decisionSubtype) decisionSubtype.value = String(current?.subtype ?? "");
+        if (eventLabelSelect) eventLabelSelect.value = "";
+        syncEventSupportUi(current.id);
         return;
       }
       decisionStatus && (decisionStatus.textContent = "No decision saved for this attempt.");
       decisionDetailLabel && (decisionDetailLabel.textContent = "No decision yet");
       if (decisionNotes) decisionNotes.value = "";
       if (decisionSubtype) decisionSubtype.value = "";
+      if (eventLabelSelect) eventLabelSelect.value = "";
+      syncEventSupportUi(current.id);
     }
 
     function updateReviewCompleteNotice() {
@@ -1769,6 +1830,7 @@ const clientBundle = JSON.stringify({
       if (String(current.id).startsWith("fn-")) return;
       const savedDetectionId = current.id;
       const subtype = isEvaluationSession() ? (decisionSubtype?.value?.trim() || null) : null;
+      const eventLabel = isEvaluationSession() ? (eventLabelSelect?.value?.trim() || null) : null;
       const response = await fetch("/api/review", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1776,6 +1838,7 @@ const clientBundle = JSON.stringify({
           analysisRunId: parsed.session.id,
           detectionId: savedDetectionId,
           label,
+          eventLabel,
           subtype,
           notes: decisionNotes?.value ?? "",
         }),

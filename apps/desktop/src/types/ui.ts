@@ -94,6 +94,8 @@ export interface UiDataBundle {
   selectedSessionId: string;
   logs: DebugLogEntry[];
   artifactsPreview: Record<string, string>;
+  eventReviewSupport: Array<Record<string, unknown>>;
+  eventReviewSupportSummary: Record<string, unknown> | null;
 }
 
 export interface ReviewDecision {
@@ -101,6 +103,7 @@ export interface ReviewDecision {
   analysisRunId: string;
   detectionId: string;
   label: ReviewDecisionLabel;
+  eventLabel?: "springboard_dive" | "springboard_rebound_only" | "platform_dive" | "noise_or_other" | "uncertain" | null;
   subtype?: EvaluationReviewSubtype | null;
   notes: string;
   createdAt: string;
