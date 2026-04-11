@@ -156,4 +156,14 @@ The default demo/runtime path is `make up`, which builds the Astro app and runs 
 
 ## Status
 
+The frozen detector reference is the region-descriptor tie-break branch at `0.20` with:
+
+- `frontend_region_pattern_exception`
+- `frontend_dense_pcen_pattern_exception`
+- `frontend_region_tail_imbalance_exception`
+
+`frontend_short_region_tail_exception` remains experimental only and does not generalize cross-session.
+
+The event-level research line improved offline separation and cluster ranking, but the live detector integration attempts were closed as unsafe.
+
 This repo is the product source of truth. Product and engine work should land here, not in the legacy integration workspace.
