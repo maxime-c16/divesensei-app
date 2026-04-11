@@ -19,6 +19,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("export-evaluation-review", help="Export reviewed evaluation sessions into hard-negative and diagnostics artifacts")
     subparsers.add_parser("export-event-window-manifest", help="Export a preview event-window manifest from reviewed evaluation sessions")
     subparsers.add_parser("export-event-review-support", help="Precompute event-review suggestions for the review workflow")
+    subparsers.add_parser("export-event-reviewed-manifest", help="Export human-reviewed event labels for dataset construction")
     subparsers.add_parser("compare-evaluation-summaries", help="Compare two reviewed evaluation export summaries")
     subparsers.add_parser("replay-evaluation-review", help="Replay reviewed labels from one evaluation session onto another by timestamp")
     subparsers.add_parser("validate", help="Run a benchmark manifest")
@@ -151,6 +152,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         from divesensei.workflows.event_review_support import main as event_review_support_main
 
         return event_review_support_main(argv[1:])
+
+    if argv[0] == "export-event-reviewed-manifest":
+        if any(flag in argv[1:] for flag in ("-h", "--help")):
+            from divesensei.workflows.event_reviewed_manifest import build_parser as reviewed_manifest_build_parser
+
+            reviewed_manifest_build_parser().print_help()
+            return 0
+
+        from divesensei.workflows.event_reviewed_manifest import main as reviewed_manifest_main
+
+        return reviewed_manifest_main(argv[1:])
 
     if argv[0] == "compare-evaluation-summaries":
         if any(flag in argv[1:] for flag in ("-h", "--help")):
