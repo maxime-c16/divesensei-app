@@ -29,10 +29,12 @@ class ReviewSupportRow:
     event_window_start_seconds: float
     event_window_end_seconds: float
     suggested_event_label: str | None
+    suggested_event_label_confidence: str
     suggested_event_label_reason: str
     suggested_session_type_context: str
     has_preceding_rebound_context: bool
     has_delayed_entry_candidate: bool
+    no_rebound_context_detected: bool
     event_label_provenance_suggestion: str
     event_anchor_strategy: str
     uncertainty_flag: bool
@@ -64,33 +66,52 @@ def _infer_session_type(source_video_path: str) -> tuple[str, str]:
     return "unknown", "uncertain"
 
 
-def _suggested_label(row: dict[str, Any], session_type: str, preceding_rebound: bool, delayed_entry: bool) -> tuple[str | None, str, bool, str]:
+def _suggested_label(
+    row: dict[str, Any],
+    session_type: str,
+    session_type_provenance: str,
+    preceding_rebound: bool,
+    delayed_entry: bool,
+) -> tuple[str, str, str, bool, str]:
     review_label = str(row.get("review_label") or "")
     subtype = str(row.get("subtype") or "")
     human_label = str(row.get("human_label") or "")
+    trustworthy_session_type = session_type in {"springboard", "platform"} and session_type_provenance == "direct_review"
+    session_type_is_conservative = session_type in {"springboard", "platform"} and session_type_provenance != "direct_review"
+    no_rebound_context = not preceding_rebound
     if review_label == "dive" or human_label == "dive":
-        if session_type == "springboard":
+        if session_type == "springboard" and trustworthy_session_type:
             if preceding_rebound:
-                return "springboard_dive", "springboard dive with rebound context", False, "session_type_inferred"
-            return "platform_dive", "dive with no rebound-like context", False, "session_type_inferred"
-        if session_type == "platform":
-            return "platform_dive", "platform dive context", False, "session_type_inferred"
-        return None, "ambiguous dive without session-type certainty", True, "uncertain"
+                return "springboard_dive", "rebound_context_plus_delayed_entry", "high", False, "session_type_inferred"
+            return "springboard_dive", "insufficient_context_uncertain", "low", True, "uncertain"
+        if session_type == "platform" and trustworthy_session_type:
+            if no_rebound_context:
+                return "platform_dive", "platform_session_dive_without_rebound_context", "high", False, "session_type_inferred"
+            return "platform_dive", "platform_session_dive_with_rebound_context", "medium", False, "session_type_inferred"
+        if session_type_is_conservative:
+            return "uncertain", "insufficient_context_uncertain", "low", True, "uncertain"
+        return "uncertain", "insufficient_context_uncertain", "low", True, "uncertain"
     if review_label == "non_dive" and subtype == "board_rebound":
         if delayed_entry:
-            return "springboard_dive", "board rebound with delayed-entry-like candidate", False, "subtype_mapped"
-        return "springboard_rebound_only", "board rebound with no plausible delayed entry", False, "subtype_mapped"
+            if trustworthy_session_type and session_type == "springboard":
+                return "springboard_dive", "rebound_context_plus_delayed_entry", "high", False, "subtype_mapped"
+            if session_type == "platform" and trustworthy_session_type:
+                return "uncertain", "insufficient_context_uncertain", "low", True, "uncertain"
+            return "uncertain", "insufficient_context_uncertain", "low", True, "uncertain"
+        if session_type == "springboard" and trustworthy_session_type:
+            return "springboard_rebound_only", "board_rebound_without_delayed_entry", "high", False, "subtype_mapped"
+        return "uncertain", "insufficient_context_uncertain", "low", True, "uncertain"
     if review_label == "non_dive" and subtype in {"voice_whistle", "handling_noise", "non_dive_splash"}:
-        return "noise_or_other", f"negative subtype mapped from {subtype}", False, "subtype_mapped"
+        return "noise_or_other", f"negative_subtype_{subtype}", "high", False, "subtype_mapped"
     if review_label == "non_dive" and not subtype:
-        return "noise_or_other", "generic non-dive without subtype detail", True, "uncertain"
+        return "uncertain", "insufficient_context_uncertain", "low", True, "uncertain"
     if review_label == "false_negative":
-        if session_type == "springboard":
-            return "springboard_dive", "false-negative dive in springboard session", False, "session_type_inferred"
-        if session_type == "platform":
-            return "platform_dive", "false-negative dive in platform session", False, "session_type_inferred"
-        return None, "false-negative dive without session-type certainty", True, "uncertain"
-    return None, "no reliable event suggestion", True, "uncertain"
+        if session_type == "springboard" and trustworthy_session_type:
+            return "springboard_dive", "false_negative_dive_springboard_session", "medium", False, "session_type_inferred"
+        if session_type == "platform" and trustworthy_session_type:
+            return "platform_dive", "false_negative_dive_platform_session", "medium", False, "session_type_inferred"
+        return "uncertain", "insufficient_context_uncertain", "low", True, "uncertain"
+    return "uncertain", "insufficient_context_uncertain", "low", True, "uncertain"
 
 
 def _event_window(anchor: float, pre_seconds: float, post_seconds: float) -> tuple[float, float]:
@@ -139,8 +160,8 @@ def _support_row(
         and 0.0 <= float(fn.get("timestamp_seconds") or 0.0) - anchor <= post_seconds
         for fn in false_negative_rows
     )
-    suggestion, reason, uncertainty, label_provenance_suggestion = _suggested_label(
-        row, session_type, preceding_rebound, delayed_entry
+    suggestion, reason, confidence, uncertainty, label_provenance_suggestion = _suggested_label(
+        row, session_type, session_type_provenance, preceding_rebound, delayed_entry
     )
     return {
         "source_session_root": source_root,
@@ -155,10 +176,12 @@ def _support_row(
         "event_window_start_seconds": window_start,
         "event_window_end_seconds": window_end,
         "suggested_event_label": suggestion,
+        "suggested_event_label_confidence": confidence,
         "suggested_event_label_reason": reason,
         "suggested_session_type_context": session_type,
         "has_preceding_rebound_context": preceding_rebound,
         "has_delayed_entry_candidate": delayed_entry,
+        "no_rebound_context_detected": not preceding_rebound,
         "event_label_provenance_suggestion": label_provenance_suggestion,
         "uncertainty_flag": uncertainty,
         "proposal_timestamp_seconds": row.get("proposal_timestamp_seconds", row.get("timestamp_seconds", row.get("timestamp"))),
@@ -227,10 +250,13 @@ def build_review_support(session_path: str, output_dir: str | None, pre_seconds:
         "session_type_provenance": session_type_provenance,
         "row_count": len(rows),
         "suggested_event_label_counts": dict(Counter(str(row.get("suggested_event_label")) for row in rows)),
+        "suggested_event_label_confidence_counts": dict(Counter(str(row.get("suggested_event_label_confidence")) for row in rows)),
         "suggested_event_label_reason_counts": dict(Counter(str(row.get("suggested_event_label_reason")) for row in rows)),
         "has_preceding_rebound_context_count": sum(1 for row in rows if row.get("has_preceding_rebound_context")),
         "has_delayed_entry_candidate_count": sum(1 for row in rows if row.get("has_delayed_entry_candidate")),
+        "no_rebound_context_detected_count": sum(1 for row in rows if row.get("no_rebound_context_detected")),
         "uncertainty_count": sum(1 for row in rows if row.get("uncertainty_flag")),
+        "session_aware_downgrade_count": sum(1 for row in rows if row.get("uncertainty_flag") and row.get("suggested_event_label") is None),
         "source_root": source_root,
     }
     return rows, summary
@@ -255,10 +281,13 @@ def write_summary_md(path: Path, summary: dict[str, Any], rows: Sequence[dict[st
         "## Counts",
         "",
         f"- suggestion types: `{json.dumps(summary['suggested_event_label_counts'], sort_keys=True)}`",
+        f"- suggestion confidence: `{json.dumps(summary['suggested_event_label_confidence_counts'], sort_keys=True)}`",
         f"- suggestion reasons: `{json.dumps(summary['suggested_event_label_reason_counts'], sort_keys=True)}`",
         f"- rebound-context hints: `{summary['has_preceding_rebound_context_count']}`",
         f"- delayed-entry hints: `{summary['has_delayed_entry_candidate_count']}`",
+        f"- no-rebound-context hints: `{summary['no_rebound_context_detected_count']}`",
         f"- uncertain rows: `{summary['uncertainty_count']}`",
+        f"- session-aware downgrades to uncertain: `{summary['session_aware_downgrade_count']}`",
         "",
         "## Examples",
         "",

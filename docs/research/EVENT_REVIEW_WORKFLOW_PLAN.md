@@ -44,6 +44,7 @@ The UI layer needs to distinguish:
 Suggested UI concepts:
 
 - `suggested_event_label`
+- `suggested_event_label_confidence`
 - `suggested_event_label_reason`
 - `suggested_session_type_context`
 - `has_preceding_rebound_context`
@@ -120,7 +121,7 @@ The reviewer should not need to infer the detector lineage manually.
 The first review-support pass should stay simple:
 
 - if a dive occurs after a nearby board-rebound-labeled sound, suggest `springboard_dive`
-- if a dive occurs with no nearby rebound-like context, suggest `platform_dive` or `no_rebound_context`
+- if a dive occurs with no nearby rebound-like context, keep the context flag visible and only suggest `platform_dive` when the session type itself supports that interpretation
 - if a board-rebound event has no plausible delayed entry in the event window, suggest `springboard_rebound_only`
 - if a negative event is whistle/handling/splash-like, map it toward `noise_or_other`
 
@@ -147,6 +148,7 @@ No existing review semantics should change.
 - do not introduce live event-level scoring into the detector
 - do not silently convert suggestions into labels
 - do not hide provenance
+- do not turn `no_rebound_context_detected` into a class suggestion by itself
 
 ## Output Expectation
 
