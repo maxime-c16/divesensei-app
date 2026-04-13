@@ -1,0 +1,108 @@
+{
+  "current_status_resolution": {
+    "classification": "B",
+    "statement": "Springboard Phase5 passed; platform/noise is blocked by validation design/gating, so global Phase5 is not yet pass-complete.",
+    "evidence": {
+      "springboard_guardbands": [
+        {
+          "check": "success_mean_auc_min",
+          "status": "PASS",
+          "threshold": 0.52,
+          "track": "springboard_track",
+          "value": 0.7745098039215687
+        },
+        {
+          "check": "success_mean_macro_f1_min",
+          "status": "PASS",
+          "threshold": 0.5,
+          "track": "springboard_track",
+          "value": 0.5047619047619047
+        },
+        {
+          "check": "success_champigny_macro_f1_min",
+          "status": "PASS",
+          "threshold": 0.44,
+          "track": "springboard_track",
+          "value": 0.5047619047619047
+        }
+      ],
+      "platform_noise_guardbands": [
+        {
+          "check": "success_mean_auc_min",
+          "status": "NOT_APPLICABLE_GATING_FAILED",
+          "threshold": 0.66,
+          "track": "platform_noise_track",
+          "value": "NOT_APPLICABLE_GATING_FAILED"
+        },
+        {
+          "check": "success_mean_macro_f1_min",
+          "status": "NOT_APPLICABLE_GATING_FAILED",
+          "threshold": 0.5,
+          "track": "platform_noise_track",
+          "value": "NOT_APPLICABLE_GATING_FAILED"
+        },
+        {
+          "check": "success_champigny_macro_f1_min",
+          "status": "NOT_APPLICABLE_GATING_FAILED",
+          "threshold": 0.64,
+          "track": "platform_noise_track",
+          "value": "NOT_APPLICABLE_GATING_FAILED"
+        }
+      ]
+    }
+  },
+  "recovery_paths": [
+    {
+      "path": "A",
+      "name": "track_level_acceptance",
+      "description": "Accept springboard as passed; mark platform/noise validation-blocked until valid scored slice exists.",
+      "feasibility_now": "high",
+      "risk": "medium",
+      "amount_of_work": "low",
+      "scientific_cleanliness": "high_for_honesty_medium_for_global_closure",
+      "preserves_comparability_with_frozen_artifacts": true,
+      "notes": "Honest status framing now, but does not unblock global Phase5 pass/fail."
+    },
+    {
+      "path": "B",
+      "name": "build_new_scored_slice_from_existing_reviewed_data",
+      "description": "Materialize a valid two-class platform/noise scored validation slice from existing reviewed manifests.",
+      "feasibility_now": "high",
+      "risk": "medium",
+      "amount_of_work": "medium",
+      "scientific_cleanliness": "medium_high",
+      "preserves_comparability_with_frozen_artifacts": "partial",
+      "notes": "Best immediate unblocker; requires explicit provenance and split-freeze update.",
+      "best_candidate_now": "insep_quick_stratified_holdout_candidate or champigny_plus_insep15min_validated_noise"
+    },
+    {
+      "path": "C",
+      "name": "minimal_additional_human_review_for_platform_noise_slice",
+      "description": "Add smallest targeted human review set to recover a clean two-class mixed validation slice.",
+      "feasibility_now": "medium",
+      "risk": "low_medium",
+      "amount_of_work": "medium_high",
+      "scientific_cleanliness": "high_if_row_selection_is_predeclared",
+      "preserves_comparability_with_frozen_artifacts": false,
+      "notes": "Current reviewed Champigny set lacks non-ambiguous noise depth; would require new reviewed rows (not yet materialized).",
+      "minimal_needed": "at least 4-6 additional clean Champigny noise_or_other rows with proposal-centered/compatible context, plus 1-2 platform checks."
+    },
+    {
+      "path": "D",
+      "name": "protocol_revision_for_track_scored_vs_reporting_only",
+      "description": "Revise global Phase5 pass/fail rule when one track is scored and another is reporting-only.",
+      "feasibility_now": "medium",
+      "risk": "high_if_used_to_mask_blocker",
+      "amount_of_work": "medium",
+      "scientific_cleanliness": "medium",
+      "preserves_comparability_with_frozen_artifacts": "partial",
+      "notes": "Useful only after explicit governance decision; should not replace missing platform/noise scored validation evidence."
+    }
+  ],
+  "best_next_path": {
+    "choice": "B",
+    "why": "It is the fastest scientifically defensible route to restore a valid two-class platform/noise scored slice using already reviewed data, without relabeling or detector/model changes.",
+    "recommended_first_candidate": "insep_quick_stratified_holdout_candidate",
+    "fallback_candidate": "champigny_plus_insep15min_validated_noise"
+  }
+}

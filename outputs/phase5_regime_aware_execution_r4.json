@@ -1,0 +1,177 @@
+{
+  "champigny_mixed_validation_reporting": {
+    "ambiguity_slice": {
+      "candidate_ids": [
+        "det-0001",
+        "det-0007"
+      ],
+      "guardband_applicable": false,
+      "row_count": 2
+    },
+    "platform_only_stress_slice": {
+      "guardband_applicable": false,
+      "metrics_reporting_only": {
+        "accuracy": 1.0,
+        "auc": 0.5,
+        "confusion_matrix": [
+          [
+            8,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "macro_f1": 0.5,
+        "negative_recall": 0.0,
+        "positive_recall": 1.0
+      },
+      "row_count": 8
+    },
+    "policy": "validation_only_explicit_sub_slices_with_binary_class_coverage_gating",
+    "springboard_scored_slice": {
+      "metrics": {
+        "accuracy": 0.6923076923076923,
+        "auc": 0.7745098039215687,
+        "confusion_matrix": [
+          [
+            4,
+            32
+          ],
+          [
+            0,
+            68
+          ]
+        ],
+        "macro_f1": 0.5047619047619047,
+        "negative_recall": 1.0,
+        "positive_recall": 0.1111111111111111
+      },
+      "row_count": 104
+    },
+    "structure_version": "r3prep_strict_sub_slices_v1"
+  },
+  "final_decision": "PHASE5_R4_FAIL",
+  "guardband_evaluation": [
+    {
+      "check": "success_mean_auc_min",
+      "status": "PASS",
+      "threshold": 0.52,
+      "track": "springboard_track",
+      "value": 0.7745098039215687
+    },
+    {
+      "check": "success_mean_macro_f1_min",
+      "status": "PASS",
+      "threshold": 0.5,
+      "track": "springboard_track",
+      "value": 0.5047619047619047
+    },
+    {
+      "check": "success_champigny_macro_f1_min",
+      "status": "PASS",
+      "threshold": 0.44,
+      "track": "springboard_track",
+      "value": 0.5047619047619047
+    },
+    {
+      "check": "success_mean_auc_min",
+      "status": "FAIL",
+      "threshold": 0.66,
+      "track": "platform_noise_track",
+      "value": 0.51
+    },
+    {
+      "check": "success_mean_macro_f1_min",
+      "status": "FAIL",
+      "threshold": 0.5,
+      "track": "platform_noise_track",
+      "value": 0.37321937321937326
+    },
+    {
+      "check": "success_champigny_macro_f1_min",
+      "status": "FAIL",
+      "threshold": 0.64,
+      "track": "platform_noise_track",
+      "value": 0.37321937321937326
+    },
+    {
+      "check": "springboard_all_dive_predicted_as_rebound",
+      "status": "PASS",
+      "threshold": "must_not_trigger",
+      "track": "catastrophic",
+      "value": "At least one holdout springboard_dive predicted correctly."
+    },
+    {
+      "check": "platform_holdout_recall_below_0p75",
+      "status": "PASS",
+      "threshold": "must_not_trigger",
+      "track": "catastrophic",
+      "value": "Holdout platform_dive recall=0.8000"
+    }
+  ],
+  "input_integrity": {
+    "classifier_family_unchanged": true,
+    "corrected_champigny_slice_structure_unchanged": true,
+    "frozen_guardbands_path": "outputs/phase5_guardbands.json",
+    "frozen_lists_used_unchanged": true,
+    "frozen_manifest_lists_path": "outputs/phase5_regime_manifest_lists.json",
+    "platform_noise_feature_setup_unchanged": true,
+    "platform_noise_scored_slice_source": "insep_quick_stratified_holdout_candidate",
+    "springboard_feature_family": "probe_r1_only"
+  },
+  "main_reason": "success_mean_auc_min failed.",
+  "platform_noise_results": {
+    "false_negative_count_platform_to_noise": 2,
+    "false_positive_count_noise_to_platform": 9,
+    "validation_metrics": {
+      "accuracy": 0.45,
+      "auc": 0.51,
+      "confusion_matrix": [
+        [
+          8,
+          2
+        ],
+        [
+          9,
+          1
+        ]
+      ],
+      "macro_f1": 0.37321937321937326,
+      "negative_recall": 0.1,
+      "positive_recall": 0.8
+    }
+  },
+  "row_counts_used": {
+    "champigny_ambiguity_rows": 2,
+    "champigny_platform_stress_rows": 8,
+    "champigny_springboard_scored_rows": 104,
+    "platform_noise_train_rows": 53,
+    "platform_noise_validation_rows": 20,
+    "springboard_train_rows": 129,
+    "springboard_validation_rows": 104
+  },
+  "run_type": "phase5_regime_aware_execution_v1_r4_platform_scored_slice_recovered",
+  "springboard_results": {
+    "false_negative_count_dive_to_rebound": 32,
+    "false_positive_count_rebound_to_dive": 0,
+    "validation_metrics": {
+      "accuracy": 0.6923076923076923,
+      "auc": 0.7745098039215687,
+      "confusion_matrix": [
+        [
+          4,
+          32
+        ],
+        [
+          0,
+          68
+        ]
+      ],
+      "macro_f1": 0.5047619047619047,
+      "negative_recall": 1.0,
+      "positive_recall": 0.1111111111111111
+    }
+  }
+}
