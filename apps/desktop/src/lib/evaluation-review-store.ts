@@ -68,7 +68,8 @@ export function saveEvaluationReviewDecision(
 ): ReviewDecision {
   const store = loadEvaluationReviewStore(manifest);
   const now = new Date().toISOString();
-  const existing = store.decisions.find((entry) => entry.analysisRunId === analysisRunId && entry.detectionId === detectionId);
+  const existing = store.decisions.find((entry) => entry.analysisRunId === analysisRunId && entry.detectionId === detectionId)
+    ?? store.decisions.find((entry) => entry.detectionId === detectionId);
   const decision: ReviewDecision = {
     id: `${analysisRunId}:${detectionId}`,
     analysisRunId,
@@ -100,6 +101,7 @@ export function addEvaluationFalseNegative(
   manifest: SessionManifest,
   analysisRunId: string,
   timestampSeconds: number,
+  eventLabel: EvaluationFalseNegativeAnnotation["eventLabel"] = null,
   subtype: EvaluationReviewSubtype | null = null,
   notes = "",
 ): EvaluationFalseNegativeAnnotation {
@@ -112,6 +114,7 @@ export function addEvaluationFalseNegative(
     reviewStartSeconds: Math.max(0, timestampSeconds - 2.0),
     reviewEndSeconds: Math.max(timestampSeconds + 2.0, timestampSeconds + 0.5),
     label: "false_negative",
+    eventLabel,
     subtype,
     notes,
     createdAt: now,
@@ -120,4 +123,26 @@ export function addEvaluationFalseNegative(
   store.falseNegatives.push(annotation);
   saveEvaluationReviewStore(manifest, store);
   return annotation;
+}
+
+export function saveEvaluationFalseNegativeAnnotation(
+  manifest: SessionManifest,
+  analysisRunId: string,
+  annotationId: string,
+  eventLabel: EvaluationFalseNegativeAnnotation["eventLabel"] = null,
+  subtype: EvaluationReviewSubtype | null = null,
+  notes = "",
+): EvaluationFalseNegativeAnnotation {
+  const store = loadEvaluationReviewStore(manifest);
+  const now = new Date().toISOString();
+  const existing = store.falseNegatives.find((entry) => entry.id === annotationId && entry.analysisRunId === analysisRunId);
+  if (!existing) {
+    throw new Error(`False negative annotation not found: ${annotationId}`);
+  }
+  existing.eventLabel = eventLabel;
+  existing.subtype = subtype;
+  existing.notes = notes;
+  existing.updatedAt = now;
+  saveEvaluationReviewStore(manifest, store);
+  return existing;
 }

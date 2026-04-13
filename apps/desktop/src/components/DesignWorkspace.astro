@@ -11,6 +11,7 @@ import {
   sessionStatusLabel,
 } from "@/lib/ui-data";
 import { listExportedPathsForAnalysisRun } from "@/lib/export-jobs";
+import { listEvaluationFalseNegatives } from "@/lib/evaluation-review-store";
 
 interface ThemeConfig {
   id: string;
@@ -25,11 +26,33 @@ const { theme } = Astro.props as { theme: ThemeConfig };
 const requestedSession = Astro.url.searchParams.get("session") ?? undefined;
 const requestedTab = Astro.url.searchParams.get("tab");
 const requestedJob = Astro.url.searchParams.get("job");
+const requestedFocus = Astro.url.searchParams.get("focus");
 const activeTabIndex = Number.parseInt(requestedTab ?? "0", 10);
 const initialTabIndex = Number.isNaN(activeTabIndex) ? 0 : Math.max(0, Math.min(theme.tabs.length - 1, activeTabIndex));
 const uiData = getUiData(requestedSession);
-const { library, manifest, selectedSessionId, eventReviewSupport } = uiData;
+const { library, manifest, selectedSessionId, eventReviewSupport, eventReviewRefinementTop15 } = uiData;
 const eventReviewSupportRows = Array.isArray(eventReviewSupport) ? eventReviewSupport : [];
+const eventReviewQueueRows = Array.isArray(eventReviewRefinementTop15) ? eventReviewRefinementTop15 : [];
+const refinementQueueStats = eventReviewQueueRows.reduce((acc, row) => {
+  const key = String(row.current_final_human_event_label ?? "unlabeled");
+  const currentCount = Number(acc[key] ?? 0);
+  acc[key] = currentCount + 1;
+  return acc;
+}, {} as Record<string, number>);
+const refinementFalseNegativeOrderBySession: Record<string, number> = {};
+const formatQueueSessionLabel = (sessionId: string) => {
+  const value = String(sessionId ?? "").trim();
+  if (!value) return "Session";
+  if (value.startsWith("evaluation_insep_15min")) return "INSEP · 15 min";
+  if (value.startsWith("evaluation_insep_quick_9015")) return "INSEP · Quick 9015";
+  if (value.startsWith("evaluation_champigny")) return "Champigny";
+  if (value.startsWith("evaluation_")) {
+    const parts = value.replace(/^evaluation_/, "").split("_").filter(Boolean);
+    const short = parts.slice(0, 2).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
+    return short || "Session";
+  }
+  return value.length > 18 ? `${value.slice(0, 15)}…` : value;
+};
 const hasSession = library.session_count > 0;
 const session = manifest.session;
 const sessionMode = session.mode ?? "standard";
@@ -37,6 +60,37 @@ const isEvaluationSession = sessionMode === "evaluation";
 const detections = manifest.detections.map((item) => ({
   ...item,
   reviewClipPath: resolveClipMediaPath(item.clip.browser_path ?? item.clip.path),
+}));
+const initialFalseNegativeAnnotations = isEvaluationSession ? listEvaluationFalseNegatives(manifest) : [];
+const initialFalseNegativeDetections = initialFalseNegativeAnnotations.map((annotation, index) => ({
+  id: annotation.id,
+  index: detections.length + index + 1,
+  timestamp_seconds: Number(annotation.timestampSeconds ?? 0),
+  start_time_seconds: Number(annotation.reviewStartSeconds ?? Math.max(0, Number(annotation.timestampSeconds ?? 0) - 2)),
+  end_time_seconds: Number(annotation.reviewEndSeconds ?? Number(annotation.timestampSeconds ?? 0) + 2),
+  duration_seconds: Math.max(0.5, Number(annotation.reviewEndSeconds ?? 0) - Number(annotation.reviewStartSeconds ?? 0)),
+  review_start_seconds: Number(annotation.reviewStartSeconds ?? Math.max(0, Number(annotation.timestampSeconds ?? 0) - 2)),
+  review_end_seconds: Number(annotation.reviewEndSeconds ?? Number(annotation.timestampSeconds ?? 0) + 2),
+  review_duration_seconds: Math.max(0.5, Number(annotation.reviewEndSeconds ?? 0) - Number(annotation.reviewStartSeconds ?? 0)),
+  confidence: "medium" as const,
+  scores: {
+    audio: 0,
+    video: 0,
+    combined: 0,
+    audio_model_probability: 0,
+    audio_clip_probability: 0,
+  },
+  features: {},
+  clip: {
+    path: null,
+    browser_path: null,
+    filename: null,
+  },
+  reviewClipPath: null,
+  notes: annotation.notes ?? "",
+  subtype: annotation.subtype ?? "",
+  eventLabel: annotation.eventLabel ?? null,
+  entry_type: "false_negative",
 }));
 const selected = detections[0];
 const highest = [...detections].sort((a, b) => b.scores.combined - a.scores.combined)[0] ?? selected;
@@ -153,9 +207,12 @@ const clientBundle = JSON.stringify({
   rangeSpan,
   initialExportedPaths,
   initialReviewPending: initialReviewPlaceholderVisible,
+  initialFalseNegativeAnnotations,
   requestedTab,
   requestedSession,
   requestedJob,
+  requestedFocus,
+  eventReviewRefinementTop15,
 });
 ---
 
@@ -329,21 +386,11 @@ const clientBundle = JSON.stringify({
               </select>
             )}
             <input type="text" class="review-decisions__note" data-decision-notes placeholder="Note (optional)" />
+            {isEvaluationSession && (
+              <button class="action-link review-decisions__button review-decisions__button--keep" type="button" data-event-save>Save event label</button>
+            )}
           </div>
         </div>
-        {isEvaluationSession && (
-          <div class="review-support-card" data-event-support-card>
-            <div class="review-support-card__header">
-              <strong>Event review support</strong>
-              <span data-event-support-confidence>Suggestion confidence unavailable</span>
-            </div>
-            <p data-event-support-label>Suggested event label: none</p>
-            <p data-event-support-reason>Reason: unavailable</p>
-            <p data-event-support-context>Session context: unavailable</p>
-            <p data-event-support-window>Window: unavailable</p>
-            <p class="review-support-card__meta" data-event-support-flags>Rebound context: n/a · Delayed entry: n/a · No rebound context: n/a</p>
-          </div>
-        )}
         <div class="review-main__timeline">
           <div class="tl" data-timeline-viewport>
             <div class="tl__scale">
@@ -378,6 +425,18 @@ const clientBundle = JSON.stringify({
                   aria-label={`Attempt ${item.index} at ${formatSeconds(item.timestamp_seconds)}`}
                 ></button>
               ))}
+              {initialFalseNegativeDetections.map((item) => (
+                <button
+                  type="button"
+                  class={`tl__pip confidence-${item.confidence} is-false-negative ${item.id === selected?.id ? "is-current" : ""}`}
+                  style={`left:${markerPosition(item.timestamp_seconds)}%;`}
+                  data-focus-detection={item.id}
+                  data-timeline-marker={item.id}
+                  data-pip-index={item.index}
+                  data-pip-time={formatSeconds(item.timestamp_seconds)}
+                  aria-label={`Manual false-negative window at ${formatSeconds(item.timestamp_seconds)}`}
+                ></button>
+              ))}
             </div>
           </div>
         </div>
@@ -399,39 +458,78 @@ const clientBundle = JSON.stringify({
       </article>
 
       <aside class="review-sidebar">
-        <div class="review-sidebar__header">
-          <h2 data-review-list-title>{isEvaluationSession ? "Evaluation queue" : "Attempts"}</h2>
-          <select class="review-sidebar__filter" data-review-filter>
-            <option value="all" selected>All</option>
-            <option value="pending">To review</option>
-            <option value={isEvaluationSession ? "dive" : "keep"}>{isEvaluationSession ? "Dives" : "Kept"}</option>
-            <option value={isEvaluationSession ? "non_dive" : "reject"}>{isEvaluationSession ? "Non-dives" : "Rejected"}</option>
-            <option value="unsure">Unsure</option>
-            {isEvaluationSession && <option value="false_negative">False negatives</option>}
-          </select>
-        </div>
-        <div class="review-sidebar__list">
-          <table class="queue-table">
-            <thead>
-              <tr>
-                <th>Attempt</th>
-                <th>Splash</th>
-                <th>Decision</th>
-                <th>{isEvaluationSession ? "Type" : "Signal"}</th>
-              </tr>
-            </thead>
-            <tbody data-detection-table>
-              {detections.map((item) => (
-                <tr class={item.id === selected?.id ? "is-current" : ""} data-focus-detection={item.id}>
-                  <td>{item.id}</td>
-                  <td>{formatSeconds(item.timestamp_seconds)}</td>
-                  <td>Pending</td>
-                  <td>{signalLabelFor(item.confidence)}</td>
-                </tr>
+        {eventReviewQueueRows.length > 0 && (
+          <section class="review-refinement">
+            <div class="review-refinement__header">
+              <div class="review-refinement__titleblock">
+                <h2>Refinement queue</h2>
+                <p>High-value rows selected from the confusion audit. Review these first to reduce class collapse.</p>
+              </div>
+              <div class="review-refinement__meta">
+                <strong>{eventReviewQueueRows.length}</strong>
+                <span>priority rows</span>
+              </div>
+            </div>
+            <div class="review-refinement__stats">
+              {Object.entries(refinementQueueStats).map(([label, count]) => (
+                <article class="review-refinement__stat">
+                  <strong>{count}</strong>
+                  <span>{label.replaceAll("_", " ")}</span>
+                </article>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </div>
+            <div class="review-refinement__note">
+              <strong>Review rule</strong>
+              <p>Confirm real entry vs rebound-only structure first. Keep `noise_or_other` for handling noise, whistles, splashes, and other non-event clutter. Use `uncertain` only when the window still does not support a clean archetype.</p>
+            </div>
+            <ol class="review-refinement__list">
+              {eventReviewQueueRows.map((row, index) => (
+                (() => {
+                  const sessionId = String(row.session_id ?? "");
+                  const falseNegativeOrder = row.candidate_id == null
+                    ? ((refinementFalseNegativeOrderBySession[sessionId] = (refinementFalseNegativeOrderBySession[sessionId] ?? 0) + 1), refinementFalseNegativeOrderBySession[sessionId])
+                    : "";
+                  return (
+                <li class="review-refinement__item">
+                  <button
+                    type="button"
+                    class="review-refinement__row"
+                    data-queue-focus
+                    data-queue-session={String(row.session_id ?? "")}
+                    data-queue-candidate={String(row.candidate_id ?? "")}
+                    data-queue-index={String(index + 1)}
+                    data-queue-label={String(row.current_final_human_event_label ?? "")}
+                    data-queue-pred={String(row.model_predicted_label ?? "")}
+                    data-queue-suggestion={String(row.suggestion_label ?? "")}
+                    data-queue-fn-order={String(falseNegativeOrder)}
+                  >
+                    <span class="review-refinement__rank">{String(index + 1).padStart(2, "0")}</span>
+                    <div class="review-refinement__body">
+                      <div class="review-refinement__rowhead">
+                        <strong>{String(row.candidate_id ?? "Manual false-negative window")}</strong>
+                        <div class="review-refinement__rowmeta">
+                          <span class="review-refinement__sessiontag">{formatQueueSessionLabel(String(row.session_id ?? ""))}</span>
+                          <span class="review-refinement__status" data-queue-status>Pending</span>
+                        </div>
+                      </div>
+                      <div class="review-refinement__labels">
+                        <span data-queue-final-label>Final {String(row.current_final_human_event_label ?? "unlabeled").replaceAll("_", " ")}</span>
+                        <span>Model {String(row.model_predicted_label ?? "n/a").replaceAll("_", " ")}</span>
+                        <span>Suggestion {String(row.suggestion_label ?? "n/a").replaceAll("_", " ")}</span>
+                      </div>
+                      <p>{String(row.why_this_row_matters ?? "")}</p>
+                    </div>
+                  </button>
+                </li>
+                  );
+                })()
+              ))}
+            </ol>
+            <div class="review-refinement__foot">
+              <span>Click a row to jump directly into the review queue.</span>
+            </div>
+          </section>
+        )}
         <div class="detail-bar">
           <span data-detail-audio>Audio {selected ? selected.scores.audio.toFixed(2) : "0.00"}</span>
           <span data-detail-window>Window {selected ? `${formatSeconds(reviewStartFor(selected))} to ${formatSeconds(reviewEndFor(selected))}` : "0:00.000 to 0:00.000"}</span>
@@ -617,7 +715,7 @@ const clientBundle = JSON.stringify({
     // @ts-nocheck
     const parsed = JSON.parse(document.getElementById("workspace-data")?.textContent ?? "{}");
     let baseDetections = parsed.detections ?? [];
-    let falseNegativeAnnotations = [];
+    let falseNegativeAnnotations = Array.isArray(parsed.initialFalseNegativeAnnotations) ? parsed.initialFalseNegativeAnnotations : [];
     let detections = baseDetections.slice();
     const rangeStartValue = Number(parsed.rangeStart ?? 0);
     const rangeSpanValue = Math.max(Number(parsed.rangeSpan ?? 1), 1);
@@ -636,6 +734,8 @@ const clientBundle = JSON.stringify({
     let timelineScrubbing = false;
     let timelinePointerId = null;
     let manualTimelineSeekMode = false;
+    const refinementReviewStorageKey = "divesensei.refinement-reviewed.v1";
+    let refinementReviewedKeys = new Set();
 
     const tabButtons = Array.from(document.querySelectorAll("[data-tab-trigger]"));
     const panels = Array.from(document.querySelectorAll("[data-tab-panel]"));
@@ -658,13 +758,7 @@ const clientBundle = JSON.stringify({
     const decisionNotes = document.querySelector("[data-decision-notes]");
     const decisionSubtype = document.querySelector("[data-decision-subtype]");
     const eventLabelSelect = document.querySelector("[data-event-label]");
-    const eventSupportCard = document.querySelector("[data-event-support-card]");
-    const eventSupportConfidence = document.querySelector("[data-event-support-confidence]");
-    const eventSupportLabel = document.querySelector("[data-event-support-label]");
-    const eventSupportReason = document.querySelector("[data-event-support-reason]");
-    const eventSupportContext = document.querySelector("[data-event-support-context]");
-    const eventSupportWindow = document.querySelector("[data-event-support-window]");
-    const eventSupportFlags = document.querySelector("[data-event-support-flags]");
+    const eventSaveButton = document.querySelector("[data-event-save]");
     const reviewCompleteNotice = document.querySelector("[data-review-complete]");
     const reviewCompleteTitle = document.querySelector("[data-review-complete-title]");
     const reviewCompleteCopy = document.querySelector("[data-review-complete-copy]");
@@ -688,9 +782,19 @@ const clientBundle = JSON.stringify({
     const sessionDeleteButtons = Array.from(document.querySelectorAll("[data-session-delete]"));
     const sessionRenameButtons = Array.from(document.querySelectorAll("[data-session-rename]"));
     const sessionOpenNodes = Array.from(document.querySelectorAll("[data-session-open]"));
+    const queueNodes = Array.from(document.querySelectorAll("[data-queue-focus]"));
     const falseNegativeButton = document.querySelector("[data-decision-false-negative]");
     let timelineLayoutFrame = null;
     let playbackUiFrame = null;
+
+    try {
+      const savedRefinementState = JSON.parse(window.localStorage.getItem(refinementReviewStorageKey) ?? "[]");
+      if (Array.isArray(savedRefinementState)) {
+        refinementReviewedKeys = new Set(savedRefinementState.map((value) => String(value)));
+      }
+    } catch {
+      refinementReviewedKeys = new Set();
+    }
 
     function sessionMode() {
       return parsed.sessionMode ?? parsed.session?.mode ?? "standard";
@@ -706,6 +810,28 @@ const clientBundle = JSON.stringify({
 
     function negativeDecisionLabel() {
       return isEvaluationSession() ? "non_dive" : "reject";
+    }
+
+    function falseNegativeOrdinalFor(annotationId) {
+      const sortedFalseNegatives = falseNegativeAnnotations
+        .slice()
+        .sort((a, b) => Number(a.timestampSeconds ?? 0) - Number(b.timestampSeconds ?? 0));
+      const index = sortedFalseNegatives.findIndex((annotation) => annotation.id === annotationId);
+      return index >= 0 ? index + 1 : null;
+    }
+
+    function falseNegativeLabelFor(item) {
+      const ordinal = falseNegativeOrdinalFor(String(item?.id ?? ""));
+      return ordinal != null ? `FN ${String(ordinal).padStart(2, "0")}` : "FN";
+    }
+
+    function falseNegativeQueueCandidates(queueSuggestion = "") {
+      return detections.filter((item) => {
+        if (!String(item.id).startsWith("fn-")) return false;
+        if (!queueSuggestion) return true;
+        const support = supportFor(item.id);
+        return String(support?.suggested_event_label ?? "") === queueSuggestion;
+      });
     }
 
     function hydrateFalseNegativeDetection(annotation, index) {
@@ -737,6 +863,7 @@ const clientBundle = JSON.stringify({
         reviewClipPath: null,
         notes: annotation.notes ?? "",
         subtype: annotation.subtype ?? "",
+        eventLabel: annotation.eventLabel ?? null,
       };
     }
 
@@ -760,6 +887,18 @@ const clientBundle = JSON.stringify({
         return;
       }
       window.history.replaceState({}, "", nextUrl.toString());
+    }
+
+    function syncSessionAndFocus(sessionId, focusId) {
+      const nextUrl = new URL(window.location.href);
+      nextUrl.searchParams.set("session", sessionId);
+      nextUrl.searchParams.set("tab", "1");
+      if (focusId) {
+        nextUrl.searchParams.set("focus", focusId);
+      } else {
+        nextUrl.searchParams.delete("focus");
+      }
+      window.location.href = nextUrl.toString();
     }
 
     function getActiveTabIndex() {
@@ -801,24 +940,117 @@ const clientBundle = JSON.stringify({
       return decisions.find((entry) => entry.detectionId === detectionId) ?? null;
     }
 
+    function upsertDecisionSnapshot(decision) {
+      if (!decision?.detectionId) return;
+      const nextDecision = {
+        ...decision,
+        eventLabel: decision.eventLabel ?? null,
+        subtype: decision.subtype ?? null,
+        notes: decision.notes ?? "",
+      };
+      const existingIndex = decisions.findIndex((entry) => entry.detectionId === nextDecision.detectionId);
+      if (existingIndex >= 0) {
+        decisions.splice(existingIndex, 1, {
+          ...decisions[existingIndex],
+          ...nextDecision,
+        });
+      } else {
+        decisions.unshift(nextDecision);
+      }
+    }
+
+    function queueKeyForNode(node) {
+      const sessionId = String(node?.getAttribute("data-queue-session") ?? "");
+      const candidateId = String(node?.getAttribute("data-queue-candidate") ?? "");
+      const queueIndex = String(node?.getAttribute("data-queue-index") ?? "");
+      return `${sessionId}::${candidateId || "manual"}::${queueIndex}`;
+    }
+
+    function persistRefinementReviewedKeys() {
+      try {
+        window.localStorage.setItem(refinementReviewStorageKey, JSON.stringify(Array.from(refinementReviewedKeys)));
+      } catch {}
+    }
+
+    function isQueueNodeReviewed(node) {
+      return refinementReviewedKeys.has(queueKeyForNode(node));
+    }
+
+    function setQueueNodeReviewed(node, reviewed = true) {
+      const key = queueKeyForNode(node);
+      if (!key) return;
+      if (reviewed) {
+        refinementReviewedKeys.add(key);
+      } else {
+        refinementReviewedKeys.delete(key);
+      }
+      persistRefinementReviewedKeys();
+    }
+
+    function queueNodeForDetection(detectionId = current?.id) {
+      const currentId = String(detectionId ?? "");
+      return queueNodes.find((node) => {
+        const queueSession = String(node.getAttribute("data-queue-session") ?? "");
+        const queueCandidate = String(node.getAttribute("data-queue-candidate") ?? "");
+        if (queueSession !== String(parsed.requestedSession ?? "")) return false;
+        if (currentId.startsWith("fn-")) {
+          return !queueCandidate || queueCandidate === "None";
+        }
+        return queueCandidate === currentId;
+      }) ?? null;
+    }
+
+    function nextRefinementQueueNode(afterNode) {
+      if (!queueNodes.length) return null;
+      const startIndex = Math.max(0, queueNodes.findIndex((node) => node === afterNode));
+      for (let step = 1; step <= queueNodes.length; step += 1) {
+        const node = queueNodes[(startIndex + step) % queueNodes.length];
+        if (!isQueueNodeReviewed(node)) return node;
+      }
+      return null;
+    }
+
+    function formatQueueLabel(value, fallback = "unlabeled") {
+      const normalized = String(value ?? "").trim();
+      return (normalized || fallback).replaceAll("_", " ");
+    }
+
+    function updateQueueNodeSnapshot(node) {
+      const finalLabelNode = node.querySelector("[data-queue-final-label]");
+      const statusNode = node.querySelector("[data-queue-status]");
+      const queueSession = String(node.getAttribute("data-queue-session") ?? "");
+      const queueCandidate = String(node.getAttribute("data-queue-candidate") ?? "");
+      const queueFinalLabel = String(node.getAttribute("data-queue-label") ?? "");
+      let liveFinalLabel = queueFinalLabel;
+      if (queueSession === String(parsed.requestedSession ?? "") && queueCandidate && queueCandidate !== "None") {
+        liveFinalLabel = String(decisionFor(queueCandidate)?.eventLabel ?? queueFinalLabel ?? "");
+      }
+      if (finalLabelNode) {
+        finalLabelNode.textContent = `Final ${formatQueueLabel(liveFinalLabel)}`;
+      }
+      if (statusNode) {
+        statusNode.textContent = isQueueNodeReviewed(node) ? "Reviewed" : "Pending";
+      }
+    }
+
     function supportFor(detectionId) {
-      return eventReviewSupportRows.find((item) => String(item.legacy_candidate_id ?? "") === String(detectionId)) ?? null;
+      const supportRows = Array.isArray(parsed.eventReviewSupportRows) ? parsed.eventReviewSupportRows : [];
+      if (String(detectionId).startsWith("fn-")) {
+        const currentItem = detections.find((item) => item.id === detectionId);
+        if (!currentItem) return null;
+        return supportRows.find((item) =>
+          item.is_false_negative_window === true &&
+          Math.abs(Number(item.event_anchor_timestamp_seconds ?? -1) - Number(currentItem.timestamp_seconds ?? 0)) < 0.02
+        ) ?? null;
+      }
+      return supportRows.find((item) => String(item.legacy_candidate_id ?? "") === String(detectionId)) ?? null;
     }
 
     function syncEventSupportUi(currentId) {
       const support = supportFor(currentId);
-      if (!support) {
-        if (eventSupportCard) eventSupportCard.hidden = true;
-        return;
-      }
-      if (eventSupportCard) eventSupportCard.hidden = false;
-      if (eventSupportConfidence) eventSupportConfidence.textContent = `Suggestion confidence: ${String(support.suggested_event_label_confidence ?? "unknown")}`;
-      if (eventSupportLabel) eventSupportLabel.textContent = `Suggested event label: ${String(support.suggested_event_label ?? "uncertain")}`;
-      if (eventSupportReason) eventSupportReason.textContent = `Reason: ${String(support.suggested_event_label_reason ?? "unavailable")}`;
-      if (eventSupportContext) eventSupportContext.textContent = `Session context: ${String(support.suggested_session_type_context ?? "unknown")} · provenance: ${String(support.session_type_provenance ?? "unknown")}`;
-      if (eventSupportWindow) eventSupportWindow.textContent = `Window: ${formatSeconds(Number(support.event_window_start_seconds ?? 0))} to ${formatSeconds(Number(support.event_window_end_seconds ?? 0))}`;
-      if (eventSupportFlags) {
-        eventSupportFlags.textContent = `Rebound context: ${support.has_preceding_rebound_context ? "yes" : "no"} · Delayed entry: ${support.has_delayed_entry_candidate ? "yes" : "no"} · No rebound context: ${support.no_rebound_context_detected ? "yes" : "no"}`;
+      const suggestedEventLabel = String(support.suggested_event_label ?? "");
+      if (eventLabelSelect && !eventLabelSelect.value) {
+        eventLabelSelect.value = suggestedEventLabel || "uncertain";
       }
     }
 
@@ -862,7 +1094,9 @@ const clientBundle = JSON.stringify({
         decisionDetailLabel && (decisionDetailLabel.textContent = `Decision ${currentDecision.label}`);
         if (decisionNotes) decisionNotes.value = currentDecision.notes ?? "";
         if (decisionSubtype) decisionSubtype.value = currentDecision.subtype ?? "";
-        if (eventLabelSelect) eventLabelSelect.value = String(currentDecision.eventLabel ?? "");
+        if (eventLabelSelect) {
+          eventLabelSelect.value = String(currentDecision.eventLabel ?? "");
+        }
         syncEventSupportUi(current.id);
         return;
       }
@@ -871,7 +1105,7 @@ const clientBundle = JSON.stringify({
         decisionDetailLabel && (decisionDetailLabel.textContent = "Decision false_negative");
         if (decisionNotes) decisionNotes.value = String(current?.notes ?? "");
         if (decisionSubtype) decisionSubtype.value = String(current?.subtype ?? "");
-        if (eventLabelSelect) eventLabelSelect.value = "";
+        if (eventLabelSelect) eventLabelSelect.value = String(current?.eventLabel ?? "");
         syncEventSupportUi(current.id);
         return;
       }
@@ -881,6 +1115,35 @@ const clientBundle = JSON.stringify({
       if (decisionSubtype) decisionSubtype.value = "";
       if (eventLabelSelect) eventLabelSelect.value = "";
       syncEventSupportUi(current.id);
+    }
+
+    function updateRefinementQueueState() {
+      queueNodes.forEach((node) => {
+        const queueSession = String(node.getAttribute("data-queue-session") ?? "");
+        const queueCandidate = String(node.getAttribute("data-queue-candidate") ?? "");
+        const sameSession = queueSession === String(parsed.requestedSession ?? "");
+        const sameCandidate = queueCandidate && queueCandidate !== "None"
+          ? queueCandidate === String(current?.id ?? "")
+          : String(current?.id ?? "").startsWith("fn-");
+        node.classList.toggle("is-current", Boolean(sameSession && sameCandidate));
+        node.classList.toggle("is-reviewed", isQueueNodeReviewed(node));
+        updateQueueNodeSnapshot(node);
+      });
+    }
+
+    function moveRefinementQueueForwardAfterSave(savedDetectionId, label) {
+      const activeQueueNode = queueNodeForDetection(savedDetectionId);
+      if (!activeQueueNode) return false;
+      setQueueNodeReviewed(activeQueueNode, true);
+      updateRefinementQueueState();
+      const nextQueueNode = nextRefinementQueueNode(activeQueueNode);
+      if (!nextQueueNode) {
+        decisionStatus && (decisionStatus.textContent = `Saved ${label} for ${savedDetectionId}. Refinement checklist complete.`);
+        return true;
+      }
+      decisionStatus && (decisionStatus.textContent = `Saved ${label} for ${savedDetectionId}. Moving to the next refinement row.`);
+      focusDetectionByQueue(nextQueueNode);
+      return true;
     }
 
     function updateReviewCompleteNotice() {
@@ -985,8 +1248,35 @@ const clientBundle = JSON.stringify({
         pip.classList.toggle("is-kept", decision === "keep");
         pip.classList.toggle("is-rejected", decision === "reject");
         pip.classList.toggle("is-unsure", decision === "unsure");
+        pip.classList.toggle("is-false-negative", String(id).startsWith("fn-"));
         pip.classList.toggle("is-current", id === current?.id);
       });
+    }
+
+    function renderTimelineMarkers() {
+      if (!timelineTrack) return;
+      timelineTrack.querySelectorAll("[data-timeline-marker]").forEach((node) => node.remove());
+      detections.forEach((item) => {
+        const pip = document.createElement("button");
+        pip.type = "button";
+        pip.className = `tl__pip confidence-${item.confidence}`;
+        if (item.id === current?.id) pip.classList.add("is-current");
+        if (String(item.id).startsWith("fn-")) pip.classList.add("is-false-negative");
+        pip.style.left = `${Math.min(99.2, Math.max(0.8, ((Number(item.timestamp_seconds ?? 0) - rangeStartValue) / rangeSpanValue) * 100))}%`;
+        pip.dataset.focusDetection = item.id;
+        pip.dataset.timelineMarker = item.id;
+        pip.dataset.pipIndex = String(item.index ?? "");
+        pip.dataset.pipTime = formatSeconds(Number(item.timestamp_seconds ?? 0));
+        pip.setAttribute(
+          "aria-label",
+          String(item.id).startsWith("fn-")
+            ? `${falseNegativeLabelFor(item)} at ${formatSeconds(Number(item.timestamp_seconds ?? 0))}`
+            : `Attempt ${item.index} at ${formatSeconds(Number(item.timestamp_seconds ?? 0))}`,
+        );
+        pip.addEventListener("click", () => selectDetection(item.id, { autoplay: false }));
+        timelineTrack.appendChild(pip);
+      });
+      layoutTimelineMarkers();
     }
 
     const timelinePlayhead = document.querySelector("[data-timeline-playhead]");
@@ -1129,7 +1419,8 @@ const clientBundle = JSON.stringify({
         const id = pip.getAttribute("data-timeline-marker") ?? "";
         const decision = decisionLabelFor(id);
         const tag = decision !== "pending" ? decision : "";
-        timelineTooltip.textContent = "#" + idx + "  " + time + (tag ? "  " + tag : "");
+        const label = String(id).startsWith("fn-") ? falseNegativeLabelFor({ id }) : "#" + idx;
+        timelineTooltip.textContent = label + "  " + time + (tag ? "  " + tag : "");
         timelineTooltip.hidden = false;
         const left = pip.style.left;
         timelineTooltip.style.left = left;
@@ -1161,7 +1452,7 @@ const clientBundle = JSON.stringify({
       if (!tableBody) return;
       tableBody.innerHTML = detections.map((item) => `
         <tr class="${item.id === current?.id ? "is-current" : ""}" data-focus-detection="${item.id}">
-          <td>${item.entry_type === "false_negative" ? "Missed dive" : item.id}</td>
+          <td>${item.entry_type === "false_negative" ? falseNegativeLabelFor(item) : item.id}</td>
           <td>${formatSeconds(item.timestamp_seconds)}</td>
           <td>${decisionLabelFor(item.id)}</td>
           <td>${signalLabelFor(item)}</td>
@@ -1169,6 +1460,7 @@ const clientBundle = JSON.stringify({
       `).join("");
       bindDetectionNodes();
       applyQueueFilter();
+      renderTimelineMarkers();
       scheduleTimelineLayout();
     }
 
@@ -1337,7 +1629,7 @@ const clientBundle = JSON.stringify({
       if (!current) return;
       manualTimelineSeekMode = false;
       reviewLabel && (reviewLabel.textContent = `${formatSeconds(reviewStartFor(current))} to ${formatSeconds(reviewEndFor(current))} · ${parsed.session?.source_video_path ?? ""}`);
-      audioLabel && (audioLabel.textContent = `Audio ${current.scores.audio.toFixed(2)}`);
+      audioLabel && (audioLabel.textContent = String(current.id).startsWith("fn-") ? "Manual annotation" : `Audio ${current.scores.audio.toFixed(2)}`);
       windowLabel && (windowLabel.textContent = `Window ${formatSeconds(reviewStartFor(current))} to ${formatSeconds(reviewEndFor(current))}`);
       decisionDetailLabel && (decisionDetailLabel.textContent = `Decision ${decisionFor(current.id)?.label ?? "pending"}`);
       document.querySelectorAll("[data-focus-detection]").forEach((node) => {
@@ -1349,9 +1641,29 @@ const clientBundle = JSON.stringify({
       updateMediaSessionMetadata();
       updateReviewCounts();
       syncCurrentDecisionUi();
+      updateRefinementQueueState();
       if (options.autoplay && autoPlayEnabled) {
         window.setTimeout(() => { void playCurrentSegment(); }, 40);
       }
+    }
+
+    function focusDetectionByQueue(row) {
+      const sessionId = String(row?.dataset?.queueSession ?? "");
+      const candidateId = String(row?.dataset?.queueCandidate ?? "");
+      const label = String(row?.dataset?.queueLabel ?? "");
+      const falseNegativeOrder = Number(row?.dataset?.queueFnOrder ?? "0");
+      const queueSuggestion = String(row?.dataset?.queueSuggestion ?? "");
+      if (sessionId && sessionId !== parsed.requestedSession) {
+        syncSessionAndFocus(sessionId, candidateId || `fn-order-${falseNegativeOrder || 1}-${queueSuggestion || "any"}`);
+        return;
+      }
+      if (candidateId && candidateId !== "None") {
+        selectDetection(candidateId, { autoplay: false });
+        return;
+      }
+      const falseNegativeRows = falseNegativeQueueCandidates(queueSuggestion);
+      const nextManual = (falseNegativeOrder > 0 ? falseNegativeRows[falseNegativeOrder - 1] : falseNegativeRows[0]) ?? detections[0];
+      if (nextManual) selectDetection(nextManual.id, { autoplay: false });
     }
 
     tabButtons.forEach((button, index) => button.addEventListener("click", () => setTab(index)));
@@ -1521,7 +1833,9 @@ const clientBundle = JSON.stringify({
 
     async function refreshDecisions() {
       if (!parsed.session?.id) return;
-      const response = await fetch(`/api/review?analysisRunId=${encodeURIComponent(parsed.session.id)}`);
+      const response = await fetch(`/api/review?analysisRunId=${encodeURIComponent(parsed.session.id)}&t=${Date.now()}`, {
+        cache: "no-store",
+      });
       const payload = await readJsonResponse(response);
       decisions = payload.decisions ?? [];
       falseNegativeAnnotations = payload.falseNegatives ?? [];
@@ -1531,6 +1845,7 @@ const clientBundle = JSON.stringify({
       renderExportList(exportedPaths);
       renderDetectionTable();
       syncCurrentDecisionUi();
+      updateRefinementQueueState();
     }
 
     sessionNameInput?.addEventListener("input", () => {
@@ -1575,6 +1890,18 @@ const clientBundle = JSON.stringify({
     const initialTab = Number(parsed.requestedTab ?? "0");
     if (!Number.isNaN(initialTab) && initialTab >= 0) {
       setTab(initialTab);
+    }
+    if (String(parsed.requestedFocus ?? "").trim()) {
+      const focusId = String(parsed.requestedFocus).trim();
+      const falseNegativeOrderMatch = /^fn-order-(\d+)-(.*)$/.exec(focusId) ?? /^fn-order-(\d+)$/.exec(focusId);
+      const focusSuggestion = falseNegativeOrderMatch?.[2] ? String(falseNegativeOrderMatch[2]) : "";
+      const falseNegativeRows = falseNegativeQueueCandidates(focusSuggestion);
+      const focusRow = falseNegativeOrderMatch
+        ? falseNegativeRows[Math.max(0, Number(falseNegativeOrderMatch[1]) - 1)]
+        : detections.find((item) => item.id === focusId) ?? falseNegativeRows[0];
+      if (focusRow) {
+        selectDetection(focusRow.id, { autoplay: false });
+      }
     }
 
     function installMediaSessionHandlers() {
@@ -1748,6 +2075,13 @@ const clientBundle = JSON.stringify({
       });
     });
 
+    queueNodes.forEach((node) => {
+      if (node.dataset.queueBound === "true") return;
+      node.dataset.queueBound = "true";
+      node.addEventListener("click", () => focusDetectionByQueue(node));
+    });
+    updateRefinementQueueState();
+
     sessionDeleteButtons.forEach((button) => {
       button.addEventListener("click", async (event) => {
         event.preventDefault();
@@ -1834,6 +2168,7 @@ const clientBundle = JSON.stringify({
       const response = await fetch("/api/review", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        cache: "no-store",
         body: JSON.stringify({
           analysisRunId: parsed.session.id,
           detectionId: savedDetectionId,
@@ -1848,8 +2183,87 @@ const clientBundle = JSON.stringify({
         decisionStatus && (decisionStatus.textContent = payload.error ?? "Could not save your decision.");
         return;
       }
+      upsertDecisionSnapshot(payload.decision);
+      syncCurrentDecisionUi();
+      updateRefinementQueueState();
       decisionStatus && (decisionStatus.textContent = `Saved ${payload.decision.label} for ${payload.decision.detectionId}.`);
       await refreshDecisions();
+      if (moveRefinementQueueForwardAfterSave(savedDetectionId, payload.decision.label)) {
+        return;
+      }
+      moveReviewForwardAfterDecision(savedDetectionId, payload.decision.label);
+    }
+
+    async function saveEventLabelOnly() {
+      if (!parsed.session?.id || !current) return;
+      if (String(current.id).startsWith("fn-")) {
+        const response = await fetch("/api/review", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+          body: JSON.stringify({
+            analysisRunId: parsed.session.id,
+            detectionId: current.id,
+            label: "false_negative",
+            eventLabel: eventLabelSelect?.value?.trim() || null,
+            subtype: decisionSubtype?.value?.trim() || null,
+            notes: decisionNotes?.value ?? "",
+          }),
+        });
+        const payload = await readJsonResponse(response);
+        if (!response.ok) {
+          decisionStatus && (decisionStatus.textContent = payload.error ?? "Could not save the event label.");
+          return;
+        }
+        const annotation = payload.annotation ?? null;
+        if (annotation?.id) {
+          falseNegativeAnnotations = falseNegativeAnnotations.map((item) =>
+            item.id === annotation.id ? { ...item, ...annotation } : item
+          );
+          rebuildDetections();
+          current = detections.find((item) => item.id === annotation.id) ?? current;
+          syncCurrentDecisionUi();
+          updateRefinementQueueState();
+        }
+        decisionStatus && (decisionStatus.textContent = `Saved event label for ${current.id}.`);
+        await refreshDecisions();
+        if (moveRefinementQueueForwardAfterSave(current.id, "false_negative")) {
+          return;
+        }
+        return;
+      }
+      const existingDecision = decisionFor(current.id);
+      if (!existingDecision) {
+        decisionStatus && (decisionStatus.textContent = "Save the legacy decision first, then save the event label.");
+        return;
+      }
+      const savedDetectionId = current.id;
+      const response = await fetch("/api/review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({
+          analysisRunId: parsed.session.id,
+          detectionId: savedDetectionId,
+          label: existingDecision.label,
+          eventLabel: eventLabelSelect?.value?.trim() || null,
+          subtype: decisionSubtype?.value?.trim() || null,
+          notes: decisionNotes?.value ?? "",
+        }),
+      });
+      const payload = await readJsonResponse(response);
+      if (!response.ok) {
+        decisionStatus && (decisionStatus.textContent = payload.error ?? "Could not save the event label.");
+        return;
+      }
+      upsertDecisionSnapshot(payload.decision);
+      syncCurrentDecisionUi();
+      updateRefinementQueueState();
+      decisionStatus && (decisionStatus.textContent = `Saved event label for ${payload.decision.detectionId}.`);
+      await refreshDecisions();
+      if (moveRefinementQueueForwardAfterSave(savedDetectionId, payload.decision.label)) {
+        return;
+      }
       moveReviewForwardAfterDecision(savedDetectionId, payload.decision.label);
     }
 
@@ -1860,6 +2274,7 @@ const clientBundle = JSON.stringify({
       const response = await fetch("/api/review", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        cache: "no-store",
         body: JSON.stringify({
           analysisRunId: parsed.session.id,
           label: "false_negative",
@@ -1884,6 +2299,9 @@ const clientBundle = JSON.stringify({
       button.addEventListener("click", async () => {
         await saveDecision(button.getAttribute("data-decision"));
       });
+    });
+    eventSaveButton?.addEventListener("click", async () => {
+      await saveEventLabelOnly();
     });
     falseNegativeButton?.addEventListener("click", async () => {
       await saveFalseNegative();
@@ -2063,6 +2481,7 @@ const clientBundle = JSON.stringify({
     renderExportList(exportedPaths);
     installMediaSessionHandlers();
     syncVideoSource();
+    rebuildDetections();
     renderDetectionTable();
     if (current) selectDetection(current.id, { autoplay: autoPlayEnabled });
     refreshDecisions();

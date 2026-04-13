@@ -14,6 +14,20 @@ DEFAULT_OUTPUT_ROOT = "exports/event-review-support"
 WINDOW_PRE_SECONDS = 0.75
 WINDOW_POST_SECONDS = 2.25
 REBOUND_CONTEXT_SECONDS = 1.5
+SPRINGBOARD_STRONG_PEAK_OFFSET_SECONDS = 0.35
+
+SESSION_EVENT_TYPE_OVERRIDES: dict[str, dict[str, str]] = {
+    "evaluation_champigny_20260406-labelling": {
+        "det-0002": "platform",
+        "det-0003": "platform",
+        "det-0004": "platform",
+        "det-0005": "platform",
+        "det-0006": "platform",
+        "det-0109": "platform",
+        "det-0110": "platform",
+        "det-0111": "platform",
+    }
+}
 
 
 @dataclass(frozen=True)
@@ -37,6 +51,7 @@ class ReviewSupportRow:
     no_rebound_context_detected: bool
     event_label_provenance_suggestion: str
     event_anchor_strategy: str
+    event_anchor_strategy_rationale: str
     uncertainty_flag: bool
     proposal_timestamp_seconds: float | None
     proposal_frontend: str | None
@@ -59,11 +74,22 @@ def build_parser() -> argparse.ArgumentParser:
 
 def _infer_session_type(source_video_path: str) -> tuple[str, str]:
     lowered = source_video_path.lower()
-    if "insep_15min" in lowered or "champigny" in lowered:
+    if "insep_15min" in lowered:
+        return "springboard", "direct_review"
+    if "champigny" in lowered:
         return "springboard", "direct_review"
     if "img_9015" in lowered or "insep quick" in lowered:
         return "platform", "session_type_inferred"
     return "unknown", "uncertain"
+
+
+def _override_event_type(session_id: str, candidate_id: str | None, fallback: str, fallback_provenance: str) -> tuple[str, str]:
+    if not candidate_id:
+        return fallback, fallback_provenance
+    override = SESSION_EVENT_TYPE_OVERRIDES.get(session_id, {}).get(candidate_id)
+    if override:
+        return override, "manual_session_override"
+    return fallback, fallback_provenance
 
 
 def _suggested_label(
@@ -76,40 +102,41 @@ def _suggested_label(
     review_label = str(row.get("review_label") or "")
     subtype = str(row.get("subtype") or "")
     human_label = str(row.get("human_label") or "")
-    trustworthy_session_type = session_type in {"springboard", "platform"} and session_type_provenance == "direct_review"
-    session_type_is_conservative = session_type in {"springboard", "platform"} and session_type_provenance != "direct_review"
+    trustworthy_session_type = session_type in {"springboard", "platform"} and session_type_provenance in {"direct_review", "manual_session_override"}
+    session_type_is_conservative = session_type in {"springboard", "platform"} and session_type_provenance not in {"direct_review", "manual_session_override"}
     no_rebound_context = not preceding_rebound
+    platform_session_trustworthy = session_type == "platform" and session_type_provenance in {"session_type_inferred", "manual_session_override"}
     if review_label == "dive" or human_label == "dive":
         if session_type == "springboard" and trustworthy_session_type:
             if preceding_rebound:
                 return "springboard_dive", "rebound_context_plus_delayed_entry", "high", False, "session_type_inferred"
-            return "springboard_dive", "insufficient_context_uncertain", "low", True, "uncertain"
-        if session_type == "platform" and trustworthy_session_type:
+            return "springboard_dive", "springboard_dive_without_rebound_context", "low", False, "session_type_inferred"
+        if session_type == "platform" and (trustworthy_session_type or platform_session_trustworthy):
             if no_rebound_context:
                 return "platform_dive", "platform_session_dive_without_rebound_context", "high", False, "session_type_inferred"
-            return "platform_dive", "platform_session_dive_with_rebound_context", "medium", False, "session_type_inferred"
+            return "platform_dive", "platform_session_dive_with_rebound_context", "high", False, "session_type_inferred"
         if session_type_is_conservative:
             return "uncertain", "insufficient_context_uncertain", "low", True, "uncertain"
         return "uncertain", "insufficient_context_uncertain", "low", True, "uncertain"
     if review_label == "non_dive" and subtype == "board_rebound":
+        if session_type == "platform" and (trustworthy_session_type or platform_session_trustworthy):
+            return "springboard_rebound_only", "board_rebound_platform_session", "high", False, "subtype_mapped"
         if delayed_entry:
-            if trustworthy_session_type and session_type == "springboard":
-                return "springboard_dive", "rebound_context_plus_delayed_entry", "high", False, "subtype_mapped"
-            if session_type == "platform" and trustworthy_session_type:
-                return "uncertain", "insufficient_context_uncertain", "low", True, "uncertain"
-            return "uncertain", "insufficient_context_uncertain", "low", True, "uncertain"
+            return "springboard_rebound_only", "board_rebound_with_delayed_entry_context", "medium", False, "subtype_mapped"
         if session_type == "springboard" and trustworthy_session_type:
             return "springboard_rebound_only", "board_rebound_without_delayed_entry", "high", False, "subtype_mapped"
         return "uncertain", "insufficient_context_uncertain", "low", True, "uncertain"
     if review_label == "non_dive" and subtype in {"voice_whistle", "handling_noise", "non_dive_splash"}:
         return "noise_or_other", f"negative_subtype_{subtype}", "high", False, "subtype_mapped"
     if review_label == "non_dive" and not subtype:
+        if session_type == "platform" and (trustworthy_session_type or platform_session_trustworthy):
+            return "noise_or_other", "platform_session_generic_non_dive", "medium", False, "subtype_mapped"
         return "uncertain", "insufficient_context_uncertain", "low", True, "uncertain"
     if review_label == "false_negative":
         if session_type == "springboard" and trustworthy_session_type:
             return "springboard_dive", "false_negative_dive_springboard_session", "medium", False, "session_type_inferred"
-        if session_type == "platform" and trustworthy_session_type:
-            return "platform_dive", "false_negative_dive_platform_session", "medium", False, "session_type_inferred"
+        if session_type == "platform" and (trustworthy_session_type or platform_session_trustworthy):
+            return "platform_dive", "false_negative_dive_platform_session", "high", False, "session_type_inferred"
         return "uncertain", "insufficient_context_uncertain", "low", True, "uncertain"
     return "uncertain", "insufficient_context_uncertain", "low", True, "uncertain"
 
@@ -124,6 +151,28 @@ def _candidate_rows(export_dir: Path) -> list[dict[str, Any]]:
 
 def _false_negative_rows(export_dir: Path) -> list[dict[str, Any]]:
     return load_jsonl(export_dir / "false_negatives.jsonl")
+
+
+def _apply_latest_review_store(output_dir: Path, candidate_rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+    review_store_path = output_dir / "evaluation_review.json"
+    if not review_store_path.exists():
+        return list(candidate_rows)
+    review_store = read_json(review_store_path)
+    decisions = {
+        str(item.get("detectionId")): item
+        for item in (review_store.get("decisions") or [])
+        if item.get("detectionId")
+    }
+    merged_rows: list[dict[str, Any]] = []
+    for row in candidate_rows:
+        merged = dict(row)
+        candidate_id = str(row.get("source_candidate_id") or row.get("detectionId") or row.get("proposal_id") or "")
+        decision = decisions.get(candidate_id)
+        if decision:
+            merged["review_label"] = decision.get("label", merged.get("review_label"))
+            merged["subtype"] = decision.get("subtype", merged.get("subtype"))
+        merged_rows.append(merged)
+    return merged_rows
 
 
 def _support_row(
@@ -141,10 +190,18 @@ def _support_row(
     candidate_rows: Sequence[dict[str, Any]],
     false_negative_rows: Sequence[dict[str, Any]],
 ) -> dict[str, Any]:
-    anchor = float(row.get("timestamp_seconds") or row.get("timestamp") or 0.0)
+    proposal_timestamp = float(row.get("proposal_timestamp_seconds") or row.get("timestamp_seconds") or row.get("timestamp") or 0.0)
+    anchor = proposal_timestamp
     if is_false_negative_window:
         anchor = float(row.get("timestamp_seconds") or anchor)
     window_start, window_end = _event_window(anchor, pre_seconds, post_seconds)
+    candidate_id = row.get("source_candidate_id") or row.get("detectionId") or row.get("proposal_id")
+    event_type_context, event_type_provenance = _override_event_type(
+        source_session_id,
+        str(candidate_id) if candidate_id is not None else None,
+        session_type,
+        session_type_provenance,
+    )
     preceding_rebound = any(
         cand.get("review_label") == "non_dive"
         and str(cand.get("subtype") or "") == "board_rebound"
@@ -161,30 +218,42 @@ def _support_row(
         for fn in false_negative_rows
     )
     suggestion, reason, confidence, uncertainty, label_provenance_suggestion = _suggested_label(
-        row, session_type, session_type_provenance, preceding_rebound, delayed_entry
+        row, event_type_context, event_type_provenance, preceding_rebound, delayed_entry
     )
+    if event_type_context == "springboard":
+        anchor_strategy = "earliest_strong_peak_in_local_cluster"
+        anchor = max(0.0, proposal_timestamp - SPRINGBOARD_STRONG_PEAK_OFFSET_SECONDS)
+        window_start, window_end = _event_window(anchor, pre_seconds, post_seconds)
+        anchor_rationale = "springboard_rows_shift_to_earliest_strong_peak_proxy"
+    elif event_type_context == "platform":
+        anchor_strategy = "proposal_centered"
+        anchor_rationale = "platform_rows_remain_proposal_centered"
+    else:
+        anchor_strategy = "proposal_centered"
+        anchor_rationale = "unknown_rows_use_proposal_centered_fallback"
     return {
         "source_session_root": source_root,
         "source_session_id": source_session_id,
         "source_video_path": source_video_path,
-        "legacy_candidate_id": row.get("source_candidate_id") or row.get("detectionId") or row.get("proposal_id"),
+        "legacy_candidate_id": candidate_id,
         "legacy_candidate_label": row.get("review_label") or row.get("label") or row.get("human_label"),
         "legacy_non_dive_subtype": row.get("subtype"),
         "is_false_negative_window": bool(is_false_negative_window),
         "event_anchor_timestamp_seconds": anchor,
-        "event_anchor_strategy": "proposal_centered",
+        "event_anchor_strategy": anchor_strategy,
+        "event_anchor_strategy_rationale": anchor_rationale,
         "event_window_start_seconds": window_start,
         "event_window_end_seconds": window_end,
         "suggested_event_label": suggestion,
         "suggested_event_label_confidence": confidence,
         "suggested_event_label_reason": reason,
-        "suggested_session_type_context": session_type,
+        "suggested_session_type_context": event_type_context,
         "has_preceding_rebound_context": preceding_rebound,
         "has_delayed_entry_candidate": delayed_entry,
         "no_rebound_context_detected": not preceding_rebound,
         "event_label_provenance_suggestion": label_provenance_suggestion,
         "uncertainty_flag": uncertainty,
-        "proposal_timestamp_seconds": row.get("proposal_timestamp_seconds", row.get("timestamp_seconds", row.get("timestamp"))),
+        "proposal_timestamp_seconds": proposal_timestamp,
         "proposal_frontend": row.get("proposal_frontend"),
         "clip_probability": row.get("audio_clip_probability"),
         "detector_scores": {
@@ -195,15 +264,16 @@ def _support_row(
             "raw_proposal_score": row.get("raw_proposal_score"),
             "threshold_passed": row.get("threshold_passed"),
         },
-        "session_type_provenance": session_type_provenance,
+        "session_type_provenance": event_type_provenance,
     }
 
 
 def build_review_support(session_path: str, output_dir: str | None, pre_seconds: float, post_seconds: float, rebound_context_seconds: float) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     paths = resolve_evaluation_session_paths(session_path)
     manifest = read_json(paths["manifest_path"])
-    export_dir = Path(str(paths["output_dir"])) / "exports" / "evaluation-review"
-    candidate_rows = _candidate_rows(export_dir)
+    output_root = Path(str(paths["output_dir"]))
+    export_dir = output_root / "exports" / "evaluation-review"
+    candidate_rows = _apply_latest_review_store(output_root, _candidate_rows(export_dir))
     false_negative_rows = _false_negative_rows(export_dir)
     source_video_path = str(manifest["session"]["source_video_path"])
     session_type, session_type_provenance = _infer_session_type(source_video_path)

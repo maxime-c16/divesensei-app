@@ -26,6 +26,19 @@ def load_rows(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
 
 
+def event_label_for_row(row: dict) -> str | None:
+    label = row.get("final_human_event_label")
+    if label:
+        return str(label)
+    label = row.get("suggested_event_label")
+    if label:
+        return str(label)
+    label = row.get("event_label")
+    if label:
+        return str(label)
+    return None
+
+
 def to_float(value, default=0.0):
     try:
         if value is None:
@@ -177,7 +190,7 @@ def collect_dataset(rows: list[dict], strict: bool) -> list[dict]:
             if row.get("session_type_provenance") != "direct_review":
                 continue
         else:
-            if row.get("event_label_provenance") == "uncertain":
+            if event_label_for_row(row) is None:
                 continue
         selected.append(row)
     return selected
@@ -199,8 +212,8 @@ def split_by_session(rows: list[dict]) -> list[tuple[str, list[dict], list[dict]
 def train_eval_four_class(train_rows: list[dict], test_rows: list[dict], labels: list[str]) -> dict:
     x_train = np.asarray([feature_vector(row) for row in train_rows], dtype=np.float64)
     x_test = np.asarray([feature_vector(row) for row in test_rows], dtype=np.float64)
-    y_train = np.asarray([labels.index(row["event_label"]) for row in train_rows], dtype=int)
-    y_test = np.asarray([labels.index(row["event_label"]) for row in test_rows], dtype=int)
+    y_train = np.asarray([labels.index(event_label_for_row(row)) for row in train_rows], dtype=int)
+    y_test = np.asarray([labels.index(event_label_for_row(row)) for row in test_rows], dtype=int)
     mean, std = standardize_fit(x_train)
     x_train = standardize_apply(x_train, mean, std)
     x_test = standardize_apply(x_test, mean, std)
@@ -220,19 +233,19 @@ def train_eval_four_class(train_rows: list[dict], test_rows: list[dict], labels:
 
 
 def train_eval_binary(train_rows: list[dict], test_rows: list[dict], positive: str, negative: str) -> dict:
-    subset_train = [row for row in train_rows if row["event_label"] in {positive, negative}]
-    subset_test = [row for row in test_rows if row["event_label"] in {positive, negative}]
+    subset_train = [row for row in train_rows if event_label_for_row(row) in {positive, negative}]
+    subset_test = [row for row in test_rows if event_label_for_row(row) in {positive, negative}]
     x_train = np.asarray([feature_vector(row) for row in subset_train], dtype=np.float64)
     x_test = np.asarray([feature_vector(row) for row in subset_test], dtype=np.float64)
-    y_train = np.asarray([1 if row["event_label"] == positive else 0 for row in subset_train], dtype=np.float64)
-    y_test = np.asarray([1 if row["event_label"] == positive else 0 for row in subset_test], dtype=object)
+    y_train = np.asarray([1 if event_label_for_row(row) == positive else 0 for row in subset_train], dtype=np.float64)
+    y_test = np.asarray([1 if event_label_for_row(row) == positive else 0 for row in subset_test], dtype=object)
     mean, std = standardize_fit(x_train)
     x_train = standardize_apply(x_train, mean, std)
     x_test = standardize_apply(x_test, mean, std)
     model = train_binary_logreg(x_train, y_train)
     scores = predict_binary_logreg(model, x_test)
     pred = np.asarray([positive if score >= 0.5 else negative for score in scores], dtype=object)
-    truth = np.asarray([positive if row["event_label"] == positive else negative for row in subset_test], dtype=object)
+    truth = np.asarray([positive if event_label_for_row(row) == positive else negative for row in subset_test], dtype=object)
     return {
         "train_count": len(subset_train),
         "test_count": len(subset_test),
@@ -251,16 +264,16 @@ def evaluate(rows: list[dict]) -> dict:
 
     strict_pairwise: dict[str, dict] = {}
     for positive, negative in PAIRWISE_TASKS:
-        strict_subset = [row for row in strict_rows if row["event_label"] in {positive, negative}]
-        if len(strict_subset) >= 2 and len(set(row["event_label"] for row in strict_subset)) == 2:
+        strict_subset = [row for row in strict_rows if event_label_for_row(row) in {positive, negative}]
+        if len(strict_subset) >= 2 and len(set(event_label_for_row(row) for row in strict_subset)) == 2:
             x = np.asarray([feature_vector(row) for row in strict_subset], dtype=np.float64)
-            y = np.asarray([1 if row["event_label"] == positive else 0 for row in strict_subset], dtype=np.float64)
+            y = np.asarray([1 if event_label_for_row(row) == positive else 0 for row in strict_subset], dtype=np.float64)
             mean, std = standardize_fit(x)
             x = standardize_apply(x, mean, std)
             model = train_binary_logreg(x, y)
             scores = predict_binary_logreg(model, x)
             pred = np.asarray([positive if score >= 0.5 else negative for score in scores], dtype=object)
-            truth = np.asarray([positive if row["event_label"] == positive else negative for row in strict_subset], dtype=object)
+            truth = np.asarray([positive if event_label_for_row(row) == positive else negative for row in strict_subset], dtype=object)
             strict_pairwise[f"{positive}_vs_{negative}"] = {
                 "train_count": len(strict_subset),
                 "eval_count": len(strict_subset),
@@ -295,12 +308,12 @@ def evaluate(rows: list[dict]) -> dict:
             "mean_recall": float(np.mean([fold["macro"]["recall"] for fold in fold_results])) if fold_results else 0.0,
         }
 
-    four_class_rows = [row for row in practical_rows if row["event_label"] in LABELS]
+    four_class_rows = [row for row in practical_rows if event_label_for_row(row) in LABELS]
     fold_results = []
     for held_out, train_rows, test_rows in split_rows:
-        train_subset = [row for row in train_rows if row["event_label"] in LABELS]
-        test_subset = [row for row in test_rows if row["event_label"] in LABELS]
-        if len(set(row["event_label"] for row in train_subset)) < 2 or len(test_subset) == 0:
+        train_subset = [row for row in train_rows if event_label_for_row(row) in LABELS]
+        test_subset = [row for row in test_rows if event_label_for_row(row) in LABELS]
+        if len(set(event_label_for_row(row) for row in train_subset)) < 2 or len(test_subset) == 0:
             continue
         fold_results.append({"held_out_session": held_out, **train_eval_four_class(train_subset, test_subset, LABELS)})
 
@@ -322,12 +335,12 @@ def evaluate(rows: list[dict]) -> dict:
             "total_rows": len(rows),
             "strict_rows": len(strict_rows),
             "practical_rows": len(practical_rows),
-            "row_counts_by_event_label": dict(Counter(row["event_label"] for row in practical_rows)),
-            "row_counts_by_event_label_provenance": dict(Counter(row["event_label_provenance"] for row in practical_rows)),
+            "row_counts_by_event_label": dict(Counter(event_label_for_row(row) or "None" for row in practical_rows)),
+            "row_counts_by_event_label_provenance": dict(Counter(row.get("final_human_event_label_provenance") or row.get("event_label_provenance") or "None" for row in practical_rows)),
             "row_counts_by_session_type": dict(Counter(row["session_type"] for row in practical_rows)),
             "row_counts_by_session_type_provenance": dict(Counter(row["session_type_provenance"] for row in practical_rows)),
             "strict_note": "direct_review session-type provenance only; this subset is too small for a four-class fit",
-            "practical_note": "includes session_type_inferred and subtype_mapped rows; uncertain rows excluded from fitting but retained in summaries",
+            "practical_note": "uses final human event labels when present, otherwise suggestion labels; missing labels are retained in summaries",
         },
         "split_strategy": {
             "type": "leave_one_session_out",
@@ -356,6 +369,10 @@ def evaluate(rows: list[dict]) -> dict:
             "event_label_provenance_is_subtype_mapped",
             "event_label_provenance_is_uncertain",
         ],
+        "supervision_source": {
+            "primary": "final_human_event_label",
+            "fallback": "suggested_event_label",
+        },
         "pairwise": pairwise,
         "four_class": four_class_summary,
         "strongest_confusions": _strongest_confusions(four_class_summary, pairwise),
@@ -423,6 +440,11 @@ def write_report(path_json: Path, path_md: Path, report: dict) -> None:
         "## Strict Subset",
         "",
         f"- note: {report['strict_subset']['note']}",
+        "",
+        "## Supervision",
+        "",
+        f"- primary: `{report['supervision_source']['primary']}`",
+        f"- fallback: `{report['supervision_source']['fallback']}`",
         "",
         "## Baseline",
         "",
@@ -504,11 +526,13 @@ def write_report(path_json: Path, path_md: Path, report: dict) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Train and evaluate an offline event-window baseline.")
-    parser.add_argument("--manifest", default=str(DEFAULT_MANIFEST))
+    parser.add_argument("--manifest", nargs="+", default=[str(DEFAULT_MANIFEST)])
     parser.add_argument("--output-json", default=str(DEFAULT_JSON))
     parser.add_argument("--output-md", default=str(DEFAULT_MD))
     args = parser.parse_args(argv)
-    rows = load_rows(Path(args.manifest))
+    rows: list[dict] = []
+    for manifest_path in args.manifest:
+        rows.extend(load_rows(Path(manifest_path)))
     report = evaluate(rows)
     write_report(Path(args.output_json), Path(args.output_md), report)
     print(json.dumps({"output_json": args.output_json, "output_md": args.output_md, "decision": report["decision"]}, indent=2))

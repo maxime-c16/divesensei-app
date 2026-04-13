@@ -96,6 +96,7 @@ export interface UiDataBundle {
   artifactsPreview: Record<string, string>;
   eventReviewSupport: Array<Record<string, unknown>>;
   eventReviewSupportSummary: Record<string, unknown> | null;
+  eventReviewRefinementTop15: Array<Record<string, unknown>>;
 }
 
 export interface ReviewDecision {
@@ -117,6 +118,7 @@ export interface EvaluationFalseNegativeAnnotation {
   reviewStartSeconds: number;
   reviewEndSeconds: number;
   label: "false_negative";
+  eventLabel?: "springboard_dive" | "springboard_rebound_only" | "platform_dive" | "noise_or_other" | "uncertain" | null;
   subtype?: EvaluationReviewSubtype | null;
   notes: string;
   createdAt: string;

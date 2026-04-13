@@ -193,6 +193,10 @@ export function getUiData(selectedSessionId?: string): UiDataBundle {
   const eventReviewSupportSummaryPath = manifest.artifacts?.event_review_support_summary;
   const eventReviewSupport = eventReviewSupportPath ? readJsonlFile<Record<string, unknown>>(eventReviewSupportPath) : [];
   const eventReviewSupportSummary = eventReviewSupportSummaryPath ? readJsonFile<Record<string, unknown>>(eventReviewSupportSummaryPath) ?? null : null;
+  const refinementQueuePath = path.join(repoRoot, "outputs", "event_label_refinement_top15.jsonl");
+  const eventReviewRefinementTop15 = fs.existsSync(refinementQueuePath)
+    ? readJsonlFile<Record<string, unknown>>(refinementQueuePath)
+    : [];
   return {
     library,
     manifest,
@@ -206,6 +210,7 @@ export function getUiData(selectedSessionId?: string): UiDataBundle {
     },
     eventReviewSupport,
     eventReviewSupportSummary,
+    eventReviewRefinementTop15,
   };
 }
 

@@ -12,6 +12,7 @@ from divesensei.workflows.evaluation_session_support import load_jsonl, read_jso
 
 PRIMARY_ANCHOR_STRATEGY = "proposal_centered"
 BACKUP_ANCHOR_STRATEGY = "earliest_strong_peak_in_local_cluster"
+SPRINGBOARD_STRONG_PEAK_OFFSET_SECONDS = 0.35
 
 SPRINGBOARD_SESSION_KEYS = ("insep_15min", "Champigny")
 PLATFORM_SESSION_KEYS = ("IMG_9015",)
@@ -129,11 +130,16 @@ def _manifest_row(
     anchor_strategy: str,
 ) -> dict[str, Any]:
     event_label, event_label_provenance, uncertainty = _event_label_for_row(session_type_info.session_type, row)
-    anchor_timestamp = _anchor_timestamp(row)
+    proposal_timestamp = float(row.get("proposal_timestamp_seconds") or row.get("timestamp_seconds") or row.get("timestamp") or _anchor_timestamp(row))
+    anchor_timestamp = proposal_timestamp
     window_pre = 0.75 if anchor_strategy == PRIMARY_ANCHOR_STRATEGY else 1.0
     window_post = 2.25 if anchor_strategy == PRIMARY_ANCHOR_STRATEGY else 3.0
     if is_false_negative:
         anchor_timestamp = float(row.get("timestamp_seconds") or row.get("timestamp") or anchor_timestamp)
+    elif session_type_info.session_type == "springboard":
+        anchor_timestamp = max(0.0, proposal_timestamp - SPRINGBOARD_STRONG_PEAK_OFFSET_SECONDS)
+    else:
+        anchor_timestamp = proposal_timestamp
     return {
         "source_session_root": source_root,
         "source_session_id": source_session_id,
@@ -146,7 +152,7 @@ def _manifest_row(
         "legacy_non_dive_subtype": row.get("subtype"),
         "is_false_negative_window": bool(is_false_negative),
         "event_anchor_timestamp_seconds": anchor_timestamp,
-        "anchor_strategy": anchor_strategy,
+        "anchor_strategy": "earliest_strong_peak_in_local_cluster" if session_type_info.session_type == "springboard" else PRIMARY_ANCHOR_STRATEGY,
         "event_window_start_seconds": max(0.0, anchor_timestamp - window_pre),
         "event_window_end_seconds": anchor_timestamp + window_post,
         "event_label": event_label,

@@ -1,0 +1,3387 @@
+{
+  "dataset": {
+    "practical_note": "uses final human event labels when present, otherwise suggestion labels; missing labels are retained in summaries",
+    "practical_rows": 341,
+    "row_counts_by_event_label": {
+      "noise_or_other": 52,
+      "platform_dive": 51,
+      "springboard_dive": 96,
+      "springboard_rebound_only": 142
+    },
+    "row_counts_by_event_label_provenance": {
+      "None": 25,
+      "human_reviewed": 316
+    },
+    "row_counts_by_session_type": {
+      "platform": 86,
+      "springboard": 255
+    },
+    "row_counts_by_session_type_provenance": {
+      "direct_review": 255,
+      "manual_session_override": 8,
+      "session_type_inferred": 78
+    },
+    "strict_note": "direct_review session-type provenance only; this subset is too small for a four-class fit",
+    "strict_rows": 255,
+    "total_rows": 341
+  },
+  "decision": "STOP_AND_ADDRESS_LABEL_GAPS",
+  "feature_set": [
+    "event_window_duration",
+    "event_anchor_timestamp_seconds",
+    "proposal_timestamp_seconds",
+    "anchor_minus_proposal_abs",
+    "raw_proposal_score",
+    "audio_score",
+    "combined_score",
+    "audio_model_probability",
+    "audio_clip_probability",
+    "threshold_passed",
+    "is_false_negative_window",
+    "session_type_is_springboard",
+    "session_type_is_platform",
+    "event_label_provenance_is_session_type_inferred",
+    "event_label_provenance_is_subtype_mapped",
+    "event_label_provenance_is_uncertain"
+  ],
+  "four_class": {
+    "available": true,
+    "confusion_matrix": [
+      [
+        0,
+        96,
+        0,
+        0
+      ],
+      [
+        0,
+        137,
+        5,
+        0
+      ],
+      [
+        0,
+        0,
+        51,
+        0
+      ],
+      [
+        0,
+        22,
+        30,
+        0
+      ]
+    ],
+    "folds": [
+      {
+        "accuracy": 0.6666666666666666,
+        "confusion_matrix": [
+          [
+            0,
+            36,
+            0,
+            0
+          ],
+          [
+            0,
+            68,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            8,
+            0
+          ],
+          [
+            0,
+            2,
+            0,
+            0
+          ]
+        ],
+        "held_out_session": "evaluation_champigny_20260406-labelling",
+        "macro": {
+          "f1": 0.4454022988505747,
+          "precision": 0.410377358490566,
+          "recall": 0.5
+        },
+        "per_class": {
+          "noise_or_other": {
+            "f1": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "support": 2
+          },
+          "platform_dive": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 8
+          },
+          "springboard_dive": {
+            "f1": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "support": 36
+          },
+          "springboard_rebound_only": {
+            "f1": 0.7816091954022989,
+            "precision": 0.6415094339622641,
+            "recall": 1.0,
+            "support": 68
+          }
+        },
+        "predictions": [
+          "springboard_rebound_only",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only"
+        ],
+        "probabilities": [
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.011581286786484728,
+            0.06919275096563875,
+            0.5389721265274123,
+            0.38025383572046423
+          ],
+          [
+            0.011581286786484728,
+            0.06919275096563875,
+            0.5389721265274123,
+            0.38025383572046423
+          ],
+          [
+            0.011581286786484728,
+            0.06919275096563875,
+            0.5389721265274123,
+            0.38025383572046423
+          ],
+          [
+            0.011581286786484728,
+            0.06919275096563875,
+            0.5389721265274123,
+            0.38025383572046423
+          ],
+          [
+            0.011581286786484728,
+            0.06919275096563875,
+            0.5389721265274123,
+            0.38025383572046423
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.011581286786484728,
+            0.06919275096563875,
+            0.5389721265274123,
+            0.38025383572046423
+          ],
+          [
+            0.011581286786484728,
+            0.06919275096563875,
+            0.5389721265274123,
+            0.38025383572046423
+          ],
+          [
+            0.011581286786484728,
+            0.06919275096563875,
+            0.5389721265274123,
+            0.38025383572046423
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ],
+          [
+            0.39599720593232934,
+            0.45891171839393236,
+            0.010053756024178774,
+            0.1350373196495595
+          ]
+        ],
+        "truth": [
+          "noise_or_other",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "noise_or_other",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_dive"
+        ]
+      },
+      {
+        "accuracy": 0.46308724832214765,
+        "confusion_matrix": [
+          [
+            0,
+            60,
+            0,
+            0
+          ],
+          [
+            0,
+            69,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            20,
+            0,
+            0
+          ]
+        ],
+        "held_out_session": "evaluation_insep_15min_validated",
+        "macro": {
+          "f1": 0.15825688073394498,
+          "precision": 0.11577181208053691,
+          "recall": 0.25
+        },
+        "per_class": {
+          "noise_or_other": {
+            "f1": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "support": 20
+          },
+          "platform_dive": {
+            "f1": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "support": 0
+          },
+          "springboard_dive": {
+            "f1": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "support": 60
+          },
+          "springboard_rebound_only": {
+            "f1": 0.6330275229357799,
+            "precision": 0.46308724832214765,
+            "recall": 1.0,
+            "support": 69
+          }
+        },
+        "predictions": [
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only"
+        ],
+        "probabilities": [
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417095,
+            0.635212866255067,
+            0.010045200017087983,
+            0.02333491358613556
+          ],
+          [
+            0.3314070201417094,
+            0.6352128662550669,
+            0.01004520001708799,
+            0.023334913586135556
+          ]
+        ],
+        "truth": [
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "noise_or_other",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "noise_or_other",
+          "noise_or_other",
+          "noise_or_other",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_dive",
+          "noise_or_other",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "noise_or_other",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "noise_or_other",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "noise_or_other",
+          "noise_or_other",
+          "springboard_dive",
+          "noise_or_other",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "noise_or_other",
+          "noise_or_other",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "noise_or_other",
+          "noise_or_other",
+          "noise_or_other",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "noise_or_other",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "noise_or_other",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "noise_or_other",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "noise_or_other",
+          "noise_or_other",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_rebound_only",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_dive",
+          "springboard_dive"
+        ]
+      },
+      {
+        "accuracy": 0.5512820512820513,
+        "confusion_matrix": [
+          [
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            5,
+            0
+          ],
+          [
+            0,
+            0,
+            43,
+            0
+          ],
+          [
+            0,
+            0,
+            30,
+            0
+          ]
+        ],
+        "held_out_session": "evaluation_insep_quick_9015_20260409_ui",
+        "macro": {
+          "f1": 0.17768595041322316,
+          "precision": 0.13782051282051283,
+          "recall": 0.25
+        },
+        "per_class": {
+          "noise_or_other": {
+            "f1": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "support": 30
+          },
+          "platform_dive": {
+            "f1": 0.7107438016528926,
+            "precision": 0.5512820512820513,
+            "recall": 1.0,
+            "support": 43
+          },
+          "springboard_dive": {
+            "f1": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "support": 0
+          },
+          "springboard_rebound_only": {
+            "f1": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "support": 5
+          }
+        },
+        "predictions": [
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive"
+        ],
+        "probabilities": [
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ],
+          [
+            0.009137305758273234,
+            0.010044740886182377,
+            0.9746890055331068,
+            0.006128947822437536
+          ]
+        ],
+        "truth": [
+          "noise_or_other",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "noise_or_other",
+          "noise_or_other",
+          "platform_dive",
+          "platform_dive",
+          "noise_or_other",
+          "platform_dive",
+          "springboard_rebound_only",
+          "platform_dive",
+          "noise_or_other",
+          "noise_or_other",
+          "platform_dive",
+          "noise_or_other",
+          "noise_or_other",
+          "noise_or_other",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "noise_or_other",
+          "noise_or_other",
+          "noise_or_other",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "noise_or_other",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "noise_or_other",
+          "noise_or_other",
+          "platform_dive",
+          "platform_dive",
+          "noise_or_other",
+          "noise_or_other",
+          "platform_dive",
+          "noise_or_other",
+          "springboard_rebound_only",
+          "springboard_rebound_only",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "noise_or_other",
+          "platform_dive",
+          "platform_dive",
+          "noise_or_other",
+          "platform_dive",
+          "platform_dive",
+          "noise_or_other",
+          "noise_or_other",
+          "noise_or_other",
+          "springboard_rebound_only",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "noise_or_other",
+          "platform_dive",
+          "platform_dive",
+          "springboard_rebound_only",
+          "noise_or_other",
+          "platform_dive",
+          "noise_or_other",
+          "noise_or_other",
+          "platform_dive",
+          "noise_or_other",
+          "noise_or_other",
+          "platform_dive",
+          "noise_or_other",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive",
+          "platform_dive"
+        ]
+      }
+    ],
+    "macro": {
+      "f1": 0.3586754674658479,
+      "precision": 0.28256953944368446,
+      "recall": 0.49119718309859156
+    },
+    "per_class": {
+      "noise_or_other": {
+        "f1": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "support": 52
+      },
+      "platform_dive": {
+        "f1": 0.7445255474452555,
+        "precision": 0.5930232558139535,
+        "recall": 1.0,
+        "support": 51
+      },
+      "springboard_dive": {
+        "f1": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "support": 96
+      },
+      "springboard_rebound_only": {
+        "f1": 0.690176322418136,
+        "precision": 0.5372549019607843,
+        "recall": 0.9647887323943662,
+        "support": 142
+      }
+    }
+  },
+  "pairwise": {
+    "platform_dive_vs_noise_or_other": {
+      "folds": [
+        {
+          "accuracy": 1.0,
+          "auc": 1.0,
+          "confusion_matrix": [
+            [
+              8,
+              0
+            ],
+            [
+              0,
+              2
+            ]
+          ],
+          "held_out_session": "evaluation_champigny_20260406-labelling",
+          "macro": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "per_class": {
+            "noise_or_other": {
+              "f1": 1.0,
+              "precision": 1.0,
+              "recall": 1.0,
+              "support": 2
+            },
+            "platform_dive": {
+              "f1": 1.0,
+              "precision": 1.0,
+              "recall": 1.0,
+              "support": 8
+            }
+          },
+          "test_count": 10,
+          "train_count": 93
+        },
+        {
+          "accuracy": 1.0,
+          "auc": 0.5,
+          "confusion_matrix": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              20
+            ]
+          ],
+          "held_out_session": "evaluation_insep_15min_validated",
+          "macro": {
+            "f1": 0.5,
+            "precision": 0.5,
+            "recall": 0.5
+          },
+          "per_class": {
+            "noise_or_other": {
+              "f1": 1.0,
+              "precision": 1.0,
+              "recall": 1.0,
+              "support": 20
+            },
+            "platform_dive": {
+              "f1": 0.0,
+              "precision": 0.0,
+              "recall": 0.0,
+              "support": 0
+            }
+          },
+          "test_count": 20,
+          "train_count": 83
+        },
+        {
+          "accuracy": 0.589041095890411,
+          "auc": 0.5,
+          "confusion_matrix": [
+            [
+              43,
+              0
+            ],
+            [
+              30,
+              0
+            ]
+          ],
+          "held_out_session": "evaluation_insep_quick_9015_20260409_ui",
+          "macro": {
+            "f1": 0.37068965517241376,
+            "precision": 0.2945205479452055,
+            "recall": 0.5
+          },
+          "per_class": {
+            "noise_or_other": {
+              "f1": 0.0,
+              "precision": 0.0,
+              "recall": 0.0,
+              "support": 30
+            },
+            "platform_dive": {
+              "f1": 0.7413793103448275,
+              "precision": 0.589041095890411,
+              "recall": 1.0,
+              "support": 43
+            }
+          },
+          "test_count": 73,
+          "train_count": 30
+        }
+      ],
+      "mean_accuracy": 0.863013698630137,
+      "mean_auc": 0.6666666666666666,
+      "mean_macro_f1": 0.6235632183908045,
+      "mean_precision": 0.5981735159817352,
+      "mean_recall": 0.6666666666666666
+    },
+    "springboard_dive_vs_springboard_rebound_only": {
+      "folds": [
+        {
+          "accuracy": 0.6538461538461539,
+          "auc": 0.5,
+          "confusion_matrix": [
+            [
+              0,
+              36
+            ],
+            [
+              0,
+              68
+            ]
+          ],
+          "held_out_session": "evaluation_champigny_20260406-labelling",
+          "macro": {
+            "f1": 0.39534883720930236,
+            "precision": 0.3269230769230769,
+            "recall": 0.5
+          },
+          "per_class": {
+            "springboard_dive": {
+              "f1": 0.0,
+              "precision": 0.0,
+              "recall": 0.0,
+              "support": 36
+            },
+            "springboard_rebound_only": {
+              "f1": 0.7906976744186047,
+              "precision": 0.6538461538461539,
+              "recall": 1.0,
+              "support": 68
+            }
+          },
+          "test_count": 104,
+          "train_count": 134
+        },
+        {
+          "accuracy": 0.5348837209302325,
+          "auc": 0.5,
+          "confusion_matrix": [
+            [
+              0,
+              60
+            ],
+            [
+              0,
+              69
+            ]
+          ],
+          "held_out_session": "evaluation_insep_15min_validated",
+          "macro": {
+            "f1": 0.34848484848484845,
+            "precision": 0.26744186046511625,
+            "recall": 0.5
+          },
+          "per_class": {
+            "springboard_dive": {
+              "f1": 0.0,
+              "precision": 0.0,
+              "recall": 0.0,
+              "support": 60
+            },
+            "springboard_rebound_only": {
+              "f1": 0.6969696969696969,
+              "precision": 0.5348837209302325,
+              "recall": 1.0,
+              "support": 69
+            }
+          },
+          "test_count": 129,
+          "train_count": 109
+        },
+        {
+          "accuracy": 1.0,
+          "auc": 0.5,
+          "confusion_matrix": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              5
+            ]
+          ],
+          "held_out_session": "evaluation_insep_quick_9015_20260409_ui",
+          "macro": {
+            "f1": 0.5,
+            "precision": 0.5,
+            "recall": 0.5
+          },
+          "per_class": {
+            "springboard_dive": {
+              "f1": 0.0,
+              "precision": 0.0,
+              "recall": 0.0,
+              "support": 0
+            },
+            "springboard_rebound_only": {
+              "f1": 1.0,
+              "precision": 1.0,
+              "recall": 1.0,
+              "support": 5
+            }
+          },
+          "test_count": 5,
+          "train_count": 233
+        }
+      ],
+      "mean_accuracy": 0.7295766249254622,
+      "mean_auc": 0.5,
+      "mean_macro_f1": 0.41461122856471694,
+      "mean_precision": 0.3647883124627311,
+      "mean_recall": 0.5
+    }
+  },
+  "split_strategy": {
+    "held_out_folds": 3,
+    "sessions": [
+      "evaluation_champigny_20260406-labelling",
+      "evaluation_insep_15min_validated",
+      "evaluation_insep_quick_9015_20260409_ui"
+    ],
+    "type": "leave_one_session_out"
+  },
+  "strict_subset": {
+    "note": "direct_review session-type provenance only; useful only for the springboard contrast and not enough for a full four-class fit",
+    "pairwise": {
+      "platform_dive_vs_noise_or_other": {
+        "accuracy": null,
+        "auc": null,
+        "eval_count": 22,
+        "macro": null,
+        "per_class": {},
+        "train_count": 22
+      },
+      "springboard_dive_vs_springboard_rebound_only": {
+        "accuracy": 0.5879828326180258,
+        "auc": 0.5,
+        "eval_count": 233,
+        "macro": {
+          "f1": 0.37027027027027026,
+          "precision": 0.2939914163090129,
+          "recall": 0.5
+        },
+        "per_class": {
+          "springboard_dive": {
+            "f1": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "support": 96
+          },
+          "springboard_rebound_only": {
+            "f1": 0.7405405405405405,
+            "precision": 0.5879828326180258,
+            "recall": 1.0,
+            "support": 137
+          }
+        },
+        "train_count": 233
+      }
+    }
+  },
+  "strongest_confusions": [
+    {
+      "accuracy": 0.5348837209302325,
+      "confusion_matrix": [
+        [
+          0,
+          60
+        ],
+        [
+          0,
+          69
+        ]
+      ],
+      "held_out_session": "evaluation_insep_15min_validated",
+      "task": "springboard_dive_vs_springboard_rebound_only"
+    },
+    {
+      "accuracy": 0.589041095890411,
+      "confusion_matrix": [
+        [
+          43,
+          0
+        ],
+        [
+          30,
+          0
+        ]
+      ],
+      "held_out_session": "evaluation_insep_quick_9015_20260409_ui",
+      "task": "platform_dive_vs_noise_or_other"
+    },
+    {
+      "confusion_matrix": [
+        [
+          0,
+          96,
+          0,
+          0
+        ],
+        [
+          0,
+          137,
+          5,
+          0
+        ],
+        [
+          0,
+          0,
+          51,
+          0
+        ],
+        [
+          0,
+          22,
+          30,
+          0
+        ]
+      ],
+      "macro_f1": 0.3586754674658479,
+      "task": "four_class"
+    }
+  ],
+  "supervision_source": {
+    "fallback": "suggested_event_label",
+    "primary": "final_human_event_label"
+  }
+}
