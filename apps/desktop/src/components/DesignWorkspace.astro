@@ -358,6 +358,10 @@ const clientBundle = JSON.stringify({
         </div>
         <div class="review-main__controls">
           <div class="review-decisions">
+            <button class="action-link review-decisions__button" type="button" data-review-prev aria-label="Previous queue item">Previous</button>
+            <button class="action-link review-decisions__button" type="button" data-review-next aria-label="Next queue item">Next</button>
+            <button class="action-link review-decisions__button" type="button" data-toggle-splash-pause aria-label="Pause briefly at splash cue">Pause at splash off</button>
+            <span class="review-splash-indicator" data-splash-cue-indicator aria-live="polite">Splash cue</span>
             <button class="action-link review-decisions__button review-decisions__button--keep" type="button" data-decision={isEvaluationSession ? "dive" : "keep"}>{isEvaluationSession ? "Dive" : "Keep"}</button>
             <button class="action-link review-decisions__button review-decisions__button--reject" type="button" data-decision={isEvaluationSession ? "non_dive" : "reject"}>{isEvaluationSession ? "Non-dive" : "Reject"}</button>
             <button class="action-link review-decisions__button review-decisions__button--unsure" type="button" data-decision="unsure">Unsure</button>
@@ -530,6 +534,39 @@ const clientBundle = JSON.stringify({
             </div>
           </section>
         )}
+        <div class="review-sidebar__header">
+          <h2 data-review-list-title>{isEvaluationSession ? "Evaluation queue" : "Attempts"}</h2>
+          <select class="review-sidebar__filter" data-review-filter>
+            <option value="all" selected>All</option>
+            <option value="pending">To review</option>
+            <option value={isEvaluationSession ? "dive" : "keep"}>{isEvaluationSession ? "Dives" : "Kept"}</option>
+            <option value={isEvaluationSession ? "non_dive" : "reject"}>{isEvaluationSession ? "Non-dives" : "Rejected"}</option>
+            <option value="unsure">Unsure</option>
+            {isEvaluationSession && <option value="false_negative">False negatives</option>}
+          </select>
+        </div>
+        <div class="review-sidebar__list">
+          <table class="queue-table">
+            <thead>
+              <tr>
+                <th>Attempt</th>
+                <th>Splash</th>
+                <th>Decision</th>
+                <th>{isEvaluationSession ? "Type" : "Signal"}</th>
+              </tr>
+            </thead>
+            <tbody data-detection-table>
+              {detections.map((item) => (
+                <tr class={item.id === selected?.id ? "is-current" : ""} data-focus-detection={item.id}>
+                  <td>{item.id}</td>
+                  <td>{formatSeconds(item.timestamp_seconds)}</td>
+                  <td>Pending</td>
+                  <td>{signalLabelFor(item.confidence)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         <div class="detail-bar">
           <span data-detail-audio>Audio {selected ? selected.scores.audio.toFixed(2) : "0.00"}</span>
           <span data-detail-window>Window {selected ? `${formatSeconds(reviewStartFor(selected))} to ${formatSeconds(reviewEndFor(selected))}` : "0:00.000 to 0:00.000"}</span>
@@ -759,6 +796,8 @@ const clientBundle = JSON.stringify({
     const decisionSubtype = document.querySelector("[data-decision-subtype]");
     const eventLabelSelect = document.querySelector("[data-event-label]");
     const eventSaveButton = document.querySelector("[data-event-save]");
+    const previousButton = document.querySelector("[data-review-prev]");
+    const nextButton = document.querySelector("[data-review-next]");
     const reviewCompleteNotice = document.querySelector("[data-review-complete]");
     const reviewCompleteTitle = document.querySelector("[data-review-complete-title]");
     const reviewCompleteCopy = document.querySelector("[data-review-complete-copy]");
@@ -784,8 +823,15 @@ const clientBundle = JSON.stringify({
     const sessionOpenNodes = Array.from(document.querySelectorAll("[data-session-open]"));
     const queueNodes = Array.from(document.querySelectorAll("[data-queue-focus]"));
     const falseNegativeButton = document.querySelector("[data-decision-false-negative]");
+    const splashPauseButton = document.querySelector("[data-toggle-splash-pause]");
+    const splashCueIndicator = document.querySelector("[data-splash-cue-indicator]");
+    const detailBar = document.querySelector(".detail-bar");
     let timelineLayoutFrame = null;
     let playbackUiFrame = null;
+    let splashCueFired = false;
+    let splashCueLastTime = null;
+    let splashCueResetTimer = null;
+    let splashPauseEnabled = false;
 
     try {
       const savedRefinementState = JSON.parse(window.localStorage.getItem(refinementReviewStorageKey) ?? "[]");
@@ -1048,7 +1094,7 @@ const clientBundle = JSON.stringify({
 
     function syncEventSupportUi(currentId) {
       const support = supportFor(currentId);
-      const suggestedEventLabel = String(support.suggested_event_label ?? "");
+      const suggestedEventLabel = String(support?.suggested_event_label ?? "");
       if (eventLabelSelect && !eventLabelSelect.value) {
         eventLabelSelect.value = suggestedEventLabel || "uncertain";
       }
@@ -1213,6 +1259,74 @@ const clientBundle = JSON.stringify({
       if (loopButton) loopButton.textContent = loopEnabled ? "Loop on" : "Loop off";
       if (autoplayButton) autoplayButton.textContent = autoPlayEnabled ? "Autoplay on" : "Autoplay off";
       if (autoAdvanceButton) autoAdvanceButton.textContent = autoAdvanceEnabled ? "Auto-next on" : "Auto-next off";
+    }
+
+    function updateQueueNavigationState() {
+      const disabled = detections.length === 0;
+      if (previousButton) previousButton.disabled = disabled;
+      if (nextButton) nextButton.disabled = disabled;
+    }
+
+    function updateSplashPauseButton() {
+      if (!splashPauseButton) return;
+      splashPauseButton.textContent = splashPauseEnabled ? "Pause at splash on" : "Pause at splash off";
+    }
+
+    function resetSplashCueCycle() {
+      splashCueFired = false;
+      splashCueLastTime = null;
+    }
+
+    function flashSplashCueUi() {
+      if (!current) return;
+      const activeQueueRows = Array.from(document.querySelectorAll("[data-focus-detection]"))
+        .filter((node) => node.getAttribute("data-focus-detection") === String(current.id));
+      activeQueueRows.forEach((node) => node.classList.add("is-splash-cue"));
+      if (detailBar) detailBar.classList.add("is-splash-cue");
+      if (splashCueIndicator) splashCueIndicator.classList.add("is-active");
+      if (splashCueResetTimer != null) {
+        window.clearTimeout(splashCueResetTimer);
+      }
+      splashCueResetTimer = window.setTimeout(() => {
+        activeQueueRows.forEach((node) => node.classList.remove("is-splash-cue"));
+        if (detailBar) detailBar.classList.remove("is-splash-cue");
+        if (splashCueIndicator) splashCueIndicator.classList.remove("is-active");
+        splashCueResetTimer = null;
+      }, 240);
+    }
+
+    function resolveSplashCueAnchor(start, end) {
+      if (!current) return start;
+      // Manual false negatives should cue exactly at the reviewer-marked timestamp.
+      if (String(current.id).startsWith("fn-")) {
+        return Math.min(Math.max(Number(current.timestamp_seconds ?? start), start), end);
+      }
+      const support = supportFor(current.id);
+      const supportAnchor = Number(support?.event_anchor_timestamp_seconds ?? Number.NaN);
+      const fallbackAnchor = Number(current.timestamp_seconds ?? start);
+      const anchor = Number.isFinite(supportAnchor) ? supportAnchor : fallbackAnchor;
+      return Math.min(Math.max(anchor, start), end);
+    }
+
+    function maybeTriggerSplashCue(start, end) {
+      if (!reviewVideo || !current) return;
+      const now = Number(reviewVideo.currentTime ?? 0);
+      if (splashCueLastTime != null && now + 0.06 < splashCueLastTime) {
+        splashCueFired = false;
+      }
+      splashCueLastTime = now;
+      const anchor = resolveSplashCueAnchor(start, end);
+      if (splashCueFired || now < anchor - 0.012) return;
+      splashCueFired = true;
+      flashSplashCueUi();
+      if (!splashPauseEnabled || reviewVideo.paused) return;
+      reviewVideo.pause();
+      window.setTimeout(() => {
+        if (!reviewVideo || !current) return;
+        if (!splashPauseEnabled) return;
+        if (reviewVideo.currentTime >= end - 0.05) return;
+        void reviewVideo.play().catch(() => {});
+      }, 260);
     }
 
     function browserFriendlySource(url) {
@@ -1462,6 +1576,7 @@ const clientBundle = JSON.stringify({
       applyQueueFilter();
       renderTimelineMarkers();
       scheduleTimelineLayout();
+      updateQueueNavigationState();
     }
 
     function updateReviewModeCopy() {
@@ -1552,6 +1667,7 @@ const clientBundle = JSON.stringify({
 
     function syncVideoSource() {
       if (!reviewVideo || !current) return;
+      resetSplashCueCycle();
       const proxySrc = parsed.primaryVideoUrl ?? "";
       const directSrc = parsed.sourceVideoUrl ?? "";
       if (sourceLoopHandler) {
@@ -1601,6 +1717,7 @@ const clientBundle = JSON.stringify({
           syncPlaybackUi();
           return;
         }
+        maybeTriggerSplashCue(start, end);
         if (reviewVideo.currentTime >= end) {
           if (loopEnabled) {
             reviewVideo.currentTime = start;
@@ -1627,6 +1744,7 @@ const clientBundle = JSON.stringify({
     function selectDetection(id, options = {}) {
       current = detections.find((item) => item.id === id) ?? current;
       if (!current) return;
+      resetSplashCueCycle();
       manualTimelineSeekMode = false;
       reviewLabel && (reviewLabel.textContent = `${formatSeconds(reviewStartFor(current))} to ${formatSeconds(reviewEndFor(current))} · ${parsed.session?.source_video_path ?? ""}`);
       audioLabel && (audioLabel.textContent = String(current.id).startsWith("fn-") ? "Manual annotation" : `Audio ${current.scores.audio.toFixed(2)}`);
@@ -1642,6 +1760,7 @@ const clientBundle = JSON.stringify({
       updateReviewCounts();
       syncCurrentDecisionUi();
       updateRefinementQueueState();
+      updateQueueNavigationState();
       if (options.autoplay && autoPlayEnabled) {
         window.setTimeout(() => { void playCurrentSegment(); }, 40);
       }
@@ -2303,8 +2422,18 @@ const clientBundle = JSON.stringify({
     eventSaveButton?.addEventListener("click", async () => {
       await saveEventLabelOnly();
     });
+    previousButton?.addEventListener("click", () => {
+      selectAdjacentDetection(-1);
+    });
+    nextButton?.addEventListener("click", () => {
+      selectAdjacentDetection(1);
+    });
     falseNegativeButton?.addEventListener("click", async () => {
       await saveFalseNegative();
+    });
+    splashPauseButton?.addEventListener("click", () => {
+      splashPauseEnabled = !splashPauseEnabled;
+      updateSplashPauseButton();
     });
 
     function renderExportList(paths) {
@@ -2478,10 +2607,12 @@ const clientBundle = JSON.stringify({
 
     updateReviewModeCopy();
     updateToggleButtons();
+    updateSplashPauseButton();
     renderExportList(exportedPaths);
     installMediaSessionHandlers();
     syncVideoSource();
     rebuildDetections();
+    updateQueueNavigationState();
     renderDetectionTable();
     if (current) selectDetection(current.id, { autoplay: autoPlayEnabled });
     refreshDecisions();

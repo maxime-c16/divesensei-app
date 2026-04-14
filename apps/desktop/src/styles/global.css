@@ -957,6 +957,10 @@ tbody tr.is-current {
   background: rgba(127, 218, 255, 0.06);
 }
 
+tbody tr.is-splash-cue {
+  animation: splash-cue-flash 260ms ease;
+}
+
 .queue-table-wrap {
   max-height: min(60vh, 720px);
   border-top: 1px solid var(--line);
@@ -1058,6 +1062,7 @@ tbody tr.is-current {
 .review-decisions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
@@ -1104,6 +1109,26 @@ tbody tr.is-current {
 .review-decisions__note:focus {
   outline: none;
   border-color: rgba(127, 218, 255, 0.4);
+}
+
+.review-splash-indicator {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1;
+  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
+}
+
+.review-splash-indicator.is-active {
+  border-color: rgba(127, 218, 255, 0.36);
+  background: rgba(127, 218, 255, 0.12);
+  color: var(--text);
 }
 
 .review-main__timeline {
@@ -1351,6 +1376,10 @@ tbody tr.is-current {
   background: rgba(127, 218, 255, 0.08);
 }
 
+.review-refinement__row.is-splash-cue {
+  animation: splash-cue-flash 260ms ease;
+}
+
 .review-refinement__row.is-reviewed {
   border-color: rgba(112, 184, 127, 0.24);
 }
@@ -1519,6 +1548,35 @@ tbody tr.is-current {
 
 .detail-bar span {
   white-space: nowrap;
+}
+
+.detail-bar.is-splash-cue {
+  animation: splash-cue-flash 260ms ease;
+}
+
+.tl__pip.is-splash-cue {
+  animation: splash-cue-marker 260ms ease;
+}
+
+@keyframes splash-cue-flash {
+  0% {
+    background-color: rgba(127, 218, 255, 0.04);
+  }
+  35% {
+    background-color: rgba(127, 218, 255, 0.2);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes splash-cue-marker {
+  0% {
+    box-shadow: 0 0 0 0 rgba(127, 218, 255, 0.34);
+  }
+  100% {
+    box-shadow: 0 0 0 8px rgba(127, 218, 255, 0);
+  }
 }
 
 /* ── Artifacts & Exports ── */
