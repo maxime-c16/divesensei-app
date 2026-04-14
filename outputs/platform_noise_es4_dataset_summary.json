@@ -1,0 +1,63 @@
+{
+  "scope": {
+    "platform_noise_only": true,
+    "detector_changed": false,
+    "taxonomy_changed": false,
+    "labels_changed": false,
+    "springboard_changed": false
+  },
+  "row_counts": {
+    "train_rows": 53,
+    "scored_validation_rows": 20,
+    "reporting_only_rows_excluded": 10,
+    "materialized_rows_total": 73
+  },
+  "label_counts": {
+    "train": {
+      "noise_or_other": 20,
+      "platform_dive": 33
+    },
+    "scored_validation": {
+      "noise_or_other": 10,
+      "platform_dive": 10
+    },
+    "reporting_only_excluded": {
+      "noise_or_other": 2,
+      "platform_dive": 8
+    }
+  },
+  "frozen_policy": {
+    "platform_noise_policy": "insep_quick_stratified_holdout_scored_validation_with_leak_prevention",
+    "holdout_logic": "stratified_row_holdout_from_insep_quick_candidate_10_platform_10_noise",
+    "scored_slice_source": "insep_quick_stratified_holdout_candidate",
+    "leak_prevention_policy": "holdout_rows_removed_from_platform_noise_train_rows",
+    "train_holdout_overlap_row_keys": 0
+  },
+  "feature_schema": {
+    "accepted_feature_family_included_as_is": true,
+    "feature_columns": [
+      "audio_score",
+      "audio_clip_probability",
+      "event_anchor_timestamp_seconds",
+      "is_false_negative_window",
+      "impact_peak_to_window_rms_ratio",
+      "impact_peak_prominence_db",
+      "transient_peak_count",
+      "inter_peak_interval_cv",
+      "post_impact_early_to_late_rms_ratio",
+      "tail_half_life_ms",
+      "spectral_flatness_post_mean",
+      "tonal_peak_fraction_post_mean",
+      "whistle_band_energy_fraction_post",
+      "spectral_entropy_post_mean",
+      "spectral_contrast_mean_post",
+      "spectral_contrast_low_high_slope_post",
+      "onset_tempogram_peak_ratio_post",
+      "onset_density_0_300ms_post"
+    ]
+  },
+  "dataset_artifacts": {
+    "npz_path": "outputs/platform_noise_es4_dataset.npz",
+    "rows_json_path": "outputs/platform_noise_es4_dataset_rows.json"
+  }
+}

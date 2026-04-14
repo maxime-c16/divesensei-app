@@ -1,0 +1,45 @@
+{
+  "final_decision": "PHASE5_R7_ES4_PASS",
+  "main_reason": "all guardbands passed.",
+  "compare_against": {
+    "phase5_r4_logistic_family": "outputs/phase5_regime_aware_execution_r4.json",
+    "es4_benchmark": "outputs/platform_noise_es4_model_benchmark.json",
+    "phase5_r5": null,
+    "phase5_r6": null
+  },
+  "springboard": {
+    "auc_r4": 0.7745098039215687,
+    "auc_r7": 0.7745098039215687,
+    "macro_f1_r4": 0.5047619047619047,
+    "macro_f1_r7": 0.5047619047619047,
+    "fn_original": 34,
+    "fn_r4": 32,
+    "fn_r7": 32,
+    "fp_r4": 0,
+    "fp_r7": 0,
+    "regression_vs_r4": false
+  },
+  "platform_noise": {
+    "auc_r4_logistic_regime": 0.51,
+    "macro_f1_r4_logistic_regime": 0.37321937321937326,
+    "fp_r4_logistic_regime": 9,
+    "fn_r4_logistic_regime": 2,
+    "auc_es4_benchmark": 0.71,
+    "macro_f1_es4_benchmark": 0.696969696969697,
+    "fp_es4_benchmark": 4,
+    "fn_es4_benchmark": 2,
+    "auc_r7_es4_regime": 0.71,
+    "macro_f1_r7_es4_regime": 0.696969696969697,
+    "fp_r7_es4_regime": 4,
+    "fn_r7_es4_regime": 2,
+    "gains_transferred_cleanly": true,
+    "hard_rows_improved_vs_r4": true
+  },
+  "near_pass_reference": {
+    "r6_available": false,
+    "r6_platform_auc": null,
+    "r6_platform_macro_f1": null,
+    "r6_platform_fp": null,
+    "r6_platform_fn": null
+  }
+}

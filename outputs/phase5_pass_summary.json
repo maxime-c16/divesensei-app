@@ -1,0 +1,108 @@
+{
+  "decision": "PHASE5_R7_ES4_PASS",
+  "final_status": {
+    "global_phase5": "PASS",
+    "springboard_track": "PASS",
+    "platform_noise_track": "PASS"
+  },
+  "frozen_contract": {
+    "detector_changed": false,
+    "taxonomy_changed": false,
+    "labels_changed": false,
+    "proposal_window_policy_changed": false,
+    "frozen_row_lists_changed": false,
+    "springboard_configuration_changed": false,
+    "platform_noise_representation_changed": false,
+    "only_platform_noise_model_family_changed": true
+  },
+  "configuration": {
+    "springboard_feature_family": "probe_r1_only",
+    "platform_noise_feature_family": "accepted_es4_input_representation",
+    "platform_noise_model_family": "xgboost_gbdt",
+    "frozen_manifest_lists_path": "outputs/phase5_regime_manifest_lists.json"
+  },
+  "metrics": {
+    "springboard": {
+      "auc": 0.7745098039215687,
+      "macro_f1": 0.5047619047619047,
+      "confusion_matrix": [
+        [
+          4,
+          32
+        ],
+        [
+          0,
+          68
+        ]
+      ],
+      "false_negative_count_dive_to_rebound": 32,
+      "false_positive_count_rebound_to_dive": 0
+    },
+    "platform_noise": {
+      "auc": 0.71,
+      "macro_f1": 0.696969696969697,
+      "accuracy": 0.7,
+      "confusion_matrix": [
+        [
+          8,
+          2
+        ],
+        [
+          4,
+          6
+        ]
+      ],
+      "false_negative_count_platform_to_noise": 2,
+      "false_positive_count_noise_to_platform": 4
+    }
+  },
+  "catastrophic_checks": {
+    "springboard_all_dive_predicted_as_rebound": "PASS",
+    "platform_holdout_recall_below_0p75": "PASS"
+  },
+  "row_level_delta_vs_r4_logistic": {
+    "platform_noise_auc": {
+      "r4_logistic": 0.51,
+      "r7_es4": 0.71
+    },
+    "platform_noise_macro_f1": {
+      "r4_logistic": 0.37321937321937326,
+      "r7_es4": 0.696969696969697
+    },
+    "platform_noise_noise_to_platform_fp": {
+      "r4_logistic": 9,
+      "r7_es4": 4
+    },
+    "platform_noise_platform_to_noise_fn": {
+      "r4_logistic": 2,
+      "r7_es4": 2
+    }
+  },
+  "residual_hard_rows": {
+    "false_negative_platform_to_noise": [
+      "evaluation_insep_quick_9015_20260409_ui::det-0038",
+      "evaluation_insep_quick_9015_20260409_ui::det-0042"
+    ],
+    "false_positive_noise_to_platform": [
+      "evaluation_insep_quick_9015_20260409_ui::det-0062",
+      "evaluation_insep_quick_9015_20260409_ui::det-0014",
+      "evaluation_insep_quick_9015_20260409_ui::det-0022",
+      "evaluation_insep_quick_9015_20260409_ui::det-0058"
+    ]
+  },
+  "top_attribution_features": [
+    "inter_peak_interval_cv",
+    "tail_half_life_ms",
+    "impact_peak_prominence_db",
+    "onset_density_0_300ms_post",
+    "spectral_entropy_post_mean"
+  ],
+  "source_artifacts": {
+    "execution": "outputs/phase5_regime_aware_execution_r7_es4.json",
+    "comparison": "outputs/phase5_regime_aware_execution_r7_es4_comparison.json",
+    "holdout_predictions": "outputs/platform_noise_es4_holdout_predictions.jsonl",
+    "feature_attribution": "outputs/platform_noise_es4_feature_attribution.json",
+    "es4_dataset_summary": "outputs/platform_noise_es4_dataset_summary.json",
+    "es4_model_benchmark": "outputs/platform_noise_es4_model_benchmark.json"
+  }
+}

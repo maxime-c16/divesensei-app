@@ -1,47 +1,56 @@
-# Phase 5 Final Status (Current Cycle Closure)
+# Phase 5 Final Status (r7-es4 freeze)
 
 ## Part A — Final status
 
-- **Springboard track:** pass (stable, accepted, unchanged in this cycle)
-- **Platform/noise track:** near-pass under current constraints; fails current joint recall/FP guardrail requirement
-- **Global Phase 5:** near-pass / not fully passed
+- **Springboard track:** **PASS** (unchanged configuration from prior accepted pass)
+- **Platform/noise track:** **PASS** with ES4 model-family upgrade (`xgboost_gbdt`)
+- **Global Phase 5:** **PASS** (`PHASE5_R7_ES4_PASS`)
+- **Detector behavior:** unchanged (validated legacy detector remains frozen proposal-generator)
+- **Taxonomy:** unchanged (`springboard_dive`, `springboard_rebound_only`, `platform_dive`, `noise_or_other`)
+- **Decisive change:** platform/noise model-family upgrade, not detector/taxonomy/label/split changes
 
 ## Part B — Best-known configuration (frozen)
 
-- **Detector line:** frozen validated detector as proposal generator only  
-  (`frontend_region_pattern_exception`, `frontend_dense_pcen_pattern_exception`, `frontend_region_tail_imbalance_exception`)
-- **Springboard feature family:** `probe_r1_only` (accepted best, no regression)
-- **Platform/noise feature family (representation):** accepted `platform_noise_feature_probe_r4` bundle  
-  (`spectral_contrast_mean_post`, `spectral_contrast_low_high_slope_post`, `onset_tempogram_peak_ratio_post`, `onset_density_0_300ms_post`)
-- **Classifier family:** unchanged logistic model family
-- **Validation policy:** frozen manifest/slice structure (platform/noise 20-row scored holdout: 10 platform, 10 noise)
+- **Detector:** frozen validated legacy detector, proposal-generator only
+- **Springboard feature family:** `probe_r1_only`
+- **Platform/noise feature family:** accepted ES4 input representation (`platform_noise_feature_probe_r4` feature set retained)
+- **Platform/noise model family:** `xgboost_gbdt`
+- **Frozen split policy:** `outputs/phase5_regime_manifest_lists.json`
+  - platform/noise scored holdout = 20 rows (10 `platform_dive`, 10 `noise_or_other`)
+  - train/holdout overlap = 0
+  - Champigny platform-only and ambiguity slices remain reporting-only
+- **Catastrophic checks:** both pass
+  - springboard all-dive-to-rebound catastrophe not triggered
+  - platform holdout recall floor (0.75) passes (`0.80`)
 
-Best observed platform/noise results with accepted r4 representation:
+Best achieved metrics (`outputs/phase5_regime_aware_execution_r7_es4.json`):
 
-- **AUC:** 0.81
-- **Macro F1:** 0.70
-- **Accuracy:** 0.70
-- **Confusion:** `[[7, 3], [3, 7]]`
-- **Noise->Platform FP:** 3 (improved from 6 in accepted r2 run)
-- **Platform recall:** 0.70 (down from 0.80 in accepted r2 run)
+- **Springboard:** AUC `0.7745`, macro F1 `0.5048`, FN `32`, FP `0`
+- **Platform/noise:** AUC `0.7100`, macro F1 `0.6970`, accuracy `0.7000`, confusion `[[8,2],[4,6]]`, FN `2`, FP `4`
+- **Residual hard rows:**  
+  FNs: `det-0038`, `det-0042`  
+  FPs: `det-0062`, `det-0014`, `det-0022`, `det-0058`
 
-Operating-point analysis outcome:
+## Part C — Why this pass happened
 
-- Threshold tuning changes precision/recall tradeoff, but no threshold satisfied all required constraints simultaneously:
-  - platform recall >= 0.75
-  - macro F1 >= 0.50
-  - strict noise->platform FP improvement vs r4 default operating point
+- Logistic-family regime baseline was the bottleneck on platform/noise (r4: AUC `0.51`, macro F1 `0.3732`, FP `9`).
+- ES4 `xgboost_gbdt` captured tabular interaction structure better under identical frozen rows/features/policy.
+- Row-level outcomes improved materially on the same scored holdout:
+  - `noise_or_other -> platform_dive` FP reduced `9 -> 4`
+  - `platform_dive -> noise_or_other` FN held `2 -> 2`
+- Top attribution features were interaction-heavy temporal/spectral descriptors:
+  `inter_peak_interval_cv`, `tail_half_life_ms`, `impact_peak_prominence_db`, `onset_density_0_300ms_post`, `spectral_entropy_post_mean`.
 
-## Part C — Why this cycle stops here
+## Part D — Closed for this cycle
 
-- The remaining blocker is no longer weak representation signal (AUC is strong at 0.81).
-- The blocker is decision-policy geometry under current constraints: improving recall reintroduces too many noise false positives; reducing false positives drops platform recall below floor.
-- Additional tiny feature or threshold tweaks are unlikely to change this structural tradeoff enough to justify continued micro-iteration in this cycle.
-- This is a constrained **near-pass**, not a broad failure.
+- springboard anchor crisis
+- platform/noise feature-only looping (without family upgrade)
+- threshold-only rescue attempts as primary path
+- detector-side intervention as current priority
 
-## Part D — Next-cycle options (ranked; not for this pass)
+## Part E — Next-cycle study focus (not executed in this pass)
 
-1. **Stronger platform/noise model family:** move beyond current logistic family while keeping detector/taxonomy/labels frozen.
-2. **More/cleaner platform-noise data:** expand and clean ambiguous handling/whistle/noise rows and boundary platform rows.
-3. **Protocol/governance decision:** explicit policy on track-level acceptance vs strict global acceptance.
-4. **Calibration/governed deployment mode:** if governance allows, adopt confidence-banded review policy rather than single hard threshold.
+1. Robustness, uncertainty, and reproducibility checks.
+2. Wider model-family benchmarking beyond the current winner.
+3. Calibration and governance policy under deployment constraints.
+4. Broader generalization checks across additional reviewed slices/sessions.

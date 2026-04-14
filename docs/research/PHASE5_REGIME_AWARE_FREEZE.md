@@ -52,3 +52,13 @@ This file freezes the manifest lists and numeric guardbands for the first future
 - Leak prevention frozen: scored holdout rows are removed from platform/noise training rows.
 - Champigny platform-only and ambiguity slices remain reporting-only.
 - Springboard configuration remains r3 unchanged (probe-r1 features, same classifier family).
+
+## Revision r7-es4 (2026-04-14)
+
+- Frozen passing execution artifact: `outputs/phase5_regime_aware_execution_r7_es4.json`.
+- Springboard track carried forward unchanged from r4/r3 pass state (`probe_r1_only`).
+- Platform/noise representation remained unchanged from accepted ES4 input dataset.
+- Only platform/noise model family changed: logistic family -> `xgboost_gbdt`.
+- Platform/noise scored holdout policy unchanged (20-row INSEP quick stratified holdout, leak prevention retained, overlap=0).
+- Catastrophic checks pass, and both track-level success guardbands pass.
+- This revision becomes the new best-known regime-aware freeze for Phase 5 closure.

@@ -1,0 +1,184 @@
+{
+  "run_type": "phase5_regime_aware_execution_v1_r7_es4_xgboost_platform_noise",
+  "final_decision": "PHASE5_R7_ES4_PASS",
+  "main_reason": "all guardbands passed.",
+  "input_integrity": {
+    "frozen_lists_used_unchanged": true,
+    "frozen_manifest_lists_path": "outputs/phase5_regime_manifest_lists.json",
+    "train_holdout_overlap_row_keys": 0,
+    "springboard_configuration_unchanged_from_r4": true,
+    "springboard_feature_family": "probe_r1_only",
+    "platform_noise_representation_unchanged_from_es4": true,
+    "platform_noise_model_family": "xgboost_gbdt",
+    "only_platform_noise_model_family_changed": true,
+    "proposal_window_policy_unchanged": true,
+    "taxonomy_changed": false,
+    "labels_changed": false,
+    "detector_changed": false
+  },
+  "row_counts_used": {
+    "champigny_ambiguity_rows": 2,
+    "champigny_platform_stress_rows": 8,
+    "champigny_springboard_scored_rows": 104,
+    "platform_noise_train_rows": 53,
+    "platform_noise_validation_rows": 20,
+    "springboard_train_rows": 129,
+    "springboard_validation_rows": 104
+  },
+  "springboard_results": {
+    "false_negative_count_dive_to_rebound": 32,
+    "false_positive_count_rebound_to_dive": 0,
+    "validation_metrics": {
+      "accuracy": 0.6923076923076923,
+      "auc": 0.7745098039215687,
+      "confusion_matrix": [
+        [
+          4,
+          32
+        ],
+        [
+          0,
+          68
+        ]
+      ],
+      "macro_f1": 0.5047619047619047,
+      "negative_recall": 1.0,
+      "positive_recall": 0.1111111111111111
+    }
+  },
+  "platform_noise_results": {
+    "false_negative_count_platform_to_noise": 2,
+    "false_positive_count_noise_to_platform": 4,
+    "validation_metrics": {
+      "accuracy": 0.7,
+      "auc": 0.71,
+      "macro_f1": 0.696969696969697,
+      "confusion_matrix": [
+        [
+          8,
+          2
+        ],
+        [
+          4,
+          6
+        ]
+      ],
+      "positive_recall": 0.8,
+      "negative_recall": 0.6
+    },
+    "model_family": "xgboost_gbdt",
+    "prediction_export_path": "outputs/platform_noise_es4_holdout_predictions.jsonl",
+    "feature_attribution_path": "outputs/platform_noise_es4_feature_attribution.json"
+  },
+  "champigny_mixed_validation_reporting": {
+    "ambiguity_slice": {
+      "candidate_ids": [
+        "det-0001",
+        "det-0007"
+      ],
+      "guardband_applicable": false,
+      "row_count": 2
+    },
+    "platform_only_stress_slice": {
+      "guardband_applicable": false,
+      "metrics_reporting_only": {
+        "accuracy": 1.0,
+        "auc": 0.5,
+        "confusion_matrix": [
+          [
+            8,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "macro_f1": 0.5,
+        "negative_recall": 0.0,
+        "positive_recall": 1.0
+      },
+      "row_count": 8
+    },
+    "policy": "validation_only_explicit_sub_slices_with_binary_class_coverage_gating",
+    "springboard_scored_slice": {
+      "metrics": {
+        "accuracy": 0.6923076923076923,
+        "auc": 0.7745098039215687,
+        "confusion_matrix": [
+          [
+            4,
+            32
+          ],
+          [
+            0,
+            68
+          ]
+        ],
+        "macro_f1": 0.5047619047619047,
+        "negative_recall": 1.0,
+        "positive_recall": 0.1111111111111111
+      },
+      "row_count": 104
+    },
+    "structure_version": "r3prep_strict_sub_slices_v1"
+  },
+  "guardband_evaluation": [
+    {
+      "track": "springboard_track",
+      "check": "success_mean_auc_min",
+      "threshold": 0.52,
+      "value": 0.7745098039215687,
+      "status": "PASS"
+    },
+    {
+      "track": "springboard_track",
+      "check": "success_mean_macro_f1_min",
+      "threshold": 0.5,
+      "value": 0.5047619047619047,
+      "status": "PASS"
+    },
+    {
+      "track": "springboard_track",
+      "check": "success_champigny_macro_f1_min",
+      "threshold": 0.44,
+      "value": 0.5047619047619047,
+      "status": "PASS"
+    },
+    {
+      "track": "platform_noise_track",
+      "check": "success_mean_auc_min",
+      "threshold": 0.66,
+      "value": 0.71,
+      "status": "PASS"
+    },
+    {
+      "track": "platform_noise_track",
+      "check": "success_mean_macro_f1_min",
+      "threshold": 0.5,
+      "value": 0.696969696969697,
+      "status": "PASS"
+    },
+    {
+      "track": "platform_noise_track",
+      "check": "success_champigny_macro_f1_min",
+      "threshold": 0.64,
+      "value": 0.696969696969697,
+      "status": "PASS"
+    },
+    {
+      "track": "catastrophic",
+      "check": "springboard_all_dive_predicted_as_rebound",
+      "threshold": "must_not_trigger",
+      "value": "At least one holdout springboard_dive predicted correctly.",
+      "status": "PASS"
+    },
+    {
+      "track": "catastrophic",
+      "check": "platform_holdout_recall_below_0p75",
+      "threshold": "must_not_trigger",
+      "value": "Holdout platform_dive recall=0.8000",
+      "status": "PASS"
+    }
+  ]
+}

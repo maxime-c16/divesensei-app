@@ -1,0 +1,247 @@
+{
+  "model_family": "xgboost_gbdt",
+  "global_feature_importance_gain": [
+    {
+      "feature": "inter_peak_interval_cv",
+      "gain": 2.4451730251312256
+    },
+    {
+      "feature": "tail_half_life_ms",
+      "gain": 2.1967246532440186
+    },
+    {
+      "feature": "impact_peak_prominence_db",
+      "gain": 2.1449317932128906
+    },
+    {
+      "feature": "onset_density_0_300ms_post",
+      "gain": 1.958612084388733
+    },
+    {
+      "feature": "spectral_entropy_post_mean",
+      "gain": 1.9292962551116943
+    },
+    {
+      "feature": "onset_tempogram_peak_ratio_post",
+      "gain": 1.846909999847412
+    },
+    {
+      "feature": "impact_peak_to_window_rms_ratio",
+      "gain": 1.758446455001831
+    },
+    {
+      "feature": "whistle_band_energy_fraction_post",
+      "gain": 1.7381832599639893
+    },
+    {
+      "feature": "audio_clip_probability",
+      "gain": 1.5550498962402344
+    },
+    {
+      "feature": "audio_score",
+      "gain": 1.402292251586914
+    },
+    {
+      "feature": "spectral_contrast_low_high_slope_post",
+      "gain": 1.3703612089157104
+    },
+    {
+      "feature": "spectral_flatness_post_mean",
+      "gain": 1.1958869695663452
+    },
+    {
+      "feature": "tonal_peak_fraction_post_mean",
+      "gain": 1.1761665344238281
+    },
+    {
+      "feature": "post_impact_early_to_late_rms_ratio",
+      "gain": 1.1501446962356567
+    },
+    {
+      "feature": "spectral_contrast_mean_post",
+      "gain": 1.0935121774673462
+    },
+    {
+      "feature": "transient_peak_count",
+      "gain": 0.9721105098724365
+    },
+    {
+      "feature": "event_anchor_timestamp_seconds",
+      "gain": 0.8865717053413391
+    },
+    {
+      "feature": "is_false_negative_window",
+      "gain": 0.0
+    }
+  ],
+  "local_error_attribution": [
+    {
+      "row_key": "evaluation_insep_quick_9015_20260409_ui::det-0038",
+      "true_label": "platform_dive",
+      "predicted_label": "noise_or_other",
+      "probability_platform_dive": 0.20961995422840118,
+      "top_contributors": [
+        {
+          "feature": "inter_peak_interval_cv",
+          "contribution": -1.121403694152832
+        },
+        {
+          "feature": "audio_score",
+          "contribution": -0.4430702030658722
+        },
+        {
+          "feature": "tail_half_life_ms",
+          "contribution": -0.28836601972579956
+        },
+        {
+          "feature": "tonal_peak_fraction_post_mean",
+          "contribution": -0.23497723042964935
+        },
+        {
+          "feature": "onset_density_0_300ms_post",
+          "contribution": -0.1753709316253662
+        }
+      ]
+    },
+    {
+      "row_key": "evaluation_insep_quick_9015_20260409_ui::det-0042",
+      "true_label": "platform_dive",
+      "predicted_label": "noise_or_other",
+      "probability_platform_dive": 0.3472871780395508,
+      "top_contributors": [
+        {
+          "feature": "inter_peak_interval_cv",
+          "contribution": -1.1667438745498657
+        },
+        {
+          "feature": "audio_score",
+          "contribution": 0.24610942602157593
+        },
+        {
+          "feature": "tail_half_life_ms",
+          "contribution": -0.21434138715267181
+        },
+        {
+          "feature": "impact_peak_prominence_db",
+          "contribution": 0.19412970542907715
+        },
+        {
+          "feature": "whistle_band_energy_fraction_post",
+          "contribution": 0.1911861151456833
+        }
+      ]
+    },
+    {
+      "row_key": "evaluation_insep_quick_9015_20260409_ui::det-0062",
+      "true_label": "noise_or_other",
+      "predicted_label": "platform_dive",
+      "probability_platform_dive": 0.5585498809814453,
+      "top_contributors": [
+        {
+          "feature": "inter_peak_interval_cv",
+          "contribution": 0.705660343170166
+        },
+        {
+          "feature": "audio_score",
+          "contribution": -0.4858323335647583
+        },
+        {
+          "feature": "tail_half_life_ms",
+          "contribution": -0.272296279668808
+        },
+        {
+          "feature": "tonal_peak_fraction_post_mean",
+          "contribution": -0.26040634512901306
+        },
+        {
+          "feature": "transient_peak_count",
+          "contribution": -0.23998984694480896
+        }
+      ]
+    },
+    {
+      "row_key": "evaluation_insep_quick_9015_20260409_ui::det-0014",
+      "true_label": "noise_or_other",
+      "predicted_label": "platform_dive",
+      "probability_platform_dive": 0.96412193775177,
+      "top_contributors": [
+        {
+          "feature": "inter_peak_interval_cv",
+          "contribution": 0.7174428105354309
+        },
+        {
+          "feature": "tail_half_life_ms",
+          "contribution": 0.5965299606323242
+        },
+        {
+          "feature": "onset_density_0_300ms_post",
+          "contribution": 0.24652530252933502
+        },
+        {
+          "feature": "whistle_band_energy_fraction_post",
+          "contribution": 0.23111437261104584
+        },
+        {
+          "feature": "audio_score",
+          "contribution": 0.22031432390213013
+        }
+      ]
+    },
+    {
+      "row_key": "evaluation_insep_quick_9015_20260409_ui::det-0022",
+      "true_label": "noise_or_other",
+      "predicted_label": "platform_dive",
+      "probability_platform_dive": 0.5249338150024414,
+      "top_contributors": [
+        {
+          "feature": "inter_peak_interval_cv",
+          "contribution": 0.6933992505073547
+        },
+        {
+          "feature": "whistle_band_energy_fraction_post",
+          "contribution": -0.6043900847434998
+        },
+        {
+          "feature": "spectral_flatness_post_mean",
+          "contribution": -0.4561792016029358
+        },
+        {
+          "feature": "tail_half_life_ms",
+          "contribution": -0.3191652297973633
+        },
+        {
+          "feature": "onset_tempogram_peak_ratio_post",
+          "contribution": 0.20508632063865662
+        }
+      ]
+    },
+    {
+      "row_key": "evaluation_insep_quick_9015_20260409_ui::det-0058",
+      "true_label": "noise_or_other",
+      "predicted_label": "platform_dive",
+      "probability_platform_dive": 0.5971885919570923,
+      "top_contributors": [
+        {
+          "feature": "inter_peak_interval_cv",
+          "contribution": 0.7571920156478882
+        },
+        {
+          "feature": "audio_score",
+          "contribution": -0.4858323335647583
+        },
+        {
+          "feature": "tail_half_life_ms",
+          "contribution": -0.2721618413925171
+        },
+        {
+          "feature": "transient_peak_count",
+          "contribution": -0.23998984694480896
+        },
+        {
+          "feature": "whistle_band_energy_fraction_post",
+          "contribution": 0.23543760180473328
+        }
+      ]
+    }
+  ]
+}
