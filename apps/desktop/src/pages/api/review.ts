@@ -4,6 +4,7 @@ import {
   isEvaluationSession,
   listEvaluationFalseNegatives,
   listEvaluationReviewDecisions,
+  removeEvaluationFalseNegativeAnnotation,
   saveEvaluationFalseNegativeAnnotation,
   saveEvaluationReviewDecision,
 } from "@/lib/evaluation-review-store";
@@ -114,5 +115,31 @@ export const POST: APIRoute = async ({ request }) => {
     return Response.json({ decision, mode: "standard" }, { headers: NO_STORE_HEADERS });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "Failed to save review decision." }, { status: 400, headers: NO_STORE_HEADERS });
+  }
+};
+
+export const DELETE: APIRoute = async ({ request }) => {
+  const body = await request.json().catch(() => null) as
+    | {
+      analysisRunId?: string;
+      detectionId?: string;
+    }
+    | null;
+  if (!body?.analysisRunId || !body?.detectionId) {
+    return Response.json({ error: "analysisRunId and detectionId are required." }, { status: 400, headers: NO_STORE_HEADERS });
+  }
+  try {
+    const manifestPath = getManifestPathForAnalysisRun(body.analysisRunId);
+    const manifest = manifestPath ? readManifest(manifestPath) : null;
+    if (!isEvaluationSession(manifest) || !manifest) {
+      return Response.json({ error: "False negative removal is only available for evaluation sessions." }, { status: 400, headers: NO_STORE_HEADERS });
+    }
+    if (!String(body.detectionId).startsWith("fn-")) {
+      return Response.json({ error: "Only false negative annotations can be removed here." }, { status: 400, headers: NO_STORE_HEADERS });
+    }
+    const removed = removeEvaluationFalseNegativeAnnotation(manifest, body.analysisRunId, body.detectionId);
+    return Response.json({ removed, mode: "evaluation" }, { headers: NO_STORE_HEADERS });
+  } catch (error) {
+    return Response.json({ error: error instanceof Error ? error.message : "Failed to remove false negative." }, { status: 400, headers: NO_STORE_HEADERS });
   }
 };

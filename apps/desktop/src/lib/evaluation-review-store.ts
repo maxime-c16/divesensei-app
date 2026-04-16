@@ -146,3 +146,20 @@ export function saveEvaluationFalseNegativeAnnotation(
   saveEvaluationReviewStore(manifest, store);
   return existing;
 }
+
+export function removeEvaluationFalseNegativeAnnotation(
+  manifest: SessionManifest,
+  analysisRunId: string,
+  annotationId: string,
+): EvaluationFalseNegativeAnnotation {
+  const store = loadEvaluationReviewStore(manifest);
+  const index = store.falseNegatives.findIndex((entry) =>
+    entry.id === annotationId && entry.analysisRunId === analysisRunId
+  );
+  if (index < 0) {
+    throw new Error(`False negative annotation not found: ${annotationId}`);
+  }
+  const [removed] = store.falseNegatives.splice(index, 1);
+  saveEvaluationReviewStore(manifest, store);
+  return removed;
+}

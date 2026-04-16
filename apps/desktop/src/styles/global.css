@@ -1095,6 +1095,28 @@ tbody tr.is-splash-cue {
   color: var(--muted);
 }
 
+.review-decisions__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1;
+  user-select: none;
+}
+
+.review-decisions__toggle input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
 .review-decisions__note {
   flex: 1 1 auto;
   min-width: 0;

@@ -369,6 +369,12 @@ const clientBundle = JSON.stringify({
               <button class="action-link review-decisions__button review-decisions__button--reject" type="button" data-decision-false-negative>Missed dive</button>
             )}
             {isEvaluationSession && (
+              <label class="review-decisions__toggle">
+                <input type="checkbox" data-timeline-fn-toggle />
+                <span>FN focus timeline</span>
+              </label>
+            )}
+            {isEvaluationSession && (
               <select class="review-decisions__subtype" data-decision-subtype aria-label="Evaluation subtype">
                 <option value="">Subtype (optional)</option>
                 <option value="board_rebound">Board rebound</option>
@@ -771,6 +777,7 @@ const clientBundle = JSON.stringify({
     let timelineScrubbing = false;
     let timelinePointerId = null;
     let manualTimelineSeekMode = false;
+    let fnTimelineFocusEnabled = false;
     const refinementReviewStorageKey = "divesensei.refinement-reviewed.v1";
     let refinementReviewedKeys = new Set();
 
@@ -805,6 +812,7 @@ const clientBundle = JSON.stringify({
     const reviewCompleteStayButton = document.querySelector("[data-review-complete-stay]");
     const timelineViewport = document.querySelector("[data-timeline-viewport]");
     const timelineTrack = document.querySelector("[data-timeline-track]");
+    const timelineFnToggle = document.querySelector("[data-timeline-fn-toggle]");
     const decisionList = document.querySelector("[data-decision-list]");
     const exportButton = document.querySelector("[data-export-kept]");
     const exportStatus = document.querySelector("[data-export-status]");
@@ -1308,14 +1316,16 @@ const clientBundle = JSON.stringify({
       return Math.min(Math.max(anchor, start), end);
     }
 
-    function maybeTriggerSplashCue(start, end) {
+    function maybeTriggerSplashCue() {
       if (!reviewVideo || !current) return;
+      const cueStart = reviewStartFor(current);
+      const cueEnd = reviewEndFor(current);
       const now = Number(reviewVideo.currentTime ?? 0);
       if (splashCueLastTime != null && now + 0.06 < splashCueLastTime) {
         splashCueFired = false;
       }
       splashCueLastTime = now;
-      const anchor = resolveSplashCueAnchor(start, end);
+      const anchor = resolveSplashCueAnchor(cueStart, cueEnd);
       if (splashCueFired || now < anchor - 0.012) return;
       splashCueFired = true;
       flashSplashCueUi();
@@ -1324,7 +1334,7 @@ const clientBundle = JSON.stringify({
       window.setTimeout(() => {
         if (!reviewVideo || !current) return;
         if (!splashPauseEnabled) return;
-        if (reviewVideo.currentTime >= end - 0.05) return;
+        if (reviewVideo.currentTime >= cueEnd - 0.05) return;
         void reviewVideo.play().catch(() => {});
       }, 260);
     }
@@ -1340,6 +1350,18 @@ const clientBundle = JSON.stringify({
         node.addEventListener("click", () => selectDetection(node.getAttribute("data-focus-detection")));
       });
       rows = Array.from(document.querySelectorAll("[data-detection-table] tr"));
+      rows.forEach((row) => {
+        if (row.dataset.fnContextBound === "true") return;
+        row.dataset.fnContextBound = "true";
+        row.addEventListener("contextmenu", async (event) => {
+          const detectionId = String(row.getAttribute("data-focus-detection") ?? "");
+          if (!isEvaluationSession() || !detectionId.startsWith("fn-")) return;
+          event.preventDefault();
+          const confirmed = window.confirm(`Remove ${detectionId} completely? This cannot be undone.`);
+          if (!confirmed) return;
+          await removeFalseNegativeAnnotation(detectionId);
+        });
+      });
     }
 
     function scheduleTimelineLayout() {
@@ -1367,10 +1389,20 @@ const clientBundle = JSON.stringify({
       });
     }
 
+    function shouldRenderTimelineMarker(item) {
+      if (!fnTimelineFocusEnabled) return true;
+      if (String(item.id).startsWith("fn-")) return true;
+      return decisionLabelFor(item.id) === positiveDecisionLabel();
+    }
+
+    function isFnFocusFreePlaybackItem(item) {
+      return Boolean(item) && fnTimelineFocusEnabled && shouldRenderTimelineMarker(item);
+    }
+
     function renderTimelineMarkers() {
       if (!timelineTrack) return;
       timelineTrack.querySelectorAll("[data-timeline-marker]").forEach((node) => node.remove());
-      detections.forEach((item) => {
+      detections.filter(shouldRenderTimelineMarker).forEach((item) => {
         const pip = document.createElement("button");
         pip.type = "button";
         pip.className = `tl__pip confidence-${item.confidence}`;
@@ -1411,6 +1443,7 @@ const clientBundle = JSON.stringify({
 
     function syncPlaybackUi() {
       updateTimelinePlayhead();
+      followTimelinePlayheadSelection();
     }
 
     function tickPlaybackUi() {
@@ -1591,6 +1624,9 @@ const clientBundle = JSON.stringify({
     function playCurrentSegment() {
       if (!reviewVideo || !current) return;
       manualTimelineSeekMode = false;
+      if (isFnFocusFreePlaybackItem(current)) {
+        return reviewVideo.play().catch(() => {});
+      }
       const start = reviewStartFor(current);
       const end = reviewEndFor(current);
       if (reviewVideo.currentTime < start || reviewVideo.currentTime >= end) {
@@ -1614,8 +1650,91 @@ const clientBundle = JSON.stringify({
     function selectAdjacentDetection(direction) {
       const candidate = nextDetection(direction, false);
       if (candidate) {
-        selectDetection(candidate.id, { autoplay: autoPlayEnabled });
+        selectDetection(candidate.id, { autoplay: autoPlayEnabled, scrollQueue: true });
       }
+    }
+
+    function matchesQueueFilter(detection, filterValue = reviewFilter) {
+      if (!detection) return false;
+      const decision = decisionLabelFor(detection.id);
+      const isFalseNegativeRow = Boolean(
+        detection.entry_type === "false_negative"
+        || String(detection.id ?? "").startsWith("fn-")
+        || decision === "false_negative",
+      );
+      if (filterValue === "all") return true;
+      if (filterValue === "pending") return isUnresolvedDecision(decision);
+      if (filterValue === "false_negative") return isFalseNegativeRow;
+      if (
+        isEvaluationSession()
+        && fnTimelineFocusEnabled
+        && filterValue === positiveDecisionLabel()
+      ) {
+        return decision === positiveDecisionLabel() || isFalseNegativeRow;
+      }
+      return decision === filterValue;
+    }
+
+    function scrollQueueRowIntoView(detectionId = current?.id) {
+      if (!detectionId) return;
+      rows = Array.from(document.querySelectorAll("[data-detection-table] tr"));
+      const targetRow = rows.find((row) => row.getAttribute("data-focus-detection") === String(detectionId));
+      if (!targetRow || targetRow.hidden) return;
+      targetRow.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+    }
+
+    function timelineFollowDetectionForTime(timeSeconds, allowNearestFallback = true) {
+      const candidates = detections.filter((item) => shouldRenderTimelineMarker(item) && matchesQueueFilter(item));
+      if (!candidates.length) return null;
+      const containing = candidates.filter((item) => {
+        const start = reviewStartFor(item);
+        const end = reviewEndFor(item);
+        return timeSeconds >= start && timeSeconds < end;
+      });
+      if (!containing.length && !allowNearestFallback) {
+        return null;
+      }
+      const pool = containing.length ? containing : candidates;
+      return pool.reduce((closest, item) => {
+        if (!closest) return item;
+        return Math.abs(Number(item.timestamp_seconds ?? 0) - timeSeconds) < Math.abs(Number(closest.timestamp_seconds ?? 0) - timeSeconds)
+          ? item
+          : closest;
+      }, null);
+    }
+
+    function adoptTimelineDetection(detectionId) {
+      const next = detections.find((item) => item.id === detectionId);
+      if (!next || next.id === current?.id) return;
+      current = next;
+      resetSplashCueCycle();
+      reviewLabel && (reviewLabel.textContent = `${formatSeconds(reviewStartFor(current))} to ${formatSeconds(reviewEndFor(current))} · ${parsed.session?.source_video_path ?? ""}`);
+      audioLabel && (audioLabel.textContent = String(current.id).startsWith("fn-") ? "Manual annotation" : `Audio ${current.scores.audio.toFixed(2)}`);
+      windowLabel && (windowLabel.textContent = `Window ${formatSeconds(reviewStartFor(current))} to ${formatSeconds(reviewEndFor(current))}`);
+      decisionDetailLabel && (decisionDetailLabel.textContent = `Decision ${decisionFor(current.id)?.label ?? "pending"}`);
+      document.querySelectorAll("[data-focus-detection]").forEach((node) => {
+        node.classList.toggle("is-current", node.getAttribute("data-focus-detection") === String(detectionId));
+      });
+      rows = Array.from(document.querySelectorAll("[data-detection-table] tr"));
+      rows.forEach((row) => row.classList.toggle("is-current", row.getAttribute("data-focus-detection") === String(detectionId)));
+      scheduleTimelineLayout();
+      updateMediaSessionMetadata();
+      syncCurrentDecisionUi();
+      updateRefinementQueueState();
+      updateQueueNavigationState();
+      scrollQueueRowIntoView(detectionId);
+    }
+
+    function followTimelinePlayheadSelection() {
+      if (!isEvaluationSession() || !reviewVideo) return;
+      const freeTimelineMode = manualTimelineSeekMode || isFnFocusFreePlaybackItem(current);
+      if (!freeTimelineMode) return;
+      const target = timelineFollowDetectionForTime(
+        Number(reviewVideo.currentTime ?? 0),
+        manualTimelineSeekMode,
+      );
+      if (!target) return;
+      adoptTimelineDetection(target.id);
     }
 
     function unresolvedDetections() {
@@ -1652,16 +1771,15 @@ const clientBundle = JSON.stringify({
         applyQueueFilter();
       }
       decisionStatus && (decisionStatus.textContent = `Saved ${label} for ${savedDetectionId}. ${unresolved.length} still in review.`);
-      selectDetection(nextQueueItem.id, { autoplay: autoPlayEnabled });
+      selectDetection(nextQueueItem.id, { autoplay: autoPlayEnabled, scrollQueue: true });
     }
 
     function applyQueueFilter() {
+      rows = Array.from(document.querySelectorAll("[data-detection-table] tr"));
       rows.forEach((row) => {
         const id = row.getAttribute("data-focus-detection") ?? "";
         const detection = detections.find((item) => item.id === id);
-        const decision = decisionLabelFor(id);
-        const matchesFilter = reviewFilter === "all" || (reviewFilter === "pending" ? isUnresolvedDecision(decision) : decision === reviewFilter);
-        row.hidden = !matchesFilter;
+        row.hidden = !matchesQueueFilter(detection);
       });
     }
 
@@ -1717,15 +1835,18 @@ const clientBundle = JSON.stringify({
           syncPlaybackUi();
           return;
         }
-        maybeTriggerSplashCue(start, end);
+        maybeTriggerSplashCue();
         if (reviewVideo.currentTime >= end) {
-          if (loopEnabled) {
+          if (isFnFocusFreePlaybackItem(current)) {
+            syncPlaybackUi();
+            return;
+          } else if (loopEnabled) {
             reviewVideo.currentTime = start;
           } else if (autoAdvanceEnabled) {
             reviewVideo.pause();
             const next = nextDetection(1, true) ?? nextDetection(1, false);
             if (next && next.id !== current?.id) {
-              selectDetection(next.id, { autoplay: autoPlayEnabled });
+              selectDetection(next.id, { autoplay: autoPlayEnabled, scrollQueue: true });
               return;
             }
             reviewVideo.currentTime = start;
@@ -1761,6 +1882,9 @@ const clientBundle = JSON.stringify({
       syncCurrentDecisionUi();
       updateRefinementQueueState();
       updateQueueNavigationState();
+      if (options.scrollQueue) {
+        scrollQueueRowIntoView(id);
+      }
       if (options.autoplay && autoPlayEnabled) {
         window.setTimeout(() => { void playCurrentSegment(); }, 40);
       }
@@ -1796,6 +1920,12 @@ const clientBundle = JSON.stringify({
     reviewFilterSelect?.addEventListener("change", (event) => {
       reviewFilter = String(event.target?.value ?? "all");
       applyQueueFilter();
+      followTimelinePlayheadSelection();
+    });
+    timelineFnToggle?.addEventListener("change", (event) => {
+      fnTimelineFocusEnabled = Boolean(event.target?.checked);
+      renderTimelineMarkers();
+      followTimelinePlayheadSelection();
     });
 
     reviewCompleteExportButton?.addEventListener("click", () => {
@@ -2410,7 +2540,31 @@ const clientBundle = JSON.stringify({
       decisionStatus && (decisionStatus.textContent = `Logged a false negative at ${formatSeconds(timestampSeconds)}.`);
       await refreshDecisions();
       if (payload.annotation?.id) {
-        selectDetection(payload.annotation.id, { autoplay: false });
+        selectDetection(payload.annotation.id, { autoplay: false, scrollQueue: true });
+      }
+    }
+
+    async function removeFalseNegativeAnnotation(detectionId) {
+      if (!parsed.session?.id || !isEvaluationSession()) return;
+      const response = await fetch("/api/review", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({
+          analysisRunId: parsed.session.id,
+          detectionId,
+        }),
+      });
+      const payload = await readJsonResponse(response);
+      if (!response.ok) {
+        decisionStatus && (decisionStatus.textContent = payload.error ?? "Could not remove false negative.");
+        return;
+      }
+      decisionStatus && (decisionStatus.textContent = `Removed ${detectionId}.`);
+      await refreshDecisions();
+      const fallback = detections.find((item) => item.id !== detectionId) ?? null;
+      if (fallback) {
+        selectDetection(fallback.id, { autoplay: false, scrollQueue: true });
       }
     }
 
