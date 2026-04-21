@@ -23,6 +23,8 @@ EXACT_R9_MODEL_PATH = EXACT_R9_MODEL_DIR / "xgboost_model.json"
 EXACT_R9_CONTRACT_PATH = EXACT_R9_MODEL_DIR / "contract.json"
 PHASE5_MODULE_PATH = ROOT / "benchmarks" / "phase5_regime_aware_execution_r7_es4.py"
 NUISANCE_MODULE_PATH = ROOT / "benchmarks" / "post_noise_nuisance_family_benchmark.py"
+GOVERNED_PLATFORM_NOISE_WINDOW_PRE_SECONDS = 0.75
+GOVERNED_PLATFORM_NOISE_WINDOW_POST_SECONDS = 2.25
 
 
 @dataclass
@@ -239,8 +241,8 @@ def _score_candidates_with_exact_governed_r9(
         try:
             details = dict(getattr(candidate, "details", {}) or {})
             timestamp = float(getattr(candidate, "timestamp", 0.0) or 0.0)
-            start = max(0.0, float(getattr(candidate, "start_time", max(0.0, timestamp - 0.75)) or 0.0))
-            end = max(start + 0.05, float(getattr(candidate, "end_time", timestamp + 2.25) or timestamp + 2.25))
+            start = max(0.0, timestamp - GOVERNED_PLATFORM_NOISE_WINDOW_PRE_SECONDS)
+            end = max(start + 0.05, timestamp + GOVERNED_PLATFORM_NOISE_WINDOW_POST_SECONDS)
             signal = audio[int(round(start * phase5.SAMPLE_RATE)) : int(round(end * phase5.SAMPLE_RATE))]
             fmap = {
                 "runtime": {
@@ -272,7 +274,7 @@ def _score_candidates_with_exact_governed_r9(
             str(PHASE5_MODULE_PATH),
             str(NUISANCE_MODULE_PATH),
         ],
-        "window_contract_runtime": "candidate.start_time_seconds to candidate.end_time_seconds",
+        "window_contract_runtime": "proposal timestamp with 0.75s pre + 2.25s post governed platform/noise event window",
     }
 
 

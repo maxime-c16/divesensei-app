@@ -23,6 +23,8 @@ MODEL_DIR = ROOT / ".divesensei-runtime/models/r9_compact_nuisance_weighted"
 MODEL_PATH = MODEL_DIR / "xgboost_model.json"
 CONTRACT_PATH = MODEL_DIR / "contract.json"
 V1_THRESHOLD = 0.92158
+GOVERNED_PLATFORM_NOISE_WINDOW_PRE_SECONDS = 0.75
+GOVERNED_PLATFORM_NOISE_WINDOW_POST_SECONDS = 2.25
 
 SOURCE_MANIFESTS = {
     "snmt": ROOT / "outputs/evaluation_SNMT-16min_20260417-131944/exports/event-reviewed-manifest/event_reviewed_manifest.jsonl",
@@ -191,7 +193,7 @@ def export_model() -> dict[str, Any]:
         "compact_nuisance_feature_names": nuisance.NOISE_BOUNDARY_COMPACT,
         "preprocessing": "raw numeric feature vector; no sklearn scaler; XGBoost handles raw values",
         "window_contract_offline": "event_window_start_seconds to event_window_end_seconds from event-window manifest",
-        "window_contract_runtime": "candidate.start_time to candidate.end_time until event-window construction is available pre-review",
+        "window_contract_runtime": "proposal timestamp with 0.75s pre + 2.25s post governed platform/noise event window",
         "training": {
             "train_rows": len(train_items),
             "positive_rows": int(np.sum(y_train)),
@@ -240,8 +242,9 @@ def score_runtime_manifest_with_exact_contract(session_root: Path) -> tuple[list
     for detection in detections:
         scores = dict(detection.get("scores", {}) or {})
         features = dict(detection.get("features", {}) or {})
-        start = max(0.0, phase5.to_float(detection.get("start_time_seconds")))
-        end = max(start + 0.05, phase5.to_float(detection.get("end_time_seconds")))
+        timestamp = phase5.to_float(detection.get("timestamp_seconds"))
+        start = max(0.0, timestamp - GOVERNED_PLATFORM_NOISE_WINDOW_PRE_SECONDS)
+        end = max(start + 0.05, timestamp + GOVERNED_PLATFORM_NOISE_WINDOW_POST_SECONDS)
         signal = audio[int(round(start * phase5.SAMPLE_RATE)) : int(round(end * phase5.SAMPLE_RATE))]
         fmap = {"runtime": {**phase5.extract_features(signal, phase5.SAMPLE_RATE), **nuisance.nuisance_features(phase5, signal, phase5.SAMPLE_RATE)}}
         row = {
@@ -373,7 +376,7 @@ def main() -> None:
         "runtime_contract_path": str(CONTRACT_PATH),
         "runtime_uses_exact_model_when_available": True,
         "fallback_behavior": "If exact model artifacts or xgboost/feature extraction are unavailable, runtime records fallback and uses bootstrapped proxy score.",
-        "remaining_parity_risk": "runtime live windows currently use candidate.start_time/end_time; offline governed training used event-window manifest windows.",
+        "remaining_parity_risk": "springboard-specific event-window policy is outside this platform/noise scorer; platform/noise runtime scoring now uses the governed 0.75s pre + 2.25s post event window.",
         "contract": contract,
     }
     recheck_report = None

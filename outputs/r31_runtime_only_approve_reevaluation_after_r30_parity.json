@@ -1,0 +1,1020 @@
+{
+  "experiment_name": "r31_runtime_only_approve_reevaluation_after_r30_parity",
+  "sessions": [
+    "evaluation_r30_exact_scorepath_insep_quick",
+    "evaluation_r30_exact_scorepath_champigny_proxy"
+  ],
+  "row_count": 69,
+  "label_counts": {
+    "noise_or_other": 28,
+    "platform_dive": 41
+  },
+  "visual_present_count": 69,
+  "v1": {
+    "policy_id": "approve_review_v1",
+    "approve_count": 5,
+    "approve_coverage": 0.07246376811594203,
+    "approve_precision": 0.8,
+    "dangerous_approvals": 1,
+    "approved_label_counts": {
+      "noise_or_other": 1,
+      "platform_dive": 4
+    },
+    "approved_source_counts": {
+      "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+      "evaluation_r30_exact_scorepath_insep_quick": 4
+    },
+    "dangerous_rows": [
+      {
+        "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+        "detection_id": "det-0007",
+        "label": "noise_or_other",
+        "subtype": "non_dive_splash",
+        "r9": 0.9423382878303528,
+        "visual": 0.9901774245153963,
+        "timestamp_seconds": 516.72
+      }
+    ],
+    "coverage_delta_vs_v1": 0.0,
+    "approve_count_delta_vs_v1": 0,
+    "safe": false,
+    "safe_improver": false
+  },
+  "best_candidate": {
+    "policy_id": "approve_review_v1",
+    "approve_count": 5,
+    "approve_coverage": 0.07246376811594203,
+    "approve_precision": 0.8,
+    "dangerous_approvals": 1,
+    "approved_label_counts": {
+      "noise_or_other": 1,
+      "platform_dive": 4
+    },
+    "approved_source_counts": {
+      "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+      "evaluation_r30_exact_scorepath_insep_quick": 4
+    },
+    "dangerous_rows": [
+      {
+        "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+        "detection_id": "det-0007",
+        "label": "noise_or_other",
+        "subtype": "non_dive_splash",
+        "r9": 0.9423382878303528,
+        "visual": 0.9901774245153963,
+        "timestamp_seconds": 516.72
+      }
+    ],
+    "coverage_delta_vs_v1": 0.0,
+    "approve_count_delta_vs_v1": 0,
+    "safe": false,
+    "safe_improver": false
+  },
+  "safe_improver_count": 0,
+  "candidate_comparison": [
+    {
+      "policy_id": "approve_review_v1",
+      "approve_count": 5,
+      "approve_coverage": 0.07246376811594203,
+      "approve_precision": 0.8,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 4
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 4
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.0,
+      "approve_count_delta_vs_v1": 0,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "r9_score_gate::0.99",
+      "approve_count": 0,
+      "approve_coverage": 0.0,
+      "approve_precision": null,
+      "dangerous_approvals": 0,
+      "approved_label_counts": {},
+      "approved_source_counts": {},
+      "dangerous_rows": [],
+      "coverage_delta_vs_v1": -0.07246376811594203,
+      "approve_count_delta_vs_v1": -5,
+      "safe": true,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "r9_score_gate::0.97",
+      "approve_count": 0,
+      "approve_coverage": 0.0,
+      "approve_precision": null,
+      "dangerous_approvals": 0,
+      "approved_label_counts": {},
+      "approved_source_counts": {},
+      "dangerous_rows": [],
+      "coverage_delta_vs_v1": -0.07246376811594203,
+      "approve_count_delta_vs_v1": -5,
+      "safe": true,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "r9_score_gate::0.95",
+      "approve_count": 0,
+      "approve_coverage": 0.0,
+      "approve_precision": null,
+      "dangerous_approvals": 0,
+      "approved_label_counts": {},
+      "approved_source_counts": {},
+      "dangerous_rows": [],
+      "coverage_delta_vs_v1": -0.07246376811594203,
+      "approve_count_delta_vs_v1": -5,
+      "safe": true,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "r9_score_gate::0.94",
+      "approve_count": 1,
+      "approve_coverage": 0.014492753623188406,
+      "approve_precision": 0.0,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": -0.057971014492753624,
+      "approve_count_delta_vs_v1": -4,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "r9_score_gate::0.93",
+      "approve_count": 2,
+      "approve_coverage": 0.028985507246376812,
+      "approve_precision": 0.5,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 1
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 1
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": -0.043478260869565216,
+      "approve_count_delta_vs_v1": -3,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "r9_score_gate::0.92158",
+      "approve_count": 5,
+      "approve_coverage": 0.07246376811594203,
+      "approve_precision": 0.8,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 4
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 4
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.0,
+      "approve_count_delta_vs_v1": 0,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "r9_score_gate::0.92",
+      "approve_count": 5,
+      "approve_coverage": 0.07246376811594203,
+      "approve_precision": 0.8,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 4
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 4
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.0,
+      "approve_count_delta_vs_v1": 0,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "r9_score_gate::0.9",
+      "approve_count": 8,
+      "approve_coverage": 0.11594202898550725,
+      "approve_precision": 0.875,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 7
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 7
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.043478260869565216,
+      "approve_count_delta_vs_v1": 3,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "r9_score_gate::0.88",
+      "approve_count": 10,
+      "approve_coverage": 0.14492753623188406,
+      "approve_precision": 0.9,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 9
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 9
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.07246376811594203,
+      "approve_count_delta_vs_v1": 5,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "r9_score_gate::0.86",
+      "approve_count": 12,
+      "approve_coverage": 0.17391304347826086,
+      "approve_precision": 0.9166666666666666,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 11
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 11
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.10144927536231883,
+      "approve_count_delta_vs_v1": 7,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "r9_score_gate::0.84",
+      "approve_count": 13,
+      "approve_coverage": 0.18840579710144928,
+      "approve_precision": 0.9230769230769231,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 12
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 12
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.11594202898550725,
+      "approve_count_delta_vs_v1": 8,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "r9_score_gate::0.8",
+      "approve_count": 16,
+      "approve_coverage": 0.2318840579710145,
+      "approve_precision": 0.9375,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 15
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 15
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.15942028985507245,
+      "approve_count_delta_vs_v1": 11,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "runtime_or_visual_gate::r9_0.84::visual_0.55",
+      "approve_count": 13,
+      "approve_coverage": 0.18840579710144928,
+      "approve_precision": 0.9230769230769231,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 12
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 12
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.11594202898550725,
+      "approve_count_delta_vs_v1": 8,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "runtime_or_visual_gate::r9_0.84::visual_0.70",
+      "approve_count": 13,
+      "approve_coverage": 0.18840579710144928,
+      "approve_precision": 0.9230769230769231,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 12
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 12
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.11594202898550725,
+      "approve_count_delta_vs_v1": 8,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "runtime_or_visual_gate::r9_0.84::visual_0.85",
+      "approve_count": 13,
+      "approve_coverage": 0.18840579710144928,
+      "approve_precision": 0.9230769230769231,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 12
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 12
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.11594202898550725,
+      "approve_count_delta_vs_v1": 8,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "runtime_or_visual_gate::r9_0.84::visual_0.95",
+      "approve_count": 13,
+      "approve_coverage": 0.18840579710144928,
+      "approve_precision": 0.9230769230769231,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 12
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 12
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.11594202898550725,
+      "approve_count_delta_vs_v1": 8,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "runtime_or_visual_gate::r9_0.84::visual_0.99",
+      "approve_count": 13,
+      "approve_coverage": 0.18840579710144928,
+      "approve_precision": 0.9230769230769231,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 12
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 12
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.11594202898550725,
+      "approve_count_delta_vs_v1": 8,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "runtime_or_visual_gate::r9_0.86::visual_0.55",
+      "approve_count": 12,
+      "approve_coverage": 0.17391304347826086,
+      "approve_precision": 0.9166666666666666,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 11
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 11
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.10144927536231883,
+      "approve_count_delta_vs_v1": 7,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "runtime_or_visual_gate::r9_0.86::visual_0.70",
+      "approve_count": 12,
+      "approve_coverage": 0.17391304347826086,
+      "approve_precision": 0.9166666666666666,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 11
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 11
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.10144927536231883,
+      "approve_count_delta_vs_v1": 7,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "runtime_or_visual_gate::r9_0.86::visual_0.85",
+      "approve_count": 12,
+      "approve_coverage": 0.17391304347826086,
+      "approve_precision": 0.9166666666666666,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 11
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 11
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.10144927536231883,
+      "approve_count_delta_vs_v1": 7,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "runtime_or_visual_gate::r9_0.86::visual_0.95",
+      "approve_count": 12,
+      "approve_coverage": 0.17391304347826086,
+      "approve_precision": 0.9166666666666666,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 11
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 11
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.10144927536231883,
+      "approve_count_delta_vs_v1": 7,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "runtime_or_visual_gate::r9_0.86::visual_0.99",
+      "approve_count": 12,
+      "approve_coverage": 0.17391304347826086,
+      "approve_precision": 0.9166666666666666,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 11
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 11
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.10144927536231883,
+      "approve_count_delta_vs_v1": 7,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "runtime_or_visual_gate::r9_0.88::visual_0.55",
+      "approve_count": 10,
+      "approve_coverage": 0.14492753623188406,
+      "approve_precision": 0.9,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 9
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 9
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.07246376811594203,
+      "approve_count_delta_vs_v1": 5,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "runtime_or_visual_gate::r9_0.88::visual_0.70",
+      "approve_count": 10,
+      "approve_coverage": 0.14492753623188406,
+      "approve_precision": 0.9,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 9
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 9
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.07246376811594203,
+      "approve_count_delta_vs_v1": 5,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "runtime_or_visual_gate::r9_0.88::visual_0.85",
+      "approve_count": 10,
+      "approve_coverage": 0.14492753623188406,
+      "approve_precision": 0.9,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 9
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 9
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.07246376811594203,
+      "approve_count_delta_vs_v1": 5,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "runtime_or_visual_gate::r9_0.88::visual_0.95",
+      "approve_count": 10,
+      "approve_coverage": 0.14492753623188406,
+      "approve_precision": 0.9,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 9
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 9
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.07246376811594203,
+      "approve_count_delta_vs_v1": 5,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "runtime_or_visual_gate::r9_0.88::visual_0.99",
+      "approve_count": 10,
+      "approve_coverage": 0.14492753623188406,
+      "approve_precision": 0.9,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 9
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 9
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.07246376811594203,
+      "approve_count_delta_vs_v1": 5,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "runtime_or_visual_gate::r9_0.90::visual_0.55",
+      "approve_count": 8,
+      "approve_coverage": 0.11594202898550725,
+      "approve_precision": 0.875,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 7
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 7
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.043478260869565216,
+      "approve_count_delta_vs_v1": 3,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "runtime_or_visual_gate::r9_0.90::visual_0.70",
+      "approve_count": 8,
+      "approve_coverage": 0.11594202898550725,
+      "approve_precision": 0.875,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 7
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 7
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.043478260869565216,
+      "approve_count_delta_vs_v1": 3,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "runtime_or_visual_gate::r9_0.90::visual_0.85",
+      "approve_count": 8,
+      "approve_coverage": 0.11594202898550725,
+      "approve_precision": 0.875,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 7
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 7
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.043478260869565216,
+      "approve_count_delta_vs_v1": 3,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "runtime_or_visual_gate::r9_0.90::visual_0.95",
+      "approve_count": 8,
+      "approve_coverage": 0.11594202898550725,
+      "approve_precision": 0.875,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 7
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 7
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.043478260869565216,
+      "approve_count_delta_vs_v1": 3,
+      "safe": false,
+      "safe_improver": false
+    },
+    {
+      "policy_id": "runtime_or_visual_gate::r9_0.90::visual_0.99",
+      "approve_count": 8,
+      "approve_coverage": 0.11594202898550725,
+      "approve_precision": 0.875,
+      "dangerous_approvals": 1,
+      "approved_label_counts": {
+        "noise_or_other": 1,
+        "platform_dive": 7
+      },
+      "approved_source_counts": {
+        "evaluation_r30_exact_scorepath_champigny_proxy": 1,
+        "evaluation_r30_exact_scorepath_insep_quick": 7
+      },
+      "dangerous_rows": [
+        {
+          "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+          "detection_id": "det-0007",
+          "label": "noise_or_other",
+          "subtype": "non_dive_splash",
+          "r9": 0.9423382878303528,
+          "visual": 0.9901774245153963,
+          "timestamp_seconds": 516.72
+        }
+      ],
+      "coverage_delta_vs_v1": 0.043478260869565216,
+      "approve_count_delta_vs_v1": 3,
+      "safe": false,
+      "safe_improver": false
+    }
+  ],
+  "final_decisions": [
+    "R31_RUNTIME_ONLY_APPROVE_REEVALUATION_NO_CLEAR_GAIN",
+    "APPROVE_REVIEW_V1_REMAINS_DEFAULT"
+  ]
+}

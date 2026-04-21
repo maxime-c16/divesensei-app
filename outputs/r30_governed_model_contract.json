@@ -64,7 +64,7 @@
   ],
   "preprocessing": "raw numeric feature vector; no sklearn scaler; XGBoost handles raw values",
   "window_contract_offline": "event_window_start_seconds to event_window_end_seconds from event-window manifest",
-  "window_contract_runtime": "candidate.start_time to candidate.end_time until event-window construction is available pre-review",
+  "window_contract_runtime": "proposal timestamp with 0.75s pre + 2.25s post governed platform/noise event window",
   "training": {
     "train_rows": 171,
     "positive_rows": 75,
