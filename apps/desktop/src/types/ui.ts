@@ -53,6 +53,7 @@ export interface Detection {
     audio: number;
     video: number;
     combined: number;
+    governed_r9_score?: number | null;
     audio_model_probability: number;
     audio_clip_probability: number;
   };
@@ -62,6 +63,9 @@ export interface Detection {
     browser_path?: string | null;
     filename: string | null;
   };
+  reviewLabel?: ReviewDecisionLabel | null;
+  eventLabel?: "springboard_dive" | "springboard_rebound_only" | "platform_dive" | "noise_or_other" | "uncertain" | null;
+  subtype?: EvaluationReviewSubtype | null;
 }
 
 export interface SessionManifest {
@@ -88,6 +92,45 @@ export interface DebugLogEntry {
   stage: string;
 }
 
+export interface ApproveReviewPolicy {
+  policy_id: "approve_review_v1" | "approve_review_v2_shadow";
+  model_ref: "r9_compact_nuisance_generalization_weighted";
+  mode: "approve_review";
+  approve_min_score: number;
+  score_field: string;
+  active_default?: boolean;
+  shadow_only?: boolean;
+  visual_score_field?: string;
+  expansion_rule?: {
+    r9_score_min: number;
+    visual_score_min: number;
+    suppressed_subtypes?: EvaluationReviewSubtype[];
+  };
+  missing_shadow_score_behavior?: string;
+  rollout_assumption: string;
+  source_experiment: string;
+  governed_external_approve_precision: number;
+  governed_external_approve_coverage: number;
+  governed_dangerous_external_auto_approves: number;
+  governed_dangerous_internal_auto_approves: number;
+  governed_source_aware_dangerous_auto_approves?: number;
+  governed_source_count?: number;
+  governed_row_count?: number;
+  governed_shadow_added_approvals?: number;
+  governed_suspicious_added_approvals?: number;
+  shadow_replaces_policy_experiment?: string;
+}
+
+export interface ApproveReviewSummary {
+  policy_id: string;
+  model_ref: string;
+  approve_min_score: number;
+  total_count: number;
+  scored_count: number;
+  auto_approved_count: number;
+  needs_review_count: number;
+}
+
 export interface UiDataBundle {
   library: LibraryIndex;
   manifest: SessionManifest;
@@ -96,7 +139,13 @@ export interface UiDataBundle {
   artifactsPreview: Record<string, string>;
   eventReviewSupport: Array<Record<string, unknown>>;
   eventReviewSupportSummary: Record<string, unknown> | null;
-  eventReviewRefinementTop15: Array<Record<string, unknown>>;
+  eventReviewQueueRows: Array<Record<string, unknown>>;
+  eventReviewQueueTitle?: string;
+  eventReviewQueueNote?: string;
+  approveReviewPolicy: ApproveReviewPolicy;
+  approveReviewSummary: ApproveReviewSummary;
+  approveReviewShadowPolicies: ApproveReviewPolicy[];
+  approveReviewShadowSummaries: ApproveReviewSummary[];
 }
 
 export interface ReviewDecision {
@@ -106,6 +155,11 @@ export interface ReviewDecision {
   label: ReviewDecisionLabel;
   eventLabel?: "springboard_dive" | "springboard_rebound_only" | "platform_dive" | "noise_or_other" | "uncertain" | null;
   subtype?: EvaluationReviewSubtype | null;
+  manualAnchorTimestampSeconds?: number | null;
+  manualWindowStartSeconds?: number | null;
+  manualWindowEndSeconds?: number | null;
+  manualCorrectionType?: "retime_earlier" | "retime_later" | "relabel" | "keep" | "other" | null;
+  manualCorrectionRationale?: string | null;
   notes: string;
   createdAt: string;
   updatedAt: string;

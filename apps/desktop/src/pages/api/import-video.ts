@@ -33,7 +33,7 @@ export const POST: APIRoute = async ({ request }) => {
     fs.mkdirSync(targetDir, { recursive: true });
 
     await pipeline(
-      Readable.fromWeb(file.stream() as ReadableStream<Uint8Array>),
+      Readable.fromWeb(file.stream() as unknown as Parameters<typeof Readable.fromWeb>[0]),
       fs.createWriteStream(targetPath),
     );
 
@@ -71,7 +71,7 @@ export const POST: APIRoute = async ({ request }) => {
   });
 
   await pipeline(
-    Readable.fromWeb(request.body.pipeThrough(sizeCounter)),
+    Readable.fromWeb(request.body.pipeThrough(sizeCounter) as unknown as Parameters<typeof Readable.fromWeb>[0]),
     fs.createWriteStream(targetPath),
   );
 

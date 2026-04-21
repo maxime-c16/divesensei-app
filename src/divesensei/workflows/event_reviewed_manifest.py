@@ -35,6 +35,19 @@ def _load_decisions(review_path: Path) -> dict[str, dict[str, Any]]:
         detection_id = str(row.get("detectionId") or "")
         if detection_id:
             decisions[detection_id] = row
+    for row in store.get("falseNegatives", []):
+        annotation_id = str(row.get("id") or "")
+        if annotation_id:
+            decisions[annotation_id] = {
+                "id": annotation_id,
+                "detectionId": annotation_id,
+                "label": row.get("label") or "false_negative",
+                "eventLabel": row.get("eventLabel"),
+                "subtype": row.get("subtype"),
+                "notes": row.get("notes"),
+                "createdAt": row.get("createdAt"),
+                "updatedAt": row.get("updatedAt"),
+            }
     return decisions
 
 
@@ -63,6 +76,7 @@ def build_reviewed_manifest(session_path: str, output_dir: str | None) -> tuple[
         final_event_label, final_provenance, human_reviewed = _final_event_label(decision)
         rows.append(
             {
+                "row_key": f"{manifest['session']['id']}::{legacy_candidate_id}" if legacy_candidate_id else None,
                 "source_session_root": source_root,
                 "source_session_id": manifest["session"]["id"],
                 "source_video_path": manifest["session"]["source_video_path"],
@@ -77,8 +91,17 @@ def build_reviewed_manifest(session_path: str, output_dir: str | None) -> tuple[
                 "has_preceding_rebound_context": row.get("has_preceding_rebound_context"),
                 "has_delayed_entry_candidate": row.get("has_delayed_entry_candidate"),
                 "no_rebound_context_detected": row.get("no_rebound_context_detected"),
+                "event_anchor_timestamp_seconds": row.get("event_anchor_timestamp_seconds"),
+                "event_anchor_strategy": row.get("event_anchor_strategy"),
+                "event_anchor_strategy_rationale": row.get("event_anchor_strategy_rationale"),
                 "event_window_start_seconds": row.get("event_window_start_seconds"),
                 "event_window_end_seconds": row.get("event_window_end_seconds"),
+                "proposal_timestamp_seconds": row.get("proposal_timestamp_seconds"),
+                "proposal_frontend": row.get("proposal_frontend"),
+                "clip_probability": row.get("clip_probability"),
+                "detector_scores": row.get("detector_scores"),
+                "manual_correction_type": row.get("manual_correction_type"),
+                "manual_correction_rationale": row.get("manual_correction_rationale"),
                 "final_human_event_label": final_event_label,
                 "final_human_event_label_provenance": final_provenance,
                 "human_reviewed_at_event_level": human_reviewed,

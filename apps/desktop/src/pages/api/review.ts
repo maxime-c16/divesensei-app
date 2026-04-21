@@ -49,6 +49,11 @@ export const POST: APIRoute = async ({ request }) => {
       subtype?: EvaluationReviewSubtype | null;
       notes?: string;
       timestampSeconds?: number;
+      manualAnchorTimestampSeconds?: number | null;
+      manualWindowStartSeconds?: number | null;
+      manualWindowEndSeconds?: number | null;
+      manualCorrectionType?: "retime_earlier" | "retime_later" | "relabel" | "keep" | "other" | null;
+      manualCorrectionRationale?: string | null;
     }
     | null;
 
@@ -103,6 +108,13 @@ export const POST: APIRoute = async ({ request }) => {
         body.eventLabel ?? null,
         evaluationLabel === "non_dive" ? body.subtype ?? null : null,
         body.notes ?? "",
+        {
+          manualAnchorTimestampSeconds: body.manualAnchorTimestampSeconds ?? null,
+          manualWindowStartSeconds: body.manualWindowStartSeconds ?? null,
+          manualWindowEndSeconds: body.manualWindowEndSeconds ?? null,
+          manualCorrectionType: body.manualCorrectionType ?? null,
+          manualCorrectionRationale: body.manualCorrectionRationale ?? null,
+        },
       );
       return Response.json({ decision, mode: "evaluation" }, { headers: NO_STORE_HEADERS });
     }

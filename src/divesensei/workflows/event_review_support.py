@@ -171,6 +171,11 @@ def _apply_latest_review_store(output_dir: Path, candidate_rows: Sequence[dict[s
         if decision:
             merged["review_label"] = decision.get("label", merged.get("review_label"))
             merged["subtype"] = decision.get("subtype", merged.get("subtype"))
+            merged["manual_anchor_timestamp_seconds"] = decision.get("manualAnchorTimestampSeconds")
+            merged["manual_window_start_seconds"] = decision.get("manualWindowStartSeconds")
+            merged["manual_window_end_seconds"] = decision.get("manualWindowEndSeconds")
+            merged["manual_correction_type"] = decision.get("manualCorrectionType")
+            merged["manual_correction_rationale"] = decision.get("manualCorrectionRationale")
         merged_rows.append(merged)
     return merged_rows
 
@@ -195,7 +200,10 @@ def _support_row(
     if is_false_negative_window:
         anchor = float(row.get("timestamp_seconds") or anchor)
     window_start, window_end = _event_window(anchor, pre_seconds, post_seconds)
-    candidate_id = row.get("source_candidate_id") or row.get("detectionId") or row.get("proposal_id")
+    if is_false_negative_window:
+        candidate_id = row.get("review_annotation_id") or row.get("source_candidate_id") or row.get("proposal_id")
+    else:
+        candidate_id = row.get("source_candidate_id") or row.get("detectionId") or row.get("proposal_id")
     event_type_context, event_type_provenance = _override_event_type(
         source_session_id,
         str(candidate_id) if candidate_id is not None else None,
@@ -231,6 +239,17 @@ def _support_row(
     else:
         anchor_strategy = "proposal_centered"
         anchor_rationale = "unknown_rows_use_proposal_centered_fallback"
+    manual_anchor = row.get("manual_anchor_timestamp_seconds")
+    manual_window_start = row.get("manual_window_start_seconds")
+    manual_window_end = row.get("manual_window_end_seconds")
+    manual_correction_type = row.get("manual_correction_type")
+    manual_correction_rationale = row.get("manual_correction_rationale")
+    if manual_anchor is not None or manual_window_start is not None or manual_window_end is not None:
+        anchor = float(manual_anchor if manual_anchor is not None else anchor)
+        window_start = float(manual_window_start if manual_window_start is not None else window_start)
+        window_end = float(manual_window_end if manual_window_end is not None else window_end)
+        anchor_strategy = "manual_review_override"
+        anchor_rationale = str(manual_correction_rationale or manual_correction_type or "manual_review_override")
     return {
         "source_session_root": source_root,
         "source_session_id": source_session_id,
@@ -242,6 +261,8 @@ def _support_row(
         "event_anchor_timestamp_seconds": anchor,
         "event_anchor_strategy": anchor_strategy,
         "event_anchor_strategy_rationale": anchor_rationale,
+        "manual_correction_type": manual_correction_type,
+        "manual_correction_rationale": manual_correction_rationale,
         "event_window_start_seconds": window_start,
         "event_window_end_seconds": window_end,
         "suggested_event_label": suggestion,
@@ -259,8 +280,10 @@ def _support_row(
         "detector_scores": {
             "audio_score": row.get("audio_score"),
             "combined_score": row.get("combined_score"),
+            "governed_r9_score": row.get("governed_r9_score"),
             "audio_model_probability": row.get("audio_model_probability"),
             "audio_clip_probability": row.get("audio_clip_probability"),
+            "visual_late_fusion_logreg_c0.5": row.get("visual_late_fusion_logreg_c0.5"),
             "raw_proposal_score": row.get("raw_proposal_score"),
             "threshold_passed": row.get("threshold_passed"),
         },

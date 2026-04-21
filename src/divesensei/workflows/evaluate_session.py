@@ -20,6 +20,7 @@ from divesensei.app.session_pipeline import (
 from divesensei.io.logging_utils import StructuredLogger, build_candidate_debug_summary
 from divesensei.io.media_io import extract_audio_wav_ffmpeg, generate_review_proxy_ffmpeg, probe_media_duration_seconds
 from divesensei.workflows.evaluation_session_support import build_proposal_diagnostics, write_json, write_jsonl
+from divesensei.workflows.runtime_score_paths import enrich_candidates_with_runtime_scores
 
 
 def default_output_dir(video_path: Path) -> Path:
@@ -148,11 +149,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     logger.log("detection_start", profile=args.profile, audio_path=prepared_audio_path, source_video_path=video_path)
     candidates = detector.detect_from_audio_file(str(prepared_audio_path), video_path=str(video_path))
     detect_seconds = time.time() - detect_started
+    runtime_score_enrichment = enrich_candidates_with_runtime_scores(candidates=list(candidates), source_video_path=video_path)
     logger.log(
         "detection_complete",
         detector_seconds=detect_seconds,
         candidate_count=len(candidates),
         debug_summary=build_candidate_debug_summary(candidates),
+        runtime_score_enrichment=runtime_score_enrichment,
     )
 
     csv_path = write_candidates_csv(output_dir, candidates)
@@ -178,6 +181,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         review_proxy_error=review_proxy_error,
     )
     report["detections_csv"] = str(csv_path)
+    report["runtime_score_enrichment"] = runtime_score_enrichment
     report["extract_seconds"] = 0.0
     report["peak_rss_kb"] = peak_rss_kb
     report["manifest_ready_seconds"] = time.time() - audio_extract_started
@@ -241,6 +245,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         review_proxy_error=review_proxy_error,
     )
     report["detections_csv"] = str(csv_path)
+    report["runtime_score_enrichment"] = runtime_score_enrichment
     proposal_trace = build_proposal_diagnostics(
         detector=detector,
         audio_path=prepared_audio_path,
@@ -317,6 +322,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     total_runtime_seconds = time.time() - audio_extract_started
     report["manifest_ready_seconds"] = total_runtime_seconds
     report["total_runtime_seconds"] = total_runtime_seconds
+    report["runtime_score_enrichment"] = runtime_score_enrichment
     report_path, ui_manifest_path = write_session_outputs(
         video_path=video_path,
         output_dir=output_dir,

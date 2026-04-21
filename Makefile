@@ -19,8 +19,9 @@ SETUP_STAMP_FILE ?= $(abspath $(RUN_DIR)/desktop-setup.stamp)
 BUILD_STAMP_FILE ?= $(abspath $(RUN_DIR)/desktop-build.stamp)
 ACTIVATE = . $(VENV)/bin/activate
 BUN ?= $(shell command -v bun 2>/dev/null || printf '%s' "$(HOME)/.bun/bin/bun")
-NODE ?= $(shell command -v node)
-NPM ?= $(shell command -v npm)
+NODE ?= $(shell if [[ -x /usr/local/opt/node@22/bin/node ]]; then printf '%s' "/usr/local/opt/node@22/bin/node"; else command -v node; fi)
+NPM ?= $(shell if [[ -x /usr/local/opt/node@22/bin/npm ]]; then printf '%s' "/usr/local/opt/node@22/bin/npm"; else command -v npm; fi)
+FLOCK ?= $(shell command -v flock 2>/dev/null || command -v gflock 2>/dev/null || printf '%s' "/usr/local/opt/util-linux/bin/flock")
 CURL ?= curl
 DEVELOPER_DIR ?= /Applications/Xcode.app/Contents/Developer
 CAP_SYNC_ENV = RUBYOPT='-EUTF-8:UTF-8' LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
@@ -33,7 +34,7 @@ IOS_BUNDLE_ID ?= com.divesensei.mobile
 .PHONY: help venv install compile smoke-help desktop-setup desktop-check desktop-build \
 	electron-dev electron-start electron-prepare mobile-setup mobile-build mobile-sync-ios \
 	mobile-open-ios mobile-xcode-build mobile-web-refresh mobile-fast mobile-sim-install mobile-sim-launch mobile-sim-relaunch mobile-sim-reinstall \
-	mobile-sim-screenshot mobile-review-reset status wait up down restart re logs clean \
+	mobile-sim-screenshot mobile-review-reset review-session review-session-open status wait up down restart re logs clean \
 	clean-runtime clean-build clean-python clean-app
 
 help:
@@ -58,6 +59,8 @@ help:
 	@printf "  make mobile-sim-reinstall Rebuild, install, and relaunch the app on the simulator\n"
 	@printf "  make mobile-sim-screenshot Capture a simulator screenshot to /tmp/divesensei-sim.png\n"
 	@printf "  make mobile-review-reset Clear simulator decision state for the selected session\n"
+	@printf "  make review-session VIDEO_PATH=/abs/video.mov Prepare an evaluation session, export review artifacts, and print the Review URL\n"
+	@printf "  make review-session-open VIDEO_PATH=/abs/video.mov Prepare the session and open the desktop Review URL in the browser\n"
 	@printf "  make up             Build and start the desktop app preview server in the background\n"
 	@printf "  make down           Stop the background app server\n"
 	@printf "  make re             Restart the background app server\n"
@@ -93,7 +96,7 @@ desktop-setup: | $(RUN_DIR) $(LOCK_DIR)
 	test -x "$(BUN)" || { echo "bun not found at $(BUN)"; exit 1; }; \
 	test -x "$(NODE)" || { echo "node not found at $(NODE)"; exit 1; }; \
 	test -x "$(NPM)" || { echo "npm not found at $(NPM)"; exit 1; }; \
-	flock -o "$(LOCK_DIR)/setup.lock" bash -lc 'set -euo pipefail; \
+	"$(FLOCK)" -o "$(LOCK_DIR)/setup.lock" bash -lc 'set -euo pipefail; \
 		compute_setup_sig() { \
 			{ \
 				printf "node=%s\n" "$$("$(NODE)" -v)"; \
@@ -104,7 +107,10 @@ desktop-setup: | $(RUN_DIR) $(LOCK_DIR)
 		}; \
 		signature="$$(compute_setup_sig)"; \
 		addon_path="$(DESKTOP_DIR_ABS)/node_modules/better-sqlite3/build/Release/better_sqlite3.node"; \
-		if [[ -f "$(SETUP_STAMP_FILE)" && -f "$$addon_path" && "$$(cat "$(SETUP_STAMP_FILE)")" == "$$signature" ]]; then \
+		addon_ok() { \
+			cd "$(DESKTOP_DIR_ABS)" && "$(NODE)" -e "require(\"better-sqlite3\");" >/dev/null 2>&1; \
+		}; \
+		if [[ -f "$(SETUP_STAMP_FILE)" && -f "$$addon_path" && "$$(cat "$(SETUP_STAMP_FILE)")" == "$$signature" ]] && addon_ok; then \
 			echo "desktop dependencies already up to date"; \
 			exit 0; \
 		fi; \
@@ -112,6 +118,7 @@ desktop-setup: | $(RUN_DIR) $(LOCK_DIR)
 		export PATH="$(dir $(NODE)):$$PATH"; \
 		cd "$(DESKTOP_DIR_ABS)/node_modules/better-sqlite3"; \
 		"$(NODE)" ../node-gyp/bin/node-gyp.js rebuild --release; \
+		addon_ok || { echo "better-sqlite3 native module ABI check failed after rebuild"; exit 1; }; \
 		printf "%s\n" "$$signature" > "$(SETUP_STAMP_FILE)"'
 
 desktop-check: desktop-setup
@@ -119,7 +126,7 @@ desktop-check: desktop-setup
 
 desktop-build: desktop-setup | $(RUN_DIR) $(LOCK_DIR)
 	@set -euo pipefail; \
-	flock -o "$(LOCK_DIR)/build.lock" bash -lc 'set -euo pipefail; \
+	"$(FLOCK)" -o "$(LOCK_DIR)/build.lock" bash -lc 'set -euo pipefail; \
 		compute_build_sig() { \
 			{ \
 				printf "node=%s\n" "$$("$(NODE)" -v)"; \
@@ -203,6 +210,37 @@ mobile-review-reset:
 	printf '[]' > "$$container/Library/Application Support/DiveSenseiMobile/decisions/$${SESSION_ID}.json"; \
 	printf "Cleared review decisions for %s\n" "$${SESSION_ID}"
 
+review-session: up
+	@set -euo pipefail; \
+	test -n "$${VIDEO_PATH:-}" || { echo "Set VIDEO_PATH=/abs/path/to/video"; exit 1; }; \
+	test -f "$${VIDEO_PATH}" || { echo "Video not found: $${VIDEO_PATH}"; exit 1; }; \
+	PROFILE="$${PROFILE:-long-session}"; \
+	DETECTOR_ID="$${DETECTOR_ID:-audio_v2_pcen_classifier}"; \
+	video_abs="$$(python3 -c 'from pathlib import Path; import sys; print(Path(sys.argv[1]).expanduser().resolve())' "$${VIDEO_PATH}")"; \
+	base_name="$$(python3 -c 'from pathlib import Path; import re, sys; name=Path(sys.argv[1]).stem; print(re.sub(r"[^A-Za-z0-9._-]+", "-", name).strip("-") or "session")' "$$video_abs")"; \
+	marker="$$(mktemp)"; \
+	touch "$$marker"; \
+	PYTHONPATH=src .venv/bin/python -m divesensei.cli evaluate-session "$$video_abs" --profile "$$PROFILE" --detector-id "$$DETECTOR_ID"; \
+	session_dir="$$(find outputs -maxdepth 1 -type d -name 'evaluation_*' -newer "$$marker" -print | sort | tail -n 1)"; \
+	rm -f "$$marker"; \
+	if [[ -z "$$session_dir" ]]; then session_dir="$$(ls -dt outputs/evaluation_* 2>/dev/null | head -n 1)"; fi; \
+	test -n "$$session_dir" || { echo "Unable to determine session output dir for $$video_abs"; exit 1; }; \
+	PYTHONPATH=src .venv/bin/python -m divesensei.cli export-evaluation-review "$$session_dir"; \
+	PYTHONPATH=src .venv/bin/python -m divesensei.cli export-event-review-support "$$session_dir"; \
+	session_id="$$(basename "$$session_dir")"; \
+	printf "SESSION_DIR=%s\n" "$$session_dir"; \
+	printf "REVIEW_URL=%s/?session=%s&tab=1\n" "$(APP_URL)" "$$session_id"
+
+review-session-open: review-session
+	@set -euo pipefail; \
+	test -n "$${VIDEO_PATH:-}" || { echo "Set VIDEO_PATH=/abs/path/to/video"; exit 1; }; \
+	video_abs="$$(python3 -c 'from pathlib import Path; import sys; print(Path(sys.argv[1]).expanduser().resolve())' "$${VIDEO_PATH}")"; \
+	base_name="$$(python3 -c 'from pathlib import Path; import re, sys; name=Path(sys.argv[1]).stem; print(re.sub(r"[^A-Za-z0-9._-]+", "-", name).strip("-") or "session")' "$$video_abs")"; \
+	session_dir="$$(ls -dt outputs/evaluation_"$$base_name"_* 2>/dev/null | head -n 1)"; \
+	test -n "$$session_dir" || { echo "No prepared session found for $$video_abs"; exit 1; }; \
+	session_id="$$(basename "$$session_dir")"; \
+	open "$(APP_URL)/?session=$$session_id&tab=1"
+
 status: | $(RUN_DIR)
 	@set -euo pipefail; \
 	if [[ -f "$(APP_PID_FILE)" ]]; then \
@@ -231,7 +269,7 @@ wait:
 
 up: desktop-setup | $(RUN_DIR) $(LOCK_DIR)
 	@set -euo pipefail; \
-	flock -o "$(LOCK_DIR)/app.lock" bash -lc 'set -euo pipefail; \
+	"$(FLOCK)" -o "$(LOCK_DIR)/app.lock" bash -lc 'set -euo pipefail; \
 		if [[ -f "$(APP_PID_FILE)" ]]; then \
 			pid="$$(cat "$(APP_PID_FILE)")"; \
 			if kill -0 "$$pid" 2>/dev/null; then \
@@ -257,7 +295,8 @@ up: desktop-setup | $(RUN_DIR) $(LOCK_DIR)
 		else \
 			: >"$(APP_LOG_FILE)"; \
 		fi; \
-		setsid bash -lc '"'"'cd "$(DESKTOP_DIR_ABS)"; exec "$(NODE)" ./node_modules/astro/astro.js preview --host "$(APP_HOST)" --port "$(APP_PORT)"'"'"' >>"$(APP_LOG_FILE)" 2>&1 < /dev/null & \
+		cd "$(DESKTOP_DIR_ABS)"; \
+		nohup "$(NODE)" ./node_modules/astro/astro.js preview --host "$(APP_HOST)" --port "$(APP_PORT)" >>"$(APP_LOG_FILE)" 2>&1 < /dev/null & \
 		pid="$$!"; \
 		echo "$$pid" >"$(APP_PID_FILE)"; \
 		echo "Started $(APP_NAME) (pid $$pid), waiting for $(APP_URL)"; \
@@ -280,7 +319,7 @@ up: desktop-setup | $(RUN_DIR) $(LOCK_DIR)
 
 down: | $(RUN_DIR) $(LOCK_DIR)
 	@set -euo pipefail; \
-	flock -o "$(LOCK_DIR)/app.lock" bash -lc 'set -euo pipefail; \
+	"$(FLOCK)" -o "$(LOCK_DIR)/app.lock" bash -lc 'set -euo pipefail; \
 		if [[ ! -f "$(APP_PID_FILE)" ]]; then \
 			echo "$(APP_NAME) is already stopped"; \
 			exit 0; \

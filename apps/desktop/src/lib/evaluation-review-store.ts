@@ -65,6 +65,13 @@ export function saveEvaluationReviewDecision(
   eventLabel: ReviewDecision["eventLabel"] = null,
   subtype: EvaluationReviewSubtype | null = null,
   notes = "",
+  overrides: {
+    manualAnchorTimestampSeconds?: number | null;
+    manualWindowStartSeconds?: number | null;
+    manualWindowEndSeconds?: number | null;
+    manualCorrectionType?: ReviewDecision["manualCorrectionType"];
+    manualCorrectionRationale?: string | null;
+  } = {},
 ): ReviewDecision {
   const store = loadEvaluationReviewStore(manifest);
   const now = new Date().toISOString();
@@ -77,6 +84,11 @@ export function saveEvaluationReviewDecision(
     label,
     eventLabel,
     subtype,
+    manualAnchorTimestampSeconds: overrides.manualAnchorTimestampSeconds ?? existing?.manualAnchorTimestampSeconds ?? null,
+    manualWindowStartSeconds: overrides.manualWindowStartSeconds ?? existing?.manualWindowStartSeconds ?? null,
+    manualWindowEndSeconds: overrides.manualWindowEndSeconds ?? existing?.manualWindowEndSeconds ?? null,
+    manualCorrectionType: overrides.manualCorrectionType ?? existing?.manualCorrectionType ?? null,
+    manualCorrectionRationale: overrides.manualCorrectionRationale ?? existing?.manualCorrectionRationale ?? null,
     notes,
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,

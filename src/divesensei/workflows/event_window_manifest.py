@@ -112,8 +112,10 @@ def _legacy_scores(row: dict[str, Any]) -> dict[str, Any]:
         "clip_probability": row.get("audio_clip_probability"),
         "audio_score": row.get("audio_score", row.get("raw_proposal_score")),
         "combined_score": row.get("combined_score", row.get("final_combined_score")),
+        "governed_r9_score": row.get("governed_r9_score"),
         "audio_model_probability": row.get("audio_model_probability"),
         "audio_clip_probability": row.get("audio_clip_probability"),
+        "visual_late_fusion_logreg_c0.5": row.get("visual_late_fusion_logreg_c0.5"),
         "raw_proposal_score": row.get("raw_proposal_score"),
         "threshold_passed": row.get("threshold_passed"),
     }

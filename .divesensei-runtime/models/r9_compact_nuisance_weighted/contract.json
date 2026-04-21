@@ -1,0 +1,86 @@
+{
+  "model_id": "r9_compact_nuisance_generalization_weighted",
+  "model_family": "xgboost.XGBClassifier",
+  "model_path": "/Users/mcauchy/divesensei-app/.divesensei-runtime/models/r9_compact_nuisance_weighted/xgboost_model.json",
+  "serialization_format": "xgboost_json",
+  "feature_contract_sources": [
+    "/Users/mcauchy/divesensei-app/benchmarks/phase5_regime_aware_execution_r7_es4.py",
+    "/Users/mcauchy/divesensei-app/benchmarks/post_noise_nuisance_family_benchmark.py"
+  ],
+  "feature_names": [
+    "audio_score",
+    "audio_clip_probability",
+    "event_anchor_timestamp_seconds",
+    "is_false_negative_window",
+    "impact_peak_to_window_rms_ratio",
+    "impact_peak_prominence_db",
+    "transient_peak_count",
+    "inter_peak_interval_cv",
+    "post_impact_early_to_late_rms_ratio",
+    "tail_half_life_ms",
+    "spectral_flatness_post_mean",
+    "tonal_peak_fraction_post_mean",
+    "whistle_band_energy_fraction_post",
+    "spectral_entropy_post_mean",
+    "spectral_contrast_mean_post",
+    "spectral_contrast_low_high_slope_post",
+    "onset_tempogram_peak_ratio_post",
+    "onset_density_0_300ms_post",
+    "dominant_frequency_hz_post_std",
+    "spectral_rolloff_90_post_mean",
+    "zero_crossing_rate_post_mean"
+  ],
+  "feature_count": 21,
+  "base_feature_names": [
+    "audio_score",
+    "audio_clip_probability",
+    "event_anchor_timestamp_seconds",
+    "is_false_negative_window"
+  ],
+  "probe1_feature_names": [
+    "impact_peak_to_window_rms_ratio",
+    "impact_peak_prominence_db",
+    "transient_peak_count",
+    "inter_peak_interval_cv",
+    "post_impact_early_to_late_rms_ratio",
+    "tail_half_life_ms",
+    "spectral_flatness_post_mean",
+    "tonal_peak_fraction_post_mean"
+  ],
+  "r2_feature_names": [
+    "whistle_band_energy_fraction_post",
+    "spectral_entropy_post_mean"
+  ],
+  "r4_feature_names": [
+    "spectral_contrast_mean_post",
+    "spectral_contrast_low_high_slope_post",
+    "onset_tempogram_peak_ratio_post",
+    "onset_density_0_300ms_post"
+  ],
+  "compact_nuisance_feature_names": [
+    "dominant_frequency_hz_post_std",
+    "spectral_rolloff_90_post_mean",
+    "zero_crossing_rate_post_mean"
+  ],
+  "preprocessing": "raw numeric feature vector; no sklearn scaler; XGBoost handles raw values",
+  "window_contract_offline": "event_window_start_seconds to event_window_end_seconds from event-window manifest",
+  "window_contract_runtime": "candidate.start_time to candidate.end_time until event-window construction is available pre-review",
+  "training": {
+    "train_rows": 171,
+    "positive_rows": 75,
+    "negative_rows": 96,
+    "source_weights": {
+      "snmt": 1.0,
+      "img_8852": 1.0,
+      "champigny_1704": 0.3
+    },
+    "base_rows": 53,
+    "source_row_counts": {
+      "base": 53,
+      "champigny_1704": 31,
+      "img_8852": 11,
+      "snmt": 76
+    }
+  },
+  "inference_threshold": 0.92158
+}

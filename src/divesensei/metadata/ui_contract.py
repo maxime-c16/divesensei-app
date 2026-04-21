@@ -66,6 +66,7 @@ def build_ui_session_manifest(
                     "audio": float(candidate.audio_score),
                     "video": float(candidate.video_score),
                     "combined": float(candidate.combined_score),
+                    "governed_r9_score": details.get("governed_r9_score"),
                     "audio_model_probability": float(details.get("audio_model_probability", 0.0) or 0.0),
                     "audio_clip_probability": float(details.get("audio_clip_probability", 0.0) or 0.0),
                 },
@@ -79,6 +80,7 @@ def build_ui_session_manifest(
                     "post_rms_ratio": details.get("post_rms_ratio"),
                     "local_prominence": details.get("local_prominence"),
                     "nearby_peaks_8s": details.get("nearby_peaks_8s"),
+                    "visual_late_fusion_logreg_c0.5": details.get("visual_late_fusion_logreg_c0.5"),
                 },
                 "clip": {
                     "path": clip_path,

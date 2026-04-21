@@ -1,0 +1,149 @@
+{
+  "experiment_name": "r30_runtime_model_parity",
+  "model_artifact_created": true,
+  "contract_artifact_created": true,
+  "runtime_score_path": "src/divesensei/workflows/runtime_score_paths.py",
+  "runtime_exact_model_path": "/Users/mcauchy/divesensei-app/.divesensei-runtime/models/r9_compact_nuisance_weighted/xgboost_model.json",
+  "runtime_contract_path": "/Users/mcauchy/divesensei-app/.divesensei-runtime/models/r9_compact_nuisance_weighted/contract.json",
+  "runtime_uses_exact_model_when_available": true,
+  "fallback_behavior": "If exact model artifacts or xgboost/feature extraction are unavailable, runtime records fallback and uses bootstrapped proxy score.",
+  "remaining_parity_risk": "runtime live windows currently use candidate.start_time/end_time; offline governed training used event-window manifest windows.",
+  "contract": {
+    "model_id": "r9_compact_nuisance_generalization_weighted",
+    "model_family": "xgboost.XGBClassifier",
+    "model_path": "/Users/mcauchy/divesensei-app/.divesensei-runtime/models/r9_compact_nuisance_weighted/xgboost_model.json",
+    "serialization_format": "xgboost_json",
+    "feature_contract_sources": [
+      "/Users/mcauchy/divesensei-app/benchmarks/phase5_regime_aware_execution_r7_es4.py",
+      "/Users/mcauchy/divesensei-app/benchmarks/post_noise_nuisance_family_benchmark.py"
+    ],
+    "feature_names": [
+      "audio_score",
+      "audio_clip_probability",
+      "event_anchor_timestamp_seconds",
+      "is_false_negative_window",
+      "impact_peak_to_window_rms_ratio",
+      "impact_peak_prominence_db",
+      "transient_peak_count",
+      "inter_peak_interval_cv",
+      "post_impact_early_to_late_rms_ratio",
+      "tail_half_life_ms",
+      "spectral_flatness_post_mean",
+      "tonal_peak_fraction_post_mean",
+      "whistle_band_energy_fraction_post",
+      "spectral_entropy_post_mean",
+      "spectral_contrast_mean_post",
+      "spectral_contrast_low_high_slope_post",
+      "onset_tempogram_peak_ratio_post",
+      "onset_density_0_300ms_post",
+      "dominant_frequency_hz_post_std",
+      "spectral_rolloff_90_post_mean",
+      "zero_crossing_rate_post_mean"
+    ],
+    "feature_count": 21,
+    "base_feature_names": [
+      "audio_score",
+      "audio_clip_probability",
+      "event_anchor_timestamp_seconds",
+      "is_false_negative_window"
+    ],
+    "probe1_feature_names": [
+      "impact_peak_to_window_rms_ratio",
+      "impact_peak_prominence_db",
+      "transient_peak_count",
+      "inter_peak_interval_cv",
+      "post_impact_early_to_late_rms_ratio",
+      "tail_half_life_ms",
+      "spectral_flatness_post_mean",
+      "tonal_peak_fraction_post_mean"
+    ],
+    "r2_feature_names": [
+      "whistle_band_energy_fraction_post",
+      "spectral_entropy_post_mean"
+    ],
+    "r4_feature_names": [
+      "spectral_contrast_mean_post",
+      "spectral_contrast_low_high_slope_post",
+      "onset_tempogram_peak_ratio_post",
+      "onset_density_0_300ms_post"
+    ],
+    "compact_nuisance_feature_names": [
+      "dominant_frequency_hz_post_std",
+      "spectral_rolloff_90_post_mean",
+      "zero_crossing_rate_post_mean"
+    ],
+    "preprocessing": "raw numeric feature vector; no sklearn scaler; XGBoost handles raw values",
+    "window_contract_offline": "event_window_start_seconds to event_window_end_seconds from event-window manifest",
+    "window_contract_runtime": "candidate.start_time to candidate.end_time until event-window construction is available pre-review",
+    "training": {
+      "train_rows": 171,
+      "positive_rows": 75,
+      "negative_rows": 96,
+      "source_weights": {
+        "snmt": 1.0,
+        "img_8852": 1.0,
+        "champigny_1704": 0.3
+      },
+      "base_rows": 53,
+      "source_row_counts": {
+        "base": 53,
+        "champigny_1704": 31,
+        "img_8852": 11,
+        "snmt": 76
+      }
+    },
+    "inference_threshold": 0.92158
+  },
+  "recheck": {
+    "experiment_name": "r30_runtime_offline_recheck",
+    "session_meta": [
+      {
+        "session_id": "evaluation_r30_exact_scorepath_insep_quick",
+        "detections": 74,
+        "source_video_path": "/Users/mcauchy/divesensei-app/outputs/evaluation_insep_quick_9015_20260409_ui/web/session_source_review.mp4",
+        "runtime_score_source_counts": {
+          "None": 74
+        }
+      },
+      {
+        "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+        "detections": 113,
+        "source_video_path": "/Users/mcauchy/divesensei-app/outputs/evaluation_champigny_20260406-labelling/web/session_source_review.mp4",
+        "runtime_score_source_counts": {
+          "None": 113
+        }
+      }
+    ],
+    "row_count": 187,
+    "pearson": 1.0,
+    "spearman": 1.0,
+    "mean_abs_delta": 0.0,
+    "median_abs_delta": 0.0,
+    "max_abs_delta": 0.0,
+    "threshold_agreement_rate": 1.0,
+    "runtime_approved_count": 7,
+    "offline_approved_count": 7,
+    "approve_overlap_count": 7,
+    "approve_jaccard": 1.0,
+    "runtime_dangerous_approve_count": 3,
+    "offline_same_window_dangerous_approve_count": 3,
+    "formerly_dangerous_r28_runtime_row": {
+      "session_id": "evaluation_r30_exact_scorepath_insep_quick",
+      "detection_id": "det-0039",
+      "label": "noise_or_other",
+      "runtime_governed_r9_score": 0.3623172342777252,
+      "runtime_score_source": null,
+      "timestamp_seconds": 222.048,
+      "offline_recomputed_same_window_score": 0.3623172342777252,
+      "abs_delta": 0.0,
+      "runtime_approved_v1": false,
+      "offline_same_window_approved_v1": false
+    },
+    "disagreement_rows": []
+  },
+  "classification": "exact_governed_runtime_parity_achieved",
+  "final_decisions": [
+    "R30_GOVERNED_RUNTIME_PARITY_PROGRESS",
+    "APPROVE_REVIEW_V1_REMAINS_DEFAULT"
+  ]
+}

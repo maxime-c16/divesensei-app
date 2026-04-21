@@ -1,0 +1,47 @@
+{
+  "experiment_name": "r30_runtime_offline_recheck",
+  "session_meta": [
+    {
+      "session_id": "evaluation_r30_exact_scorepath_insep_quick",
+      "detections": 74,
+      "source_video_path": "/Users/mcauchy/divesensei-app/outputs/evaluation_insep_quick_9015_20260409_ui/web/session_source_review.mp4",
+      "runtime_score_source_counts": {
+        "None": 74
+      }
+    },
+    {
+      "session_id": "evaluation_r30_exact_scorepath_champigny_proxy",
+      "detections": 113,
+      "source_video_path": "/Users/mcauchy/divesensei-app/outputs/evaluation_champigny_20260406-labelling/web/session_source_review.mp4",
+      "runtime_score_source_counts": {
+        "None": 113
+      }
+    }
+  ],
+  "row_count": 187,
+  "pearson": 1.0,
+  "spearman": 1.0,
+  "mean_abs_delta": 0.0,
+  "median_abs_delta": 0.0,
+  "max_abs_delta": 0.0,
+  "threshold_agreement_rate": 1.0,
+  "runtime_approved_count": 7,
+  "offline_approved_count": 7,
+  "approve_overlap_count": 7,
+  "approve_jaccard": 1.0,
+  "runtime_dangerous_approve_count": 3,
+  "offline_same_window_dangerous_approve_count": 3,
+  "formerly_dangerous_r28_runtime_row": {
+    "session_id": "evaluation_r30_exact_scorepath_insep_quick",
+    "detection_id": "det-0039",
+    "label": "noise_or_other",
+    "runtime_governed_r9_score": 0.3623172342777252,
+    "runtime_score_source": null,
+    "timestamp_seconds": 222.048,
+    "offline_recomputed_same_window_score": 0.3623172342777252,
+    "abs_delta": 0.0,
+    "runtime_approved_v1": false,
+    "offline_same_window_approved_v1": false
+  },
+  "disagreement_rows": []
+}

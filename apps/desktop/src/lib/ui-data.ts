@@ -3,6 +3,12 @@ import path from "node:path";
 import { getManifestPathForAnalysisRun, listCatalogSessions, resolveCatalogManifestPaths } from "@/lib/session-catalog";
 import type { DebugLogEntry, LibraryIndex, SessionManifest, UiDataBundle } from "@/types/ui";
 import { outputsRoot, repoRoot } from "@/lib/runtime-config";
+import { listEvaluationReviewDecisions } from "@/lib/evaluation-review-store";
+import {
+  APPROVE_REVIEW_V1_POLICY,
+  APPROVE_REVIEW_V2_SHADOW_POLICY,
+  summarizeApproveReviewDetections,
+} from "@/lib/approve-review-policy";
 
 function readJsonFile<T>(filePath: string): T | null {
   try {
@@ -125,6 +131,57 @@ function buildEmptyLibrary(): LibraryIndex {
   };
 }
 
+function normalizeReviewQueueRows(rows: Record<string, unknown>[]): Array<Record<string, unknown>> {
+  return rows.map((row, index) => {
+    const sessionRoot = String(row.session_root ?? "");
+    const sessionId = sessionRoot ? path.basename(sessionRoot) : String(row.session_id ?? "");
+    return {
+      priority_rank: row.priority_rank ?? index + 1,
+      session_id: sessionId,
+      candidate_id: row.candidate_id ?? null,
+      row_key: row.row_key ?? `${sessionId}::${String(row.candidate_id ?? `row-${index + 1}`)}`,
+      current_final_human_event_label: row.current_final_human_event_label ?? row.final_human_event_label ?? "",
+      model_predicted_label: row.model_predicted_label ?? "",
+      suggestion_label: row.suggestion_label ?? row.suggested_event_label ?? "",
+      suggestion_reason: row.suggestion_reason ?? row.suggested_event_label_reason ?? "",
+      why_this_row_matters: row.why_this_row_matters ?? row.why_high_priority ?? "",
+      probability_platform_dive: row.probability_platform_dive ?? null,
+      legacy_subtype: row.legacy_subtype ?? null,
+    };
+  });
+}
+
+function loadReviewQueue(selectedSessionId?: string): {
+  rows: Array<Record<string, unknown>>;
+  title: string;
+  note: string;
+} {
+  const outputsDir = path.join(repoRoot, "outputs");
+  const noiseQueueJsonPath = path.join(outputsDir, "post_retime_noise_residual_queue.json");
+  if (selectedSessionId === "evaluation_insep_plateform_mixed_sound" && fs.existsSync(noiseQueueJsonPath)) {
+    const payload = readJsonFile<{ rows?: Record<string, unknown>[] }>(noiseQueueJsonPath);
+    const normalizedRows = normalizeReviewQueueRows(Array.isArray(payload?.rows) ? payload.rows : [])
+      .filter((row) => String(row.session_id ?? "") === selectedSessionId);
+    return {
+      rows: normalizedRows,
+      title: "Noise residual queue",
+      note: "Persistent external noise false positives after the bounded retime pass. Review subtype consistency and confirm whether each row is truly noise_or_other.",
+    };
+  }
+
+  const refinementQueuePath = path.join(outputsDir, "event_label_refinement_top15.jsonl");
+  const refinementRows = fs.existsSync(refinementQueuePath)
+    ? readJsonlFile<Record<string, unknown>>(refinementQueuePath)
+    : [];
+  const normalizedRows = normalizeReviewQueueRows(refinementRows)
+    .filter((row) => String(row.session_id ?? "") === String(selectedSessionId ?? ""));
+  return {
+    rows: normalizedRows,
+    title: "Refinement queue",
+    note: "High-value rows selected from the confusion audit. Review these first to reduce class collapse.",
+  };
+}
+
 const fallbackManifest: SessionManifest = {
   schema_version: "1.0.0",
   kind: "divesensei.ui-session",
@@ -193,15 +250,33 @@ export function getUiData(selectedSessionId?: string): UiDataBundle {
   const eventReviewSupportSummaryPath = manifest.artifacts?.event_review_support_summary;
   const eventReviewSupport = eventReviewSupportPath ? readJsonlFile<Record<string, unknown>>(eventReviewSupportPath) : [];
   const eventReviewSupportSummary = eventReviewSupportSummaryPath ? readJsonFile<Record<string, unknown>>(eventReviewSupportSummaryPath) ?? null : null;
-  const refinementQueuePath = path.join(repoRoot, "outputs", "event_label_refinement_top15.jsonl");
-  const eventReviewRefinementTop15 = fs.existsSync(refinementQueuePath)
-    ? readJsonlFile<Record<string, unknown>>(refinementQueuePath)
-    : [];
+  const reviewQueue = loadReviewQueue(manifest.session.id);
+  const decisionsByDetectionId = new Map(
+    listEvaluationReviewDecisions(manifest).map((decision) => [decision.detectionId, decision])
+  );
+  const detectionsWithReviewMetadata = manifest.detections.map((detection) => {
+    const decision = decisionsByDetectionId.get(detection.id);
+    return {
+      ...detection,
+      reviewLabel: decision?.label ?? null,
+      eventLabel: decision?.eventLabel ?? null,
+      subtype: decision?.subtype ?? null,
+    };
+  });
+  const manifestWithReviewMetadata = {
+    ...manifest,
+    detections: detectionsWithReviewMetadata,
+  };
+  const approveReviewSummary = summarizeApproveReviewDetections(detectionsWithReviewMetadata, APPROVE_REVIEW_V1_POLICY);
+  const approveReviewShadowPolicies = [APPROVE_REVIEW_V2_SHADOW_POLICY];
+  const approveReviewShadowSummaries = approveReviewShadowPolicies.map((policy) =>
+    summarizeApproveReviewDetections(detectionsWithReviewMetadata, policy)
+  );
   return {
     library,
-    manifest,
-    selectedSessionId: manifest.session.id,
-    logs: readLogs(manifest.artifacts.session_pipeline_log ?? ""),
+    manifest: manifestWithReviewMetadata,
+    selectedSessionId: manifestWithReviewMetadata.session.id,
+    logs: readLogs(manifestWithReviewMetadata.artifacts.session_pipeline_log ?? ""),
     artifactsPreview: {
       session_pipeline_report: safePreview(manifest.artifacts.session_pipeline_report ?? ""),
       session_debug_summary: safePreview(manifest.artifacts.session_debug_summary ?? ""),
@@ -210,7 +285,13 @@ export function getUiData(selectedSessionId?: string): UiDataBundle {
     },
     eventReviewSupport,
     eventReviewSupportSummary,
-    eventReviewRefinementTop15,
+    eventReviewQueueRows: reviewQueue.rows,
+    eventReviewQueueTitle: reviewQueue.title,
+    eventReviewQueueNote: reviewQueue.note,
+    approveReviewPolicy: APPROVE_REVIEW_V1_POLICY,
+    approveReviewSummary,
+    approveReviewShadowPolicies,
+    approveReviewShadowSummaries,
   };
 }
 

@@ -159,6 +159,9 @@ def build_proposal_diagnostics(
             "detection_id": f"det-{idx + 1:04d}",
             "confidence": getattr(candidate, "confidence", None),
             "combined_score": float(getattr(candidate, "combined_score", 0.0) or 0.0),
+            "governed_r9_score": (getattr(candidate, "details", {}) or {}).get("governed_r9_score"),
+            "audio_model_probability": (getattr(candidate, "details", {}) or {}).get("audio_model_probability"),
+            "visual_late_fusion_logreg_c0.5": (getattr(candidate, "details", {}) or {}).get("visual_late_fusion_logreg_c0.5"),
         }
         for idx, candidate in enumerate(candidates)
     }
@@ -191,8 +194,22 @@ def build_proposal_diagnostics(
             "timestamp": float(row.get("timestamp", 0.0) or 0.0),
             "proposal_frontend": str(row.get("proposal_frontend", details.get("proposal_frontend", "unknown"))),
             "raw_proposal_score": float(row.get("raw_proposal_score", details.get("audio_score", 0.0)) or 0.0),
-            "audio_model_probability": details.get("audio_model_probability"),
+            "governed_r9_score": (
+                candidate_meta[match[0]]["governed_r9_score"]
+                if match is not None and candidate_meta[match[0]]["governed_r9_score"] is not None
+                else details.get("governed_r9_score")
+            ),
+            "audio_model_probability": (
+                candidate_meta[match[0]]["audio_model_probability"]
+                if match is not None and candidate_meta[match[0]]["audio_model_probability"] is not None
+                else details.get("audio_model_probability")
+            ),
             "audio_clip_probability": details.get("audio_clip_probability"),
+            "visual_late_fusion_logreg_c0.5": (
+                candidate_meta[match[0]]["visual_late_fusion_logreg_c0.5"]
+                if match is not None and candidate_meta[match[0]]["visual_late_fusion_logreg_c0.5"] is not None
+                else details.get("visual_late_fusion_logreg_c0.5")
+            ),
             "classifier_bucket": classifier_bucket,
             "classifier_decision": row.get("classifier_decision", "dive" if classifier_bucket in {"accepted", "accepted_no_model"} else "non-dive"),
             "pipeline_selected": bool(match is not None),

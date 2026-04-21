@@ -63,9 +63,10 @@ export function listExportedPathsForAnalysisRun(analysisRunId: string): string[]
         return null;
       }
     })
-    .filter((record): record is ExportJobRecord =>
-      Boolean(record) && record.analysisRunId === analysisRunId && record.status === "completed" && record.exportedPaths.length > 0
-    )
+    .filter((record): record is ExportJobRecord => {
+      if (!record) return false;
+      return record.analysisRunId === analysisRunId && record.status === "completed" && record.exportedPaths.length > 0;
+    })
     .sort((left, right) => {
       const leftTime = Date.parse(left.finishedAt ?? left.createdAt ?? "") || 0;
       const rightTime = Date.parse(right.finishedAt ?? right.createdAt ?? "") || 0;

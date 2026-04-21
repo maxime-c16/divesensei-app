@@ -1,0 +1,160 @@
+{
+  "experiment_name": "r28_runtime_only_baseline",
+  "active_default_policy": "approve_review_v1",
+  "sessions": [
+    {
+      "session_id": "evaluation_r27_scorepath_insep_quick_v2",
+      "included": true,
+      "source_video_path": "/Users/mcauchy/divesensei-app/outputs/evaluation_insep_quick_9015_20260409_ui/web/session_source_review.mp4",
+      "manifest_detection_count": 74,
+      "review_decision_count": 64,
+      "platform_noise_rows_used": 59,
+      "governed_present_count": 59,
+      "visual_present_count": 59,
+      "visual_missing_count": 0,
+      "event_label_counts": {
+        "noise_or_other": 26,
+        "platform_dive": 33
+      },
+      "runtime_score_enrichment": {
+        "candidate_count": 74,
+        "governed_r9_nonzero_count": 74,
+        "visual_present_count": 74,
+        "visual_missing_count": 0,
+        "source_video_path_exists": true,
+        "governed_model": {
+          "model_path": "/Users/mcauchy/divesensei-app/.divesensei-runtime/models/governed_r9_audio_candidate_model.json",
+          "bootstrapped": false,
+          "training_rows": 979,
+          "positive_rows": 394,
+          "negative_rows": 585
+        },
+        "visual_model": {
+          "model_path": "/Users/mcauchy/divesensei-app/.divesensei-runtime/models/visual_late_fusion_logreg_c0.5.json",
+          "bootstrapped": false,
+          "training_rows": 81,
+          "positive_rows": 38,
+          "negative_rows": 43
+        },
+        "label_distribution_reference": {
+          "platform_dive": 394,
+          "noise_or_other": 585
+        }
+      }
+    },
+    {
+      "session_id": "evaluation_r27_scorepath_champigny_proxy",
+      "included": true,
+      "source_video_path": "/Users/mcauchy/divesensei-app/outputs/evaluation_champigny_20260406-labelling/web/session_source_review.mp4",
+      "manifest_detection_count": 113,
+      "review_decision_count": 109,
+      "platform_noise_rows_used": 10,
+      "governed_present_count": 10,
+      "visual_present_count": 10,
+      "visual_missing_count": 0,
+      "event_label_counts": {
+        "noise_or_other": 2,
+        "platform_dive": 8
+      },
+      "runtime_score_enrichment": {}
+    }
+  ],
+  "availability": {
+    "runtime_session_count": 2,
+    "row_count": 69,
+    "label_counts": {
+      "noise_or_other": 28,
+      "platform_dive": 41
+    },
+    "governed_r9_present_count": 69,
+    "governed_r9_nonzero_count": 69,
+    "visual_present_count": 69,
+    "visual_missing_count": 0,
+    "visual_presence_rate": 1.0,
+    "source_counts": {
+      "evaluation_r27_scorepath_champigny_proxy": 10,
+      "evaluation_r27_scorepath_insep_quick_v2": 59
+    }
+  },
+  "approve_review_v1": {
+    "policy_id": "approve_review_v1",
+    "description": "approve if governed_r9_score >= 0.92158",
+    "row_count": 69,
+    "approve_count": 4,
+    "approve_coverage": 0.057971014492753624,
+    "approve_precision": 0.75,
+    "platform_approve_recall": 0.07317073170731707,
+    "dangerous_approvals": 1,
+    "suspicious_additions": 1,
+    "approved_label_counts": {
+      "noise_or_other": 1,
+      "platform_dive": 3
+    },
+    "approved_source_counts": {
+      "evaluation_r27_scorepath_champigny_proxy": 2,
+      "evaluation_r27_scorepath_insep_quick_v2": 2
+    },
+    "dangerous_rows": [
+      {
+        "session_id": "evaluation_r27_scorepath_insep_quick_v2",
+        "detection_id": "det-0039",
+        "event_label": "noise_or_other",
+        "governed_r9_score": 0.9421256462285259,
+        "visual_late_fusion_logreg_c0.5": 0.9991066586590726,
+        "audio_score": 17.266101837158203,
+        "timestamp_seconds": 222.048
+      }
+    ],
+    "approved_rows": [
+      {
+        "session_id": "evaluation_r27_scorepath_insep_quick_v2",
+        "detection_id": "det-0037",
+        "event_label": "platform_dive",
+        "governed_r9_score": 0.9382865401749777,
+        "visual_late_fusion_logreg_c0.5": 0.9996978545492573,
+        "audio_score": 16.98819923400879,
+        "timestamp_seconds": 211.456
+      },
+      {
+        "session_id": "evaluation_r27_scorepath_insep_quick_v2",
+        "detection_id": "det-0039",
+        "event_label": "noise_or_other",
+        "governed_r9_score": 0.9421256462285259,
+        "visual_late_fusion_logreg_c0.5": 0.9991066586590726,
+        "audio_score": 17.266101837158203,
+        "timestamp_seconds": 222.048
+      },
+      {
+        "session_id": "evaluation_r27_scorepath_champigny_proxy",
+        "detection_id": "det-0004",
+        "event_label": "platform_dive",
+        "governed_r9_score": 0.9797077610522851,
+        "visual_late_fusion_logreg_c0.5": 0.9989534880949669,
+        "audio_score": 29.248920440673828,
+        "timestamp_seconds": 254.432
+      },
+      {
+        "session_id": "evaluation_r27_scorepath_champigny_proxy",
+        "detection_id": "det-0112",
+        "event_label": "platform_dive",
+        "governed_r9_score": 0.9989010333987904,
+        "visual_late_fusion_logreg_c0.5": 0.9975098564507296,
+        "audio_score": 24.58724594116211,
+        "timestamp_seconds": 3428.288
+      }
+    ],
+    "family": "baseline",
+    "r9_min": 0.92158,
+    "visual_min": null,
+    "mode": "r9_only",
+    "coverage_delta_vs_v1": 0.0,
+    "approve_count_delta_vs_v1": 0,
+    "safe_vs_v1_dangerous_rule": false,
+    "improves_over_v1": false
+  },
+  "interpretation": {
+    "scores_genuinely_present_and_nontrivial": true,
+    "visual_fallback_rows": 0,
+    "v1_behavior_change_vs_pre_r27": "materially changed: pre-r27 manifests had no governed_r9_score, so v1 could not be evaluated as a true live score path; r27/r28 now exercise nonzero runtime governed scores."
+  }
+}
