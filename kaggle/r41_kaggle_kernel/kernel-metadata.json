@@ -1,0 +1,17 @@
+{
+  "id": "maximecauchy/divesensei-r41-paligemma-probe",
+  "title": "DiveSensei R41 PaliGemma Probe",
+  "code_file": "r41_kaggle_runner.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": "true",
+  "enable_gpu": "true",
+  "enable_tpu": "false",
+  "enable_internet": "true",
+  "dataset_sources": [
+    "maximecauchy/r41-remote-gpu-package-v3"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": []
+}

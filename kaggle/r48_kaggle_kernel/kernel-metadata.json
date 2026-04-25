@@ -1,0 +1,17 @@
+{
+  "id": "maximecauchy/divesensei-r48-audio-window-prompt-ablation",
+  "title": "DiveSensei R48 Audio Window Prompt Ablation",
+  "code_file": "r48_kaggle_runner.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": "true",
+  "enable_gpu": "true",
+  "enable_tpu": "false",
+  "enable_internet": "true",
+  "dataset_sources": [
+    "maximecauchy/r41-remote-gpu-package-v3"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": []
+}

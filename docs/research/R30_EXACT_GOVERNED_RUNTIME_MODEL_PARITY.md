@@ -6,4 +6,4 @@ R30 persisted the governed r9 compact nuisance weighted XGBoost model and wired 
 - Contract artifact: `/Users/mcauchy/divesensei-app/.divesensei-runtime/models/r9_compact_nuisance_weighted/contract.json`
 - Classification: `exact_governed_runtime_parity_achieved`
 
-The remaining risk is window parity: live runtime scoring currently uses candidate windows, while the governed offline training contract used event-window manifest windows.
+The prior candidate-window risk was repaired in the follow-up parity check. Live runtime scoring now uses the governed platform/noise event window contract: proposal timestamp with `0.75s` pre-context and `2.25s` post-context. The r30 recheck showed exact runtime/offline agreement over the matched rows.

@@ -253,6 +253,47 @@ button {
   font-size: 0.86rem;
 }
 
+.review-card__preset-strip,
+.review-card__quality-strip {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  gap: 8px;
+  padding: 8px 10px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.review-card__preset-strip::-webkit-scrollbar,
+.review-card__quality-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.preset-button,
+.quality-button {
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--text-1);
+  background: rgba(4, 16, 24, 0.72);
+  padding: 7px 10px;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.64rem;
+}
+
+.preset-button--active,
+.quality-button--active {
+  color: var(--bg-0);
+  border-color: rgba(127, 218, 255, 0.72);
+  background: linear-gradient(135deg, var(--accent), #d8f6ff);
+}
+
+.review-card__quality-strip {
+  padding-top: 6px;
+  opacity: 0.9;
+}
+
 .create-workspace__source-card > .primary-action {
   width: 100%;
 }

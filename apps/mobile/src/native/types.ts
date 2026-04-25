@@ -239,6 +239,19 @@ export interface DetectionExportRef {
   status?: ExportStatus | null;
 }
 
+export type ClipPresetName = "short" | "medium" | "long";
+
+export interface DetectionClipPreset {
+  preset: ClipPresetName;
+  pre_seconds: number;
+  post_seconds: number;
+  start_seconds: number;
+  end_seconds: number;
+  duration_seconds: number;
+  clamped_start: boolean;
+  clamped_end: boolean;
+}
+
 export interface Detection {
   id: DetectionId;
   index: number;
@@ -249,6 +262,8 @@ export interface Detection {
   review_start_seconds?: number;
   review_end_seconds?: number;
   review_duration_seconds?: number;
+  clip_presets?: Partial<Record<ClipPresetName, DetectionClipPreset>>;
+  default_clip_preset?: ClipPresetName;
   confidence: ConfidenceLevel;
   scores: DetectionScores;
   features: Record<string, number | null>;

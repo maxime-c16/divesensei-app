@@ -15,6 +15,17 @@ dependencies = [
   "numpy",
   "opencv-python",
 ]
+
+[project.optional-dependencies]
+visual-vlm = [
+  "Pillow",
+  "numpy<2",
+  "torch",
+  "transformers==4.53.3",
+  "accelerate",
+  "sentencepiece",
+  "huggingface-hub==0.33.5",
+]
 keywords = ["computer-vision", "audio", "video", "sports", "diving", "desktop-app"]
 classifiers = [
   "Development Status :: 3 - Alpha",

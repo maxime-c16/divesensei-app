@@ -9,6 +9,12 @@ from typing import Any, Sequence
 UI_SCHEMA_VERSION = "1.0.0"
 REVIEW_PRE_SECONDS = 2.0
 REVIEW_POST_SECONDS = 2.0
+CLIP_PRESETS = {
+    "short": {"pre_seconds": 4.0, "post_seconds": 3.0},
+    "medium": {"pre_seconds": 6.0, "post_seconds": 4.0},
+    "long": {"pre_seconds": 8.0, "post_seconds": 5.0},
+}
+DEFAULT_CLIP_PRESET = "medium"
 
 
 def _utc_now() -> str:
@@ -20,6 +26,23 @@ def _clip_browser_path(clip_path: str | None) -> str | None:
         return None
     candidate = Path(clip_path).parent / "web" / Path(clip_path).name
     return str(candidate) if candidate.exists() else clip_path
+
+
+def _clip_window(anchor_seconds: float, pre_seconds: float, post_seconds: float, duration_seconds: float) -> dict[str, Any]:
+    unclamped_start = anchor_seconds - pre_seconds
+    unclamped_end = anchor_seconds + post_seconds
+    start = max(0.0, unclamped_start)
+    end = max(start + 0.25, unclamped_end)
+    if duration_seconds > 0.0:
+        end = min(duration_seconds, end)
+        start = min(start, max(0.0, end - 0.25))
+    return {
+        "start_seconds": float(start),
+        "end_seconds": float(end),
+        "duration_seconds": float(end - start),
+        "clamped_start": bool(start != unclamped_start),
+        "clamped_end": bool(duration_seconds > 0.0 and end != unclamped_end),
+    }
 
 
 def build_ui_session_manifest(
@@ -50,6 +73,15 @@ def build_ui_session_manifest(
         if session_duration_seconds > 0.0:
             review_end_seconds = min(session_duration_seconds, review_end_seconds)
             review_start_seconds = min(review_start_seconds, max(0.0, review_end_seconds - 0.25))
+        clip_presets = {
+            name: {
+                "preset": name,
+                "pre_seconds": config["pre_seconds"],
+                "post_seconds": config["post_seconds"],
+                **_clip_window(float(candidate.timestamp), float(config["pre_seconds"]), float(config["post_seconds"]), session_duration_seconds),
+            }
+            for name, config in CLIP_PRESETS.items()
+        }
         detections.append(
             {
                 "id": f"det-{idx:04d}",
@@ -61,6 +93,8 @@ def build_ui_session_manifest(
                 "review_start_seconds": review_start_seconds,
                 "review_end_seconds": review_end_seconds,
                 "review_duration_seconds": float(review_end_seconds - review_start_seconds),
+                "clip_presets": clip_presets,
+                "default_clip_preset": DEFAULT_CLIP_PRESET,
                 "confidence": candidate.confidence,
                 "scores": {
                     "audio": float(candidate.audio_score),
@@ -109,6 +143,12 @@ def build_ui_session_manifest(
             "session_duration_seconds": session_duration_seconds,
             "candidate_count": report.get("candidate_count", 0),
             "extracted_count": len(extracted_paths),
+            "clip_extraction": {
+                "mode": "audio_anchor_presets",
+                "default_preset": DEFAULT_CLIP_PRESET,
+                "presets": CLIP_PRESETS,
+                "exact_visual_contact_required": False,
+            },
             "timestamp_range": debug_summary.get("timestamp_range", {}),
             "telemetry": {
                 "detector_seconds": report.get("detector_seconds"),
@@ -140,6 +180,10 @@ def build_ui_session_manifest(
             "hard_negative_commands": report.get("hard_negative_commands_path"),
             "candidate_diagnostics": report.get("candidate_diagnostics_path"),
             "ranking_reports": report.get("ranking_reports_path"),
+            "visual_vlm_proposals_summary": report.get("visual_vlm_proposals_summary_path"),
+            "visual_vlm_proposals": report.get("visual_vlm_proposals_path"),
+            "visual_vlm_frame_predictions": report.get("visual_vlm_frame_predictions_path"),
+            "visual_vlm_event_intervals": report.get("visual_vlm_event_intervals_path"),
         },
         "detections": detections,
     }

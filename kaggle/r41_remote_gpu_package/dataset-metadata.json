@@ -1,0 +1,11 @@
+{
+  "title": "DiveSensei R41 Remote GPU Package",
+  "id": "maximecauchy/r41-remote-gpu-package-v3",
+  "licenses": [
+    {
+      "name": "CC0-1.0"
+    }
+  ],
+  "subtitle": "Private DiveSensei PaliGemma2-3B visual proposal benchmark package",
+  "description": "Private research-only package for running the DiveSensei R41 PaliGemma2-3B visual proposal benchmark on Kaggle GPU. Contains a minimal source subset and the Compete review proxy session. No approval policy changes are included."
+}

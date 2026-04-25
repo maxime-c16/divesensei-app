@@ -31,7 +31,7 @@ IOS_SIMULATOR_ID ?= 10E4E9DA-CA56-45C7-B846-3A63D534BAF1
 IOS_APP_BUNDLE ?= /Users/$(USER)/Library/Developer/Xcode/DerivedData/App-fprmnnhpsvflfgcrzusflztskrms/Build/Products/Debug-iphonesimulator/App.app
 IOS_BUNDLE_ID ?= com.divesensei.mobile
 
-.PHONY: help venv install compile smoke-help desktop-setup desktop-check desktop-build \
+.PHONY: help venv install compile smoke-help approve-safety-monitor desktop-setup desktop-check desktop-build \
 	electron-dev electron-start electron-prepare mobile-setup mobile-build mobile-sync-ios \
 	mobile-open-ios mobile-xcode-build mobile-web-refresh mobile-fast mobile-sim-install mobile-sim-launch mobile-sim-relaunch mobile-sim-reinstall \
 	mobile-sim-screenshot mobile-review-reset review-session review-session-open status wait up down restart re logs clean \
@@ -43,6 +43,7 @@ help:
 	@printf "  make install        Install the Python package in editable mode\n"
 	@printf "  make compile        Byte-compile the Python source tree\n"
 	@printf "  make smoke-help     Check the CLI help surfaces\n"
+	@printf "  make approve-safety-monitor Refresh the approve_review_v1 safety monitor and stable latest-status artifacts\n"
 	@printf "  make desktop-setup  Install Bun dependencies for the Astro app\n"
 	@printf "  make desktop-check  Run Astro type/config checks\n"
 	@printf "  make desktop-build  Build the Astro desktop app\n"
@@ -90,6 +91,10 @@ compile:
 smoke-help:
 	PYTHONPATH=src $(PYTHON) -m divesensei.cli --help
 	PYTHONPATH=src $(PYTHON) -m divesensei.cli detect --help
+
+approve-safety-monitor:
+	PYTHONPATH=src $(PYTHON) benchmarks/r36_approve_v1_safety_monitor.py
+	PYTHONPATH=src $(PYTHON) benchmarks/r37_publish_approve_safety_monitor.py
 
 desktop-setup: | $(RUN_DIR) $(LOCK_DIR)
 	@set -euo pipefail; \

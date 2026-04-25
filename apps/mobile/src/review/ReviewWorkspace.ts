@@ -1,5 +1,6 @@
 import type { ReviewHostService } from "@/host/types";
 import type {
+  ClipPresetName,
   DecisionRecord,
   Detection,
   ReviewDecisionLabel,
@@ -7,7 +8,7 @@ import type {
   SessionId,
   SessionManifest,
 } from "@/native/types";
-import { formatSeconds, reviewEndFor, reviewStartFor } from "@/review/model";
+import { clipWindowFor, formatSeconds, reviewEndFor, reviewStartFor } from "@/review/model";
 
 type DeckDecision = ReviewDecisionLabel | "pending";
 
@@ -36,6 +37,7 @@ type GestureState = {
 
 type SessionUiState = {
   pendingIndex: number;
+  clipPreset: ClipPresetName;
   lastDecision?: PersistedDecisionSnapshot;
 };
 
@@ -44,7 +46,7 @@ const sessionUiState = new Map<SessionId, SessionUiState>();
 function uiStateFor(sessionId: SessionId): SessionUiState {
   const existing = sessionUiState.get(sessionId);
   if (existing) return existing;
-  const created: SessionUiState = { pendingIndex: 0 };
+  const created: SessionUiState = { pendingIndex: 0, clipPreset: "medium" };
   sessionUiState.set(sessionId, created);
   return created;
 }
@@ -188,6 +190,8 @@ export class ReviewWorkspace {
     } = input;
 
     const activeItem = pending[pendingIndex] ?? null;
+    const selectedPreset = uiStateFor(input.sessionId).clipPreset;
+    const selectedWindow = activeItem ? clipWindowFor(activeItem.detection, selectedPreset) : null;
 
     const activeReadyMarkup = activeItem && proxy?.status === "ready" && proxy.url ? `
       <section class="review-deck review-deck--ready">
@@ -197,8 +201,8 @@ export class ReviewWorkspace {
             class="review-card review-card--active"
             data-review-card
             data-detection-id="${escapeHtmlAttribute(activeItem.detection.id)}"
-            data-window-start="${activeItem.windowStart}"
-            data-window-end="${activeItem.windowEnd}"
+            data-window-start="${selectedWindow?.start ?? activeItem.windowStart}"
+            data-window-end="${selectedWindow?.end ?? activeItem.windowEnd}"
           >
             <div class="review-card__decision review-card__decision--reject">Reject</div>
             <div class="review-card__decision review-card__decision--keep">Keep</div>
@@ -216,13 +220,27 @@ export class ReviewWorkspace {
                 ></video>
                 <div class="review-card__video-overlay">
                   <div class="review-card__video-topline">
-                    <span class="review-card__window-pill">${formatSeconds(activeItem.windowStart)} to ${formatSeconds(activeItem.windowEnd)}</span>
+                    <span class="review-card__window-pill">${formatSeconds(selectedWindow?.start ?? activeItem.windowStart)} to ${formatSeconds(selectedWindow?.end ?? activeItem.windowEnd)}</span>
                   </div>
                   <span class="review-card__video-state" data-video-state-label>Loading</span>
                 </div>
                 <div class="review-card__video-caption">
                   <strong>${manifest.session.session_name ?? manifest.session.title}</strong>
-                  <span>Swipe left to reject, right to keep.</span>
+                  <span>Audio-anchored ${selectedPreset} clip. Swipe left to reject, right to keep.</span>
+                </div>
+                <div class="review-card__preset-strip" aria-label="Clip preset">
+                  ${(["short", "medium", "long"] as const).map((preset) => `
+                    <button
+                      class="preset-button ${preset === selectedPreset ? "preset-button--active" : ""}"
+                      type="button"
+                      data-clip-preset="${preset}"
+                    >${preset}</button>
+                  `).join("")}
+                </div>
+                <div class="review-card__quality-strip" aria-label="Clip quality marker">
+                  ${["good", "too early", "too late", "too short"].map((quality) => `
+                    <button class="quality-button" type="button" data-quality-marker="${escapeHtmlAttribute(quality)}">${escapeHtml(quality)}</button>
+                  `).join("")}
                 </div>
                 <div class="review-card__action-rail">
                   <button class="decision-button decision-button--reject" type="button" data-decision-action="reject">Reject</button>
@@ -320,6 +338,22 @@ export class ReviewWorkspace {
       await this.render(sessionId);
     });
 
+    this.root.querySelectorAll<HTMLButtonElement>("[data-clip-preset]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const preset = button.dataset.clipPreset as ClipPresetName | undefined;
+        if (!preset) return;
+        uiStateFor(sessionId).clipPreset = preset;
+        await this.render(sessionId);
+      });
+    });
+
+    this.root.querySelectorAll<HTMLButtonElement>("[data-quality-marker]").forEach((button) => {
+      button.addEventListener("click", () => {
+        this.root.querySelectorAll<HTMLButtonElement>("[data-quality-marker]").forEach((item) => item.classList.remove("quality-button--active"));
+        button.classList.add("quality-button--active");
+      });
+    });
+
     const undoButton = this.root.querySelector<HTMLButtonElement>("[data-undo-last]");
     if (undoButton) {
       undoButton.addEventListener("click", async () => {
@@ -354,7 +388,8 @@ export class ReviewWorkspace {
       return;
     }
 
-    this.bindVideo(video, activeItem.windowStart, activeItem.windowEnd);
+    const clipWindow = clipWindowFor(activeItem.detection, uiStateFor(sessionId).clipPreset);
+    this.bindVideo(video, clipWindow.start, clipWindow.end);
 
     this.root.querySelectorAll<HTMLButtonElement>("[data-decision-action]").forEach((button) => {
       button.addEventListener("click", () => {

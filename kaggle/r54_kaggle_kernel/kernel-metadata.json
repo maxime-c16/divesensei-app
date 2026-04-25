@@ -1,0 +1,18 @@
+{
+  "id": "maximecauchy/divesensei-r54-audio-local-visual-burst",
+  "title": "DiveSensei R54 Audio Local Visual Burst",
+  "code_file": "r54_kaggle_runner.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": "true",
+  "enable_gpu": "true",
+  "enable_tpu": "false",
+  "enable_internet": "true",
+  "dataset_sources": [
+    "maximecauchy/r41-remote-gpu-package-v3",
+    "maximecauchy/divesensei-r54-visual-burst-sessions"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": []
+}

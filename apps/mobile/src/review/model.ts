@@ -1,4 +1,4 @@
-import type { Detection } from "@/native/types";
+import type { ClipPresetName, Detection } from "@/native/types";
 
 export function formatSeconds(value: number): string {
   const total = Math.max(0, value);
@@ -24,4 +24,18 @@ export function reviewStartFor(item: Detection): number {
 export function reviewEndFor(item: Detection): number {
   const fallbackStart = reviewStartFor(item);
   return Number(item.review_end_seconds ?? item.end_time_seconds ?? fallbackStart + 0.5);
+}
+
+export function clipWindowFor(item: Detection, preset: ClipPresetName): { start: number; end: number } {
+  const window = item.clip_presets?.[preset] ?? item.clip_presets?.[item.default_clip_preset ?? "medium"];
+  if (window) {
+    return {
+      start: Number(window.start_seconds),
+      end: Number(window.end_seconds),
+    };
+  }
+  return {
+    start: reviewStartFor(item),
+    end: reviewEndFor(item),
+  };
 }

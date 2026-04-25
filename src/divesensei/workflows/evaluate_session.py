@@ -21,6 +21,7 @@ from divesensei.io.logging_utils import StructuredLogger, build_candidate_debug_
 from divesensei.io.media_io import extract_audio_wav_ffmpeg, generate_review_proxy_ffmpeg, probe_media_duration_seconds
 from divesensei.workflows.evaluation_session_support import build_proposal_diagnostics, write_json, write_jsonl
 from divesensei.workflows.runtime_score_paths import enrich_candidates_with_runtime_scores
+from divesensei.workflows.visual_vlm_proposals import VisualProposalConfig, run_visual_proposal_generation
 
 
 def default_output_dir(video_path: Path) -> Path:
@@ -44,6 +45,13 @@ def build_parser() -> argparse.ArgumentParser:
         default="session_audio.wav",
         help=argparse.SUPPRESS,
     )
+    parser.add_argument("--with-visual-vlm-proposals", action="store_true", help="Research-only: generate optional visual VLM proposal artifacts.")
+    parser.add_argument("--visual-vlm-backend", choices=["paligemma", "motion-proxy", "availability-check"], default="paligemma", help=argparse.SUPPRESS)
+    parser.add_argument("--visual-vlm-mode", choices=["full-session", "audio-gated"], default="audio-gated", help=argparse.SUPPRESS)
+    parser.add_argument("--visual-vlm-fps", type=float, default=1.0, help=argparse.SUPPRESS)
+    parser.add_argument("--visual-vlm-roi-mode", choices=["full_frame", "center_pool", "lower_water", "custom"], default="full_frame", help=argparse.SUPPRESS)
+    parser.add_argument("--visual-vlm-cache-dir", default="", help=argparse.SUPPRESS)
+    parser.add_argument("--visual-vlm-max-frames", type=int, default=0, help=argparse.SUPPRESS)
     return parser
 
 
@@ -272,6 +280,21 @@ def main(argv: Sequence[str] | None = None) -> int:
         }
     )
     proposal_summary_path = write_json(output_dir / "proposal_diagnostics_summary.json", proposal_summary)
+    visual_vlm_summary = None
+    visual_vlm_summary_path = None
+    if args.with_visual_vlm_proposals:
+        visual_vlm_summary, visual_vlm_summary_path = run_visual_proposal_generation(
+            output_dir,
+            output_dir / "exports" / "visual-vlm-proposals",
+            VisualProposalConfig(
+                mode=str(args.visual_vlm_mode),
+                backend=str(args.visual_vlm_backend),
+                fps=float(args.visual_vlm_fps),
+                roi_mode=str(args.visual_vlm_roi_mode),
+                model_cache_dir=str(args.visual_vlm_cache_dir or ""),
+                max_frames=int(args.visual_vlm_max_frames),
+            ),
+        )
     report["proposal_diagnostics_path"] = str(proposal_diagnostics_path)
     report["proposal_transient_peaks_path"] = str(proposal_transient_peaks_path)
     report["proposal_raw_peaks_path"] = str(proposal_raw_peaks_path)
@@ -279,6 +302,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     report["proposal_suppression_events_path"] = str(proposal_suppression_events_path)
     report["proposal_frontend_stage_summary_path"] = str(proposal_frontend_stage_summary_path)
     report["proposal_diagnostics_summary_path"] = str(proposal_summary_path)
+    if visual_vlm_summary is not None:
+        report["visual_vlm_proposals_summary_path"] = str(visual_vlm_summary_path)
+        report["visual_vlm_proposals_status"] = visual_vlm_summary.get("status")
+        report["visual_vlm_proposals_path"] = visual_vlm_summary.get("artifacts", {}).get("visual_proposals")
+        report["visual_vlm_frame_predictions_path"] = visual_vlm_summary.get("artifacts", {}).get("visual_frame_predictions")
+        report["visual_vlm_event_intervals_path"] = visual_vlm_summary.get("artifacts", {}).get("visual_event_intervals")
     report["extract_seconds"] = 0.0
     report["peak_rss_kb"] = peak_rss_kb
     report["manifest_ready_seconds"] = time.time() - audio_extract_started

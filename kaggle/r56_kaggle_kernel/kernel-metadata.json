@@ -1,0 +1,18 @@
+{
+  "id": "maximecauchy/divesensei-r56-burst-validation",
+  "title": "DiveSensei R56 Burst Validation",
+  "code_file": "r56_kaggle_runner.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": "true",
+  "enable_gpu": "true",
+  "enable_tpu": "false",
+  "enable_internet": "true",
+  "dataset_sources": [
+    "maximecauchy/r41-remote-gpu-package-v3",
+    "maximecauchy/divesensei-r56-burst-validation-sessions"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": []
+}

@@ -24,6 +24,8 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("replay-evaluation-review", help="Replay reviewed labels from one evaluation session onto another by timestamp")
     subparsers.add_parser("validate", help="Run a benchmark manifest")
     subparsers.add_parser("evaluate-audio-pcen", help="Evaluate proposal-level audio_v2_pcen_classifier performance")
+    subparsers.add_parser("visual-vlm-proposals", help="Generate optional visual VLM proposal artifacts for an evaluated session")
+    subparsers.add_parser("visual-vlm-preflight", help="Check optional visual VLM runtime readiness")
 
     inspect = subparsers.add_parser("inspect", help="Print a summary for a session report or UI manifest")
     inspect.add_argument("report_path")
@@ -196,6 +198,28 @@ def main(argv: Sequence[str] | None = None) -> int:
         from divesensei.workflows.evaluate_audio_pcen_classifier import main as evaluate_audio_pcen_main
 
         return evaluate_audio_pcen_main(argv[1:])
+
+    if argv[0] == "visual-vlm-proposals":
+        if any(flag in argv[1:] for flag in ("-h", "--help")):
+            from divesensei.workflows.visual_vlm_proposals import build_parser as visual_build_parser
+
+            visual_build_parser().print_help()
+            return 0
+
+        from divesensei.workflows.visual_vlm_proposals import main as visual_vlm_proposals_main
+
+        return visual_vlm_proposals_main(argv[1:])
+
+    if argv[0] == "visual-vlm-preflight":
+        if any(flag in argv[1:] for flag in ("-h", "--help")):
+            from divesensei.workflows.visual_vlm_proposals import build_preflight_parser
+
+            build_preflight_parser().print_help()
+            return 0
+
+        from divesensei.workflows.visual_vlm_proposals import preflight_main
+
+        return preflight_main(argv[1:])
 
     if argv[0] == "inspect":
         if len(argv) < 2:
