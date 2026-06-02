@@ -28,9 +28,12 @@ const requestedSession = Astro.url.searchParams.get("session") ?? undefined;
 const requestedTab = Astro.url.searchParams.get("tab");
 const requestedJob = Astro.url.searchParams.get("job");
 const requestedFocus = Astro.url.searchParams.get("focus");
+const requestedCleanupQueue = Astro.url.searchParams.get("cleanupQueue") ?? undefined;
+const requestedShadowV2Telemetry = Astro.url.searchParams.get("shadowV2Telemetry") ?? undefined;
+const requestedAssignmentDraftRun = Astro.url.searchParams.get("assignmentDraftRun") ?? undefined;
 const activeTabIndex = Number.parseInt(requestedTab ?? "0", 10);
 const initialTabIndex = Number.isNaN(activeTabIndex) ? 0 : Math.max(0, Math.min(theme.tabs.length - 1, activeTabIndex));
-const uiData = getUiData(requestedSession);
+const uiData = getUiData(requestedSession, requestedCleanupQueue);
 const {
   library,
   manifest,
@@ -39,6 +42,8 @@ const {
   eventReviewQueueRows: loadedReviewQueueRows,
   eventReviewQueueTitle,
   eventReviewQueueNote,
+  eventReviewQueueSummary,
+  cleanupQueueMode,
   approveReviewPolicy,
   approveReviewSummary,
   approveReviewShadowPolicies,
@@ -46,6 +51,27 @@ const {
 } = uiData;
 const eventReviewSupportRows = Array.isArray(eventReviewSupport) ? eventReviewSupport : [];
 const eventReviewQueueRows = Array.isArray(loadedReviewQueueRows) ? loadedReviewQueueRows : [];
+const isCleanupQueueMode = cleanupQueueMode === "r162";
+const cleanupQueueSummaryStats = isCleanupQueueMode && eventReviewQueueSummary && typeof eventReviewQueueSummary === "object"
+  ? {
+      total: Number((eventReviewQueueSummary as Record<string, unknown>).total ?? eventReviewQueueRows.length),
+      completed: Number((eventReviewQueueSummary as Record<string, unknown>).completed ?? 0),
+      remaining: Number((eventReviewQueueSummary as Record<string, unknown>).remaining ?? eventReviewQueueRows.length),
+    }
+  : null;
+const cleanupQueuePriorityStats = isCleanupQueueMode && eventReviewQueueSummary && typeof eventReviewQueueSummary === "object"
+  ? Object.entries(((eventReviewQueueSummary as Record<string, unknown>).perPriority ?? {}) as Record<string, { total?: number; remaining?: number }>).map(([bucket, data]) => ({
+      bucket,
+      remaining: Number(data?.remaining ?? data?.total ?? 0),
+    }))
+  : [];
+const cleanupQueueSessionProgress = isCleanupQueueMode && eventReviewQueueSummary && typeof eventReviewQueueSummary === "object"
+  ? Object.entries(((eventReviewQueueSummary as Record<string, unknown>).perSession ?? {}) as Record<string, { total?: number; completed?: number }>).map(([sessionId, data]) => ({
+      sessionId,
+      completed: Number(data?.completed ?? 0),
+      total: Number(data?.total ?? 0),
+    }))
+  : [];
 
 function timingGroupForDetection(detectionId: string): string {
   const support = eventReviewSupportRows.find((row: Record<string, unknown>) => String(row.legacy_candidate_id ?? "") === String(detectionId));
@@ -256,6 +282,162 @@ const nextActionLabel = !hasActiveSession
         : "Open Review, confirm the attempts you want, then export the clips you keep.")
       : "Wait for analysis to finish, then open Review.";
 const initialExportedPaths = hasActiveSession ? listExportedPathsForAnalysisRun(session.id) : [];
+type AssignmentDraftRow = Record<string, string>;
+const assignmentDraftRepoRoot = path.basename(process.cwd()) === "desktop"
+  ? path.resolve(process.cwd(), "../..")
+  : process.cwd();
+const assignmentDraftRoot = path.join(assignmentDraftRepoRoot, "outputs", "assignment_drafts", "snmt");
+const assignmentMobileShareRoot = path.join(assignmentDraftRepoRoot, "outputs", "mobile_share", "snmt");
+
+function sanitizeAssignmentSlug(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/^[._]+|[._]+$/g, "") || "session";
+}
+
+function assignmentRunIdIsSafe(value: string | undefined): value is string {
+  return typeof value === "string" && /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(value);
+}
+
+function readAssignmentMetadata(draftDir: string): Record<string, unknown> {
+  const metadataPath = path.join(draftDir, "draft_metadata.json");
+  if (!fs.existsSync(metadataPath)) return {};
+  try {
+    return JSON.parse(fs.readFileSync(metadataPath, "utf-8")) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
+function listAssignmentDraftRuns(sessionSlug: string): string[] {
+  const sessionDir = path.join(assignmentDraftRoot, sessionSlug);
+  if (!fs.existsSync(sessionDir)) return [];
+  return fs.readdirSync(sessionDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .filter((runId) => fs.existsSync(path.join(sessionDir, runId, "clip_assignments_draft.csv")))
+    .sort();
+}
+
+function discoverAssignmentDraft() {
+  const sessionBase = path.basename(String(session.output_dir || session.id || "session"));
+  const sessionSlug = sanitizeAssignmentSlug(sessionBase);
+  const availableRuns = listAssignmentDraftRuns(sessionSlug);
+  const requestedRun = requestedAssignmentDraftRun;
+  if (requestedRun && !assignmentRunIdIsSafe(requestedRun)) {
+    return {
+      enabled: false,
+      scaffoldOnly: false,
+      discoveryStatus: "invalid_run_id",
+      sessionSlug,
+      requestedRun,
+      availableRuns,
+      draftDir: "",
+      mobilePackage: "",
+    };
+  }
+  if (requestedRun) {
+    const draftDir = path.join(assignmentDraftRoot, sessionSlug, requestedRun);
+    if (!fs.existsSync(path.join(draftDir, "clip_assignments_draft.csv"))) {
+      return {
+        enabled: false,
+        scaffoldOnly: false,
+        discoveryStatus: "not_found",
+        sessionSlug,
+        requestedRun,
+        availableRuns,
+        draftDir: "",
+        mobilePackage: "",
+      };
+    }
+    const metadata = readAssignmentMetadata(draftDir);
+    return {
+      enabled: true,
+      scaffoldOnly: false,
+      discoveryStatus: "selected",
+      sessionSlug,
+      requestedRun,
+      availableRuns,
+      draftDir,
+      mobilePackage: String(metadata.mobile_package || path.join(assignmentMobileShareRoot, sessionSlug)),
+    };
+  }
+  if (availableRuns.length === 1) {
+    const draftDir = path.join(assignmentDraftRoot, sessionSlug, availableRuns[0]);
+    const metadata = readAssignmentMetadata(draftDir);
+    return {
+      enabled: true,
+      scaffoldOnly: false,
+      discoveryStatus: "single_match",
+      sessionSlug,
+      requestedRun: availableRuns[0],
+      availableRuns,
+      draftDir,
+      mobilePackage: String(metadata.mobile_package || path.join(assignmentMobileShareRoot, sessionSlug)),
+    };
+  }
+  return {
+    enabled: false,
+    scaffoldOnly: false,
+    discoveryStatus: availableRuns.length > 1 ? "ambiguous" : "not_found",
+    sessionSlug,
+    requestedRun: "",
+    availableRuns,
+    draftDir: "",
+    mobilePackage: "",
+  };
+}
+
+const assignmentDraftScaffold = discoverAssignmentDraft();
+
+function parseAssignmentDraftCsvLine(line: string): string[] {
+  const values: string[] = [];
+  let current = "";
+  let quoted = false;
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    const next = line[index + 1];
+    if (quoted && char === "\"" && next === "\"") {
+      current += "\"";
+      index += 1;
+    } else if (char === "\"") {
+      quoted = !quoted;
+    } else if (!quoted && char === ",") {
+      values.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  values.push(current);
+  return values;
+}
+
+function readAssignmentDraftRows(draftDir: string): AssignmentDraftRow[] {
+  const csvPath = path.join(draftDir, "clip_assignments_draft.csv");
+  if (!fs.existsSync(csvPath)) return [];
+  const lines = fs.readFileSync(csvPath, "utf-8").split(/\r?\n/).filter((line) => line.length > 0);
+  if (lines.length < 2) return [];
+  const fields = parseAssignmentDraftCsvLine(lines[0]);
+  return lines.slice(1).map((line) => {
+    const values = parseAssignmentDraftCsvLine(line);
+    return fields.reduce((row, field, index) => {
+      row[field] = values[index] ?? "";
+      return row;
+    }, {} as AssignmentDraftRow);
+  });
+}
+
+const assignmentDraftRows = readAssignmentDraftRows(assignmentDraftScaffold.draftDir);
+const assignmentRowKeyByCandidateId: Record<string, string> = {};
+assignmentDraftRows.forEach((row) => {
+  const candidateId = String(row.candidate_id ?? "").trim();
+  const rowKey = String(row.source_mobile_filename || row.mobile_filename || "").trim();
+  if (candidateId && rowKey) assignmentRowKeyByCandidateId[candidateId] = rowKey;
+});
 const clientBundle = JSON.stringify({
   hasSession,
   session,
@@ -272,16 +454,27 @@ const clientBundle = JSON.stringify({
   initialReviewPending: initialReviewPlaceholderVisible,
   initialFalseNegativeAnnotations,
   requestedTab,
-  requestedSession,
+  requestedSession: cleanupQueueMode ? selectedSessionId : requestedSession,
   requestedJob,
   requestedFocus,
+  requestedCleanupQueue,
+  requestedAssignmentDraftRun,
   eventReviewQueueRows,
   eventReviewQueueTitle,
   eventReviewQueueNote,
+  eventReviewQueueSummary,
+  cleanupQueueMode,
+  shadowV2Telemetry: requestedShadowV2Telemetry,
   approveReviewPolicy,
   approveReviewSummary,
   approveReviewShadowPolicies,
   approveReviewShadowSummaries,
+  assignmentDraft: {
+    ...assignmentDraftScaffold,
+    initialized: assignmentDraftRows.length > 0,
+    rowCount: assignmentDraftRows.length,
+    rowKeyByCandidateId: assignmentRowKeyByCandidateId,
+  },
 });
 const timingSummaryCounts: Record<string, number> = {};
 const timingGroupLabels: Record<string, string> = {
@@ -629,11 +822,14 @@ const isSortEligible: boolean = (() => {
         <div class="review-sidebar__modebar">
           {eventReviewQueueRows.length > 0 && (
             <button class="review-sidebar__modebutton is-active" type="button" data-sidebar-mode-button data-sidebar-mode-target="focus">
-              Priority queue
+              Priority
             </button>
           )}
           <button class={`review-sidebar__modebutton ${eventReviewQueueRows.length === 0 ? "is-active" : ""}`} type="button" data-sidebar-mode-button data-sidebar-mode-target="review">
-            Review queue
+            Review
+          </button>
+          <button class="review-sidebar__modebutton" type="button" data-sidebar-mode-button data-sidebar-mode-target="assignment">
+            Assign.
           </button>
           <button class="review-sidebar__modebutton" type="button" data-sidebar-mode-button data-sidebar-mode-target="policy">
             Policy
@@ -663,28 +859,36 @@ const isSortEligible: boolean = (() => {
             <div class="review-refinement__summary">
               <div class="review-refinement__header">
                 <div class="review-refinement__titleblock">
-                  <h2>{eventReviewQueueTitle ?? "Refinement queue"}</h2>
-                  <p>{eventReviewQueueNote ?? "High-value rows selected from the confusion audit. Review these first to reduce class collapse."}</p>
-                </div>
-                <div class="review-refinement__meta">
-                  <strong>{eventReviewQueueRows.length}</strong>
-                  <span>priority rows</span>
+                  <h2>{eventReviewQueueTitle ?? "Refinement queue"}<span class="review-refinement__count">{isCleanupQueueMode ? Number(eventReviewQueueSummary?.total ?? eventReviewQueueRows.length) : eventReviewQueueRows.length} rows</span></h2>
+                  {eventReviewQueueNote && <p>{eventReviewQueueNote}</p>}
                 </div>
               </div>
+              {isCleanupQueueMode && (
               <div class="review-refinement__stats">
-                {Object.entries(refinementQueueStats).map(([label, count]) => (
+                <article class="review-refinement__stat">
+                  <strong data-cleanup-completed>{cleanupQueueSummaryStats?.completed ?? 0}</strong>
+                  <span>complete</span>
+                </article>
+                <article class="review-refinement__stat">
+                  <strong data-cleanup-remaining>{cleanupQueueSummaryStats?.remaining ?? eventReviewQueueRows.length}</strong>
+                  <span>remaining</span>
+                </article>
+                <article class="review-refinement__stat">
+                  <strong data-cleanup-total>{cleanupQueueSummaryStats?.total ?? eventReviewQueueRows.length}</strong>
+                  <span>total</span>
+                </article>
+                <article class="review-refinement__stat">
+                  <strong data-cleanup-current-position>1</strong>
+                  <span>current row</span>
+                </article>
+                {cleanupQueuePriorityStats.map(({ bucket, remaining }) => (
                   <article class="review-refinement__stat">
-                    <strong>{count}</strong>
-                    <span>{label.replaceAll("_", " ")}</span>
+                    <strong>{remaining}</strong>
+                    <span>{bucket.replaceAll("_", " ")}</span>
                   </article>
                 ))}
               </div>
-              <div class="review-refinement__note">
-                <strong>Review rule</strong>
-                <p>{manifest.session.id === "evaluation_insep_plateform_mixed_sound"
-                  ? "For these residual false positives, keep `noise_or_other` unless the media shows a real platform entry. Tighten subtype when it is clearly whistle, handling noise, splash, or another nuisance family. Use `uncertain` only when the evidence still does not support a stable noise label."
-                  : "Confirm real entry vs rebound-only structure first. Keep `noise_or_other` for handling noise, whistles, splashes, and other non-event clutter. Use `uncertain` only when the window still does not support a clean archetype."}</p>
-              </div>
+              )}
             </div>
             <ol class="review-refinement__list" data-review-refinement-list>
               {eventReviewQueueRows.map((row, index) => (
@@ -693,35 +897,53 @@ const isSortEligible: boolean = (() => {
                   const falseNegativeOrder = row.candidate_id == null
                     ? ((refinementFalseNegativeOrderBySession[sessionId] = (refinementFalseNegativeOrderBySession[sessionId] ?? 0) + 1), refinementFalseNegativeOrderBySession[sessionId])
                     : "";
+                  const isCleanup = isCleanupQueueMode;
+                  const labelText = isCleanup
+                    ? String(row.cleanup_current_review_label ?? "unlabeled").replaceAll("_", " ")
+                    : String(row.current_final_human_event_label ?? "unlabeled").replaceAll("_", " ");
+                  const priorityBucket = String(row.suggested_priority_bucket ?? "").replaceAll("_", " ");
+                  const needsLabels = Array.isArray(row.required_human_decisions) ? row.required_human_decisions.map((v) => String(v).replaceAll("_", " ")).map((v) => v === "anchor quality" ? "AQ" : v === "candidate usefulness" ? "CU" : v).join(", ") : "";
                   return (
                 <li class="review-refinement__item">
                   <button
                     type="button"
-                    class="review-refinement__row"
+                    class={isCleanup ? "review-refinement__row" : "review-refinement__row is-compact"}
                     data-queue-focus
                     data-queue-session={String(row.session_id ?? "")}
                     data-queue-candidate={String(row.candidate_id ?? "")}
                     data-queue-index={String(index + 1)}
-                    data-queue-label={String(row.current_final_human_event_label ?? "")}
+                    data-queue-label={labelText}
                     data-queue-pred={String(row.model_predicted_label ?? "")}
                     data-queue-suggestion={String(row.suggestion_label ?? "")}
                     data-queue-fn-order={String(falseNegativeOrder)}
+                    data-queue-cleanup-mode={String(row.cleanup_mode ?? "")}
+                    data-queue-cleanup-complete={String(row.cleanup_complete ?? false)}
+                    data-queue-cleanup-review-label={String(row.cleanup_current_review_label ?? "")}
+                    data-queue-cleanup-event-label={String(row.cleanup_current_event_label ?? "")}
+                    data-queue-cleanup-anchor-quality={String(row.cleanup_current_anchor_quality ?? "")}
+                    data-queue-cleanup-usefulness={String(row.cleanup_current_candidate_usefulness ?? "")}
+                    data-queue-cleanup-clip-quality={String(row.cleanup_current_clip_quality ?? "")}
+                    data-queue-cleanup-required={Array.isArray(row.required_human_decisions) ? row.required_human_decisions.join("|") : ""}
+                    data-queue-cleanup-priority={priorityBucket}
+                    data-queue-cleanup-media-kind={String(row.review_media_kind ?? "")}
+                    data-queue-cleanup-shadow-rank={String(row.candidate_quality_shadow_rank ?? "")}
+                    data-queue-cleanup-shadow-score={String(row.candidate_quality_shadow_score_keep ?? "")}
+                    data-queue-cleanup-split-role={String(row.split_role_context ?? "")}
+                    data-queue-cleanup-is-unreviewed={needsLabels ? "true" : "false"}
                   >
                     <span class="review-refinement__rank">{String(index + 1).padStart(2, "0")}</span>
                     <div class="review-refinement__body">
                       <div class="review-refinement__rowhead">
                         <strong>{String(row.candidate_id ?? "Manual false-negative window")}</strong>
                         <div class="review-refinement__rowmeta">
-                          <span class="review-refinement__sessiontag">{formatQueueSessionLabel(String(row.session_id ?? ""))}</span>
                           <span class="review-refinement__status" data-queue-status>Pending</span>
+                          {priorityBucket && <span class="review-refinement__priotag">{priorityBucket}</span>}
+                          {needsLabels && <span class="review-refinement__needstag">Needs: {needsLabels}</span>}
                         </div>
                       </div>
                       <div class="review-refinement__labels">
-                        <span data-queue-final-label>Final {String(row.current_final_human_event_label ?? "unlabeled").replaceAll("_", " ")}</span>
-                        <span>Model {String(row.model_predicted_label ?? "n/a").replaceAll("_", " ")}</span>
-                        <span>Suggestion {String(row.suggestion_label ?? "n/a").replaceAll("_", " ")}</span>
+                        <span data-queue-final-label class="review-refinement__finallabel">{labelText}</span>
                       </div>
-                      <p>{String(row.why_this_row_matters ?? "")}</p>
                     </div>
                   </button>
                 </li>
@@ -730,7 +952,7 @@ const isSortEligible: boolean = (() => {
               ))}
             </ol>
             <div class="review-refinement__foot">
-              <span>Click a row to jump directly into the review queue.</span>
+              <span>{isCleanupQueueMode ? "Click a row to jump directly into cleanup review. Save only intentional human edits; no labels are auto-filled." : "Click a row to jump directly into the review queue."}</span>
             </div>
           </section>
         )}
@@ -866,36 +1088,89 @@ const isSortEligible: boolean = (() => {
             <span><b>unclear</b>: needs human judgment. Do not force ambiguous failed-hurdle rows.</span>
           </aside>
         )}
-        <div class="review-sidebar__detail">
-          <div class="detail-bar">
-            <section class="detail-card detail-card--anchor">
-              <div class="detail-card__labelrow">
-                <span class="detail-card__label">Anchor quality</span>
-                {isEvaluationSession && (
-                  <button
-                    class="detail-bar__info"
-                    type="button"
-                    data-anchor-quality-info
+        <section class="review-sidebar__panel review-sidebar__panel--assignment" data-sidebar-panel="assignment" hidden>
+          <section class="assignment-panel" data-assignment-panel>
+            <div class="assignment-panel__header">
+              <h3>Affectation du clip</h3>
+              <span class="assignment-panel__status" data-assignment-status>Brouillon non chargé</span>
+            </div>
+            <p class="assignment-panel__copy">Affectation pour le partage — ne modifie pas les labels de revue.</p>
+            <div class="assignment-panel__line" data-assignment-draft-line hidden></div>
+            <div class="assignment-panel__line" data-assignment-row-key hidden></div>
+            <div class="assignment-panel__grid">
+              <label class="assignment-field">
+                <span>Plongeur</span>
+                <div class="assignment-inline-combobox" data-assignment-inline-combobox="diver_query">
+                  <span class="assignment-inline-completion" data-assignment-inline-completion="diver_query" aria-hidden="true"></span>
+                  <input
+                    type="text"
+                    autocomplete="off"
+                    role="combobox"
+                    aria-autocomplete="both"
                     aria-expanded="false"
-                    aria-controls="anchor-quality-memo"
-                    title="Anchor-quality memo"
-                  >
-                    i
-                  </button>
-                )}
-              </div>
-              <span data-detail-anchor-quality class="detail-card__value">not confirmed</span>
-            </section>
-            <section class="detail-card detail-card--timing">
-              <span class="detail-card__label">Timing context</span>
-              <span data-detail-timing-semantics class="detail-card__value detail-card__value--muted"></span>
-            </section>
-            <section class="detail-card detail-card--mode">
-              <span class="detail-card__label">Queue mode</span>
-              <span data-detail-mode-hint class="detail-card__value detail-card__value--muted">{eventReviewQueueRows.length > 0 ? "Priority queue" : "Review queue"}</span>
-            </section>
-          </div>
-        </div>
+                    aria-controls="assignment-diver-suggestions"
+                    data-assignment-input="diver_query"
+                  />
+                </div>
+                <div class="assignment-suggestions" data-assignment-suggestions="diver_query" hidden></div>
+              </label>
+              <label class="assignment-field">
+                <span>Groupe</span>
+                <input type="text" autocomplete="off" list="assignment-recent-groups" data-assignment-input="training_group" />
+                <div class="assignment-suggestions" data-assignment-suggestions="training_group" hidden></div>
+              </label>
+              <input type="hidden" data-assignment-input="apparatus_type" />
+              <label class="assignment-field">
+                <span>Hauteur</span>
+                <input type="text" inputmode="decimal" autocomplete="off" list="assignment-recent-heights" data-assignment-input="apparatus_height_m" />
+                <div class="assignment-suggestions" data-assignment-suggestions="apparatus_height_m" hidden></div>
+              </label>
+              <input type="hidden" data-assignment-input="apparatus_id" />
+              <label class="assignment-field">
+                <span>Code</span>
+                <input type="text" autocomplete="off" list="assignment-recent-codes" data-assignment-input="dive_code" />
+                <div class="assignment-suggestions" data-assignment-suggestions="dive_code" hidden></div>
+              </label>
+              <div class="assignment-derived-row" data-assignment-derived-apparatus>Appareil selon la hauteur</div>
+              <label class="assignment-field">
+                <span>Statut</span>
+                <select data-assignment-input="assignment_status">
+                  <option value="garder">Garder</option>
+                  <option value="a_identifier">À identifier</option>
+                  <option value="supprimer">À supprimer</option>
+                </select>
+              </label>
+              <label class="assignment-field">
+                <span>Partage</span>
+                <select data-assignment-input="share_status">
+                  <option value="a_verifier">À vérifier</option>
+                  <option value="a_partager">À partager</option>
+                  <option value="ne_pas_partager">Ne pas partager</option>
+                </select>
+              </label>
+              <label class="assignment-field assignment-field--wide">
+                <span>Notes</span>
+                <textarea rows="2" data-assignment-input="notes"></textarea>
+              </label>
+            </div>
+            <datalist id="assignment-recent-groups" data-assignment-recent-list="training_group"></datalist>
+            <datalist id="assignment-recent-heights" data-assignment-recent-list="apparatus_height_m"></datalist>
+            <datalist id="assignment-recent-codes" data-assignment-recent-list="dive_code"></datalist>
+            <div class="assignment-panel__actions">
+              <button class="assignment-panel__button assignment-panel__button--primary" type="button" data-assignment-save>Enregistrer</button>
+              <button class="assignment-panel__button" type="button" data-assignment-apply-previous>Appliquer précédent</button>
+              <button class="assignment-panel__button" type="button" data-assignment-validate>Vérifier les affectations</button>
+            </div>
+            <p class="assignment-panel__hint">Raccourci: Alt+P applique le dernier contexte enregistré, avec confirmation si un champ rempli change.</p>
+            <div class="assignment-panel__validation" data-assignment-validation hidden>
+              <span>Erreurs <strong data-assignment-count="errors">0</strong></span>
+              <span>Avertissements <strong data-assignment-count="warnings">0</strong></span>
+              <span>Exportables <strong data-assignment-count="packageable">0</strong></span>
+              <span>À identifier <strong data-assignment-count="aIdentifier">0</strong></span>
+              <span>À vérifier <strong data-assignment-count="aVerifier">0</strong></span>
+            </div>
+          </section>
+        </section>
       </aside>
     </div>
   </section>
@@ -1086,6 +1361,15 @@ const isSortEligible: boolean = (() => {
     let current = detections[0] ?? null;
     let decisions = [];
     let reviewFilter = "needs_review";
+    const cleanupQueueActive = parsed.cleanupQueueMode === "r162" || parsed.cleanupQueueMode === "r249";
+    const cleanupQueueSummary = parsed.eventReviewQueueSummary ?? null;
+    const cleanupAllowed = {
+      reviewLabel: ["dive", "non_dive", "unsure"],
+      eventLabel: ["platform_dive", "springboard_dive", "noise_or_other", "springboard_rebound_only", "unknown_or_unsure"],
+      anchorQuality: ["on_dive", "early_rebound", "late_after_entry", "wrong_event", "duplicate", "unclear", "unknown"],
+      candidateUsefulness: ["useful_clip", "wrong_event", "too_early_or_late", "duplicate_of_previous_dive", "unusable", "unsure"],
+      clipQuality: ["good", "too_early", "too_late", "too_short", "too_long", "wrong_event", "unusable"],
+    };
     let loopEnabled = true;
     let autoPlayEnabled = true;
     let autoAdvanceEnabled = true;
@@ -1131,8 +1415,6 @@ const isSortEligible: boolean = (() => {
     const candidateUsefulnessSelect = document.querySelector("[data-candidate-usefulness]");
     const clipQualitySelect = document.querySelector("[data-clip-quality]");
     const anchorQualitySelect = document.querySelector("[data-anchor-quality]");
-    const anchorQualityDetailLabel = document.querySelector("[data-detail-anchor-quality]");
-    const anchorQualityInfoButton = document.querySelector("[data-anchor-quality-info]");
     const anchorQualityMemo = document.querySelector("[data-anchor-quality-memo]");
     const shadowRankDetailLabel = document.querySelector("[data-detail-shadow-rank]");
     const candidateQualityShadowDetailLabel = document.querySelector("[data-detail-candidate-quality-shadow]");
@@ -1167,17 +1449,864 @@ const isSortEligible: boolean = (() => {
     const falseNegativeButton = document.querySelector("[data-decision-false-negative]");
     const splashPauseButton = document.querySelector("[data-toggle-splash-pause]");
     const splashCueIndicator = document.querySelector("[data-splash-cue-indicator]");
-    const detailBar = document.querySelector(".detail-bar");
-    const timingSemanticsDetailLabel = document.querySelector("[data-detail-timing-semantics]");
+    const assignmentDraft = parsed.assignmentDraft ?? {};
+    const assignmentPanel = document.querySelector("[data-assignment-panel]");
+    const assignmentStatus = document.querySelector("[data-assignment-status]");
+    const assignmentDraftLine = document.querySelector("[data-assignment-draft-line]");
+    const assignmentRowKeyLabel = document.querySelector("[data-assignment-row-key]");
+    const assignmentSaveButton = document.querySelector("[data-assignment-save]");
+    const assignmentApplyPreviousButton = document.querySelector("[data-assignment-apply-previous]");
+    const assignmentValidateButton = document.querySelector("[data-assignment-validate]");
+    const assignmentValidation = document.querySelector("[data-assignment-validation]");
+    const assignmentDerivedApparatus = document.querySelector("[data-assignment-derived-apparatus]");
+    const assignmentInputs = Array.from(document.querySelectorAll("[data-assignment-input]"));
+    const assignmentRecentLists = Array.from(document.querySelectorAll("[data-assignment-recent-list]"));
+    const assignmentSuggestionBoxes = Array.from(document.querySelectorAll("[data-assignment-suggestions]"));
+    const assignmentCounts = {
+      errors: document.querySelector('[data-assignment-count="errors"]'),
+      warnings: document.querySelector('[data-assignment-count="warnings"]'),
+      packageable: document.querySelector('[data-assignment-count="packageable"]'),
+      aIdentifier: document.querySelector('[data-assignment-count="aIdentifier"]'),
+      aVerifier: document.querySelector('[data-assignment-count="aVerifier"]'),
+    };
+    let assignmentCurrentRow = null;
+    let assignmentDirty = false;
+    let assignmentLoading = false;
+    let assignmentRecentValues = {};
+    let assignmentActiveSuggestionIndex = -1;
+    let assignmentActiveSuggestionField = "";
+    let assignmentSuggestionSuppressOnce = false;
+    const assignmentInlineFields = new Set(["diver_query"]);
+
+    const assignmentKnownDivers = [
+      { label: "Maxime Cauchy", aliases: ["maxime", "max", "cauchy", "cauch", "maca", "maxc", "mc"] },
+      { label: "Fanny Bayle", aliases: ["fanny", "bayle", "faba", "fb"] },
+      { label: "Sara Garrault", aliases: ["sara", "garrault", "saga", "sg"] },
+      { label: "Louis Fournier", aliases: ["louis", "fournier", "lofo", "lf"] },
+      { label: "Mathis Prevost", aliases: ["mathis", "prevost", "mapr", "mp"] },
+      { label: "Guillaume Breda", aliases: ["guillaume", "breda", "gubr", "gb"] },
+    ];
+    const assignmentKnownGroups = ["Groupe A", "Groupe B", "Jeunes", "Adultes", "Débutants", "Compétition"];
+    const assignmentCommonDiveCodes = ["103B", "201C", "301C", "401C", "101A", "203C"];
+    const assignmentKnownHeights = ["1", "3", "5", "7", "10"];
 
     const sortToggle = document.querySelector("[data-sort-toggle]");
     let sortEnabled = false;
+
+    const telemetryEligible = sortToggle !== null;
+    const telemetryRoot = parsed.session?.output_dir ?? "";
+    let telemetryToggleOnCount = 0;
+    let telemetryToggleOffCount = 0;
+    let telemetryDecisionsWhileSorted = 0;
+    let telemetryFilterChangesWhileSorted = 0;
+    let telemetryNextWhileSorted = 0;
+    let telemetryPrevWhileSorted = 0;
+    let telemetryRapidToggleBacks = 0;
+    let telemetrySortEnabledAt = 0;
+
+    const telemetrySandboxPrefix = ["sand", "box"].join("");
+    const approvedSandboxSessionMap = {
+      [`${telemetrySandboxPrefix}_r194_evaluation_SNMT-7min_20260418-191834`]: {
+        sandbox_session_id: `${telemetrySandboxPrefix}_r194_evaluation_SNMT-7min_20260418-191834`,
+        original_session_id: "evaluation_SNMT-7min_20260418-191834",
+      },
+      [`${telemetrySandboxPrefix}_r194_evaluation_CAO-SUN-19-4-26-FANNY_20260419-160927`]: {
+        sandbox_session_id: `${telemetrySandboxPrefix}_r194_evaluation_CAO-SUN-19-4-26-FANNY_20260419-160927`,
+        original_session_id: "evaluation_CAO-SUN-19-4-26-FANNY_20260419-160927",
+      },
+    };
+
+    function currentSandboxTelemetryIdentity() {
+      const sessionId = String(parsed.session?.id ?? "").trim();
+      return approvedSandboxSessionMap[sessionId] ?? null;
+    }
+
+    function telemetryNow() {
+      return Date.now();
+    }
+
+    function assignmentField(name) {
+      return document.querySelector(`[data-assignment-input="${name}"]`);
+    }
+
+    function setAssignmentStatus(text, state = "neutral") {
+      if (!assignmentStatus) return;
+      assignmentStatus.textContent = text;
+      assignmentStatus.setAttribute("data-state", state);
+    }
+
+    function setAssignmentControlsDisabled(disabled) {
+      assignmentInputs.forEach((input) => {
+        input.disabled = disabled;
+      });
+      if (assignmentSaveButton) assignmentSaveButton.disabled = disabled;
+      if (assignmentApplyPreviousButton) assignmentApplyPreviousButton.disabled = disabled;
+      if (assignmentValidateButton) assignmentValidateButton.disabled = !assignmentDraft?.draftDir;
+    }
+
+    function currentAssignmentRowKey() {
+      const id = String(current?.id ?? "");
+      return String(assignmentDraft?.rowKeyByCandidateId?.[id] ?? "");
+    }
+
+    function updateAssignmentDraftLine() {
+      if (!assignmentDraftLine) return;
+      const status = String(assignmentDraft?.discoveryStatus ?? "");
+      const run = String(assignmentDraft?.requestedRun ?? "");
+      const runs = Array.isArray(assignmentDraft?.availableRuns) ? assignmentDraft.availableRuns : [];
+      assignmentDraftLine.hidden = false;
+      if (assignmentDraft?.draftDir && run) {
+        assignmentDraftLine.textContent = `Brouillon actif: ${run}`;
+      } else if (status === "ambiguous") {
+        assignmentDraftLine.textContent = `Plusieurs brouillons disponibles: ajoutez ?assignmentDraftRun=${runs[0] ?? "run-id"}`;
+      } else if (status === "invalid_run_id") {
+        assignmentDraftLine.textContent = "Brouillon refusé: identifiant non autorisé.";
+      } else if (status === "not_found") {
+        assignmentDraftLine.textContent = "Aucun brouillon trouvé pour cette séance.";
+      } else {
+        assignmentDraftLine.hidden = true;
+      }
+    }
+
+    function setAssignmentFieldValue(name, value) {
+      const field = assignmentField(name);
+      if (!field) return;
+      field.value = value == null ? "" : String(value);
+      renderAssignmentInlineCompletion(name);
+    }
+
+    function normalizeAssignmentQuery(value) {
+      return String(value ?? "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, " ");
+    }
+
+    function compactAssignmentQuery(value) {
+      return normalizeAssignmentQuery(value).replace(/[^a-z0-9]/g, "");
+    }
+
+    function normalizeAssignmentHeight(value) {
+      return String(value ?? "")
+        .toLowerCase()
+        .replace(",", ".")
+        .replace(/\s*m$/, "")
+        .trim();
+    }
+
+    function apparatusForAssignmentHeight(value) {
+      const height = normalizeAssignmentHeight(value);
+      if (height === "1" || height === "3") return "springboard";
+      if (height === "5" || height === "7" || height === "10") return "platform";
+      return "";
+    }
+
+    function apparatusLabelForAssignment(value) {
+      if (value === "springboard") return "Tremplin";
+      if (value === "platform") return "Plateforme";
+      if (value === "unknown") return "Inconnu";
+      return "";
+    }
+
+    function assignmentInitials(value) {
+      return normalizeAssignmentQuery(value).split(" ").filter(Boolean).map((part) => part[0]).join("");
+    }
+
+    function assignmentNameParts(value) {
+      return normalizeAssignmentQuery(value).split(" ").filter(Boolean);
+    }
+
+    function orderedFuzzyNameScore(label, query) {
+      const compactQuery = compactAssignmentQuery(query);
+      const compactLabel = compactAssignmentQuery(label);
+      if (!compactQuery) return 0;
+      let searchFrom = 0;
+      let score = 0;
+      let previousIndex = -1;
+      for (const char of compactQuery) {
+        const index = compactLabel.indexOf(char, searchFrom);
+        if (index < 0) return 0;
+        score += 12;
+        if (index === 0 || /[^a-z0-9]/.test(label[index - 1] ?? "")) score += 10;
+        if (previousIndex >= 0 && index === previousIndex + 1) score += 8;
+        if (previousIndex >= 0 && index > previousIndex + 1) score -= Math.min(5, index - previousIndex - 1);
+        previousIndex = index;
+        searchFrom = index + 1;
+      }
+      score += Math.max(0, 16 - compactLabel.length);
+      return score;
+    }
+
+    function orderedFuzzyAliasScore(item, query) {
+      const aliases = Array.isArray(item.aliases) ? item.aliases : [];
+      return aliases.reduce((best, alias) => Math.max(best, orderedFuzzyNameScore(alias, query)), 0);
+    }
+
+    function scoreAssignmentSuggestion(item, query) {
+      const q = normalizeAssignmentQuery(query);
+      const compact = compactAssignmentQuery(query);
+      if (!q && !compact) return item.recent ? 40 : 10;
+      const label = normalizeAssignmentQuery(item.label);
+      const labelCompact = compactAssignmentQuery(item.label);
+      const initials = assignmentInitials(item.label);
+      const aliases = Array.isArray(item.aliases) ? item.aliases.map(normalizeAssignmentQuery) : [];
+      const compactAliases = aliases.map((alias) => alias.replace(/[^a-z0-9]/g, ""));
+      if (aliases.includes(q) || compactAliases.includes(compact)) return 130 + (item.recent ? 8 : 0);
+      if (label === q || labelCompact === compact) return 128 + (item.recent ? 8 : 0);
+      if (initials === compact) return 122 + (item.recent ? 8 : 0);
+      if (aliases.some((alias) => alias.startsWith(q)) || compactAliases.some((alias) => alias.startsWith(compact))) return 112 + (item.recent ? 8 : 0);
+      if (label.startsWith(q)) return 108 + (item.recent ? 8 : 0);
+      if (assignmentNameParts(item.label).some((part) => part.startsWith(q))) return 102 + (item.recent ? 8 : 0);
+      if (labelCompact.startsWith(compact)) return 96 + (item.recent ? 8 : 0);
+      if (label.includes(q) || labelCompact.includes(compact)) return 84 + (item.recent ? 8 : 0);
+      if (item.source === "Liste club" && compact.length >= 3) {
+        const fuzzyScore = Math.max(orderedFuzzyNameScore(item.label, query), orderedFuzzyAliasScore(item, query));
+        if (fuzzyScore > 0) return 58 + fuzzyScore + (item.recent ? 8 : 0);
+      }
+      if (item.recent && label.includes(q)) return 50;
+      return 0;
+    }
+
+    function directAssignmentAliasMatch(item, query) {
+      const q = normalizeAssignmentQuery(query);
+      const compact = compactAssignmentQuery(query);
+      const label = normalizeAssignmentQuery(item.label);
+      const labelCompact = compactAssignmentQuery(item.label);
+      const aliases = Array.isArray(item.aliases) ? item.aliases.map(normalizeAssignmentQuery) : [];
+      const compactAliases = aliases.map((alias) => alias.replace(/[^a-z0-9]/g, ""));
+      return Boolean(
+        q && (
+          label.includes(q)
+          || labelCompact.includes(compact)
+          || aliases.some((alias) => alias === q || alias.startsWith(q))
+          || compactAliases.some((alias) => alias === compact || alias.startsWith(compact))
+        )
+      );
+    }
+
+    function uniqueAssignmentSuggestions(items) {
+      const seen = new Set();
+      return items.filter((item) => {
+        const key = normalizeAssignmentQuery(item.label);
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+
+    function assignmentSuggestionsFor(fieldName, query) {
+      const recent = Array.isArray(assignmentRecentValues?.[fieldName]) ? assignmentRecentValues[fieldName] : [];
+      let candidates = [];
+      if (fieldName === "diver_query") {
+        candidates = [
+          ...assignmentKnownDivers.map((item) => ({ ...item, source: "Liste club" })),
+          ...recent.map((label) => ({ label, source: "Récent", recent: true })),
+          { label: "À identifier", source: "Statut" },
+        ];
+      } else if (fieldName === "training_group") {
+        candidates = [
+          ...recent.map((label) => ({ label, source: "Récent", recent: true })),
+          ...assignmentKnownGroups.map((label) => ({ label, source: "Groupe club" })),
+        ];
+      } else if (fieldName === "dive_code") {
+        candidates = [
+          ...recent.map((label) => ({ label, source: "Récent", recent: true })),
+          ...assignmentCommonDiveCodes.map((label) => ({ label, source: "Code" })),
+          { label: "inconnu", source: "Manuel" },
+        ];
+      } else if (fieldName === "apparatus_height_m") {
+        candidates = [
+          ...recent.map((label) => ({ label, source: "Récent", recent: true })),
+          ...assignmentKnownHeights.map((label) => ({
+            label,
+            source: apparatusForAssignmentHeight(label) === "springboard" ? "Tremplin" : "Plateforme",
+          })),
+        ];
+      }
+      return candidates
+        .map((item) => ({ ...item, score: scoreAssignmentSuggestion(item, query) }))
+        .map((item) => fieldName === "diver_query" && item.score === 0 && directAssignmentAliasMatch(item, query)
+          ? { ...item, score: 88 }
+          : item)
+        .filter((item) => item.score > 0)
+        .sort((a, b) => b.score - a.score || a.label.localeCompare(b.label))
+        .filter((item, index, items) => items.findIndex((other) => normalizeAssignmentQuery(other.label) === normalizeAssignmentQuery(item.label)) === index)
+        .slice(0, 6);
+    }
+
+    function bestAssignmentSuggestion(fieldName, query) {
+      return assignmentSuggestionsFor(fieldName, query)[0] ?? null;
+    }
+
+    function renderAssignmentInlineCompletion(fieldName) {
+      const ghost = document.querySelector(`[data-assignment-inline-completion="${fieldName}"]`);
+      const field = assignmentField(fieldName);
+      if (!ghost || !field) return;
+      const query = String(field.value ?? "");
+      const suggestion = assignmentInlineFields.has(fieldName) ? bestAssignmentSuggestion(fieldName, query) : null;
+      const normalizedQuery = normalizeAssignmentQuery(query);
+      if (!suggestion || !normalizedQuery || normalizeAssignmentQuery(suggestion.label) === normalizedQuery) {
+        ghost.textContent = "";
+        ghost.removeAttribute("data-completion-kind");
+        return;
+      }
+      const label = String(suggestion.label ?? "");
+      if (normalizeAssignmentQuery(label).startsWith(normalizedQuery)) {
+        ghost.textContent = label;
+        ghost.setAttribute("data-completion-kind", "prefix");
+      } else {
+        ghost.textContent = `${query}  → ${label}`;
+        ghost.setAttribute("data-completion-kind", "fuzzy");
+      }
+    }
+
+    function refreshAssignmentInlineCompletions() {
+      assignmentInlineFields.forEach(renderAssignmentInlineCompletion);
+    }
+
+    function hideAssignmentSuggestions() {
+      assignmentSuggestionBoxes.forEach((box) => {
+        box.hidden = true;
+        box.innerHTML = "";
+      });
+      assignmentInputs.forEach((input) => {
+        const name = input?.getAttribute?.("data-assignment-input");
+        if (name) input.setAttribute("aria-expanded", "false");
+      });
+      assignmentActiveSuggestionIndex = -1;
+      assignmentActiveSuggestionField = "";
+    }
+
+    function renderAssignmentSuggestions(fieldName) {
+      if (assignmentSuggestionSuppressOnce) {
+        assignmentSuggestionSuppressOnce = false;
+        return;
+      }
+      const field = assignmentField(fieldName);
+      const box = document.querySelector(`[data-assignment-suggestions="${fieldName}"]`);
+      if (!field || !box) return;
+      const suggestions = assignmentSuggestionsFor(fieldName, field.value ?? "");
+      box.dataset.query = field.value ?? "";
+      if (suggestions.length === 0) {
+        box.hidden = true;
+        box.innerHTML = "";
+        field.setAttribute("aria-expanded", "false");
+        renderAssignmentInlineCompletion(fieldName);
+        return;
+      }
+      assignmentActiveSuggestionField = fieldName;
+      assignmentActiveSuggestionIndex = -1;
+      box.innerHTML = "";
+      suggestions.forEach((suggestion, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.setAttribute("data-assignment-suggestion-index", String(index));
+        const label = document.createElement("span");
+        label.textContent = suggestion.label;
+        const source = document.createElement("small");
+        source.textContent = suggestion.source;
+        button.append(label, source);
+        button.addEventListener("mousedown", (event) => {
+          event.preventDefault();
+          field.value = suggestion.label;
+          markAssignmentDirty();
+          renderAssignmentInlineCompletion(fieldName);
+          hideAssignmentSuggestions();
+        });
+        box.appendChild(button);
+      });
+      box.hidden = false;
+      field.setAttribute("aria-expanded", "true");
+      renderAssignmentInlineCompletion(fieldName);
+    }
+
+    function refreshAssignmentSuggestionsForInput(input) {
+      const name = input?.getAttribute?.("data-assignment-input");
+      if (name === "diver_query" || name === "training_group" || name === "dive_code" || name === "apparatus_height_m") {
+        window.requestAnimationFrame(() => renderAssignmentSuggestions(name));
+      }
+    }
+
+    function syncApparatusFromHeight() {
+      const heightField = assignmentField("apparatus_height_m");
+      const apparatusField = assignmentField("apparatus_type");
+      if (!heightField || !apparatusField) return;
+      const apparatus = apparatusForAssignmentHeight(heightField.value);
+      if (apparatus && apparatusField.value !== apparatus) {
+        apparatusField.value = apparatus;
+        markAssignmentDirty();
+      }
+      updateDerivedApparatusHint();
+    }
+
+    function updateDerivedApparatusHint() {
+      if (!assignmentDerivedApparatus) return;
+      const heightField = assignmentField("apparatus_height_m");
+      const apparatusField = assignmentField("apparatus_type");
+      const fromHeight = apparatusForAssignmentHeight(heightField?.value ?? "");
+      const label = apparatusLabelForAssignment(fromHeight || apparatusField?.value || "");
+      assignmentDerivedApparatus.textContent = label ? `Appareil: ${label}` : "Appareil selon la hauteur";
+    }
+
+    function moveAssignmentSuggestion(fieldName, direction) {
+      const box = document.querySelector(`[data-assignment-suggestions="${fieldName}"]`);
+      if (!box || box.hidden) return;
+      const buttons = Array.from(box.querySelectorAll("button"));
+      if (buttons.length === 0) return;
+      assignmentActiveSuggestionField = fieldName;
+      assignmentActiveSuggestionIndex = (assignmentActiveSuggestionIndex + direction + buttons.length) % buttons.length;
+      buttons.forEach((button, index) => button.toggleAttribute("aria-selected", index === assignmentActiveSuggestionIndex));
+    }
+
+    function acceptAssignmentSuggestion(fieldName) {
+      const field = assignmentField(fieldName);
+      const box = document.querySelector(`[data-assignment-suggestions="${fieldName}"]`);
+      if (!field || !box || box.hidden) return false;
+      const buttons = Array.from(box.querySelectorAll("button"));
+      const index = assignmentActiveSuggestionIndex >= 0 ? assignmentActiveSuggestionIndex : 0;
+      const button = buttons[index];
+      if (!button) return false;
+      const label = button.querySelector("span")?.textContent ?? "";
+      if (!label) return false;
+      field.value = label;
+      if (fieldName === "apparatus_height_m") {
+        syncApparatusFromHeight();
+      }
+      markAssignmentDirty();
+      assignmentSuggestionSuppressOnce = true;
+      renderAssignmentInlineCompletion(fieldName);
+      hideAssignmentSuggestions();
+      return true;
+    }
+
+    function assignmentUpdatesFromFields() {
+      const updates = {};
+      assignmentInputs.forEach((field) => {
+        const name = field.getAttribute("data-assignment-input");
+        if (!name) return;
+        updates[name] = field.value ?? "";
+      });
+      return updates;
+    }
+
+    function fillAssignmentFields(row) {
+      const safeRow = row ?? {};
+      setAssignmentFieldValue("diver_query", safeRow.diver_query ?? "");
+      setAssignmentFieldValue("training_group", safeRow.training_group ?? "");
+      setAssignmentFieldValue("apparatus_type", safeRow.apparatus_type ?? "");
+      setAssignmentFieldValue("apparatus_height_m", safeRow.apparatus_height_m ?? "");
+      setAssignmentFieldValue("apparatus_id", safeRow.apparatus_id ?? "");
+      setAssignmentFieldValue("dive_code", safeRow.dive_code ?? "");
+      setAssignmentFieldValue("assignment_status", safeRow.assignment_status || "a_identifier");
+      setAssignmentFieldValue("share_status", safeRow.share_status || "a_verifier");
+      setAssignmentFieldValue("notes", safeRow.notes ?? "");
+      assignmentCurrentRow = safeRow;
+      assignmentDirty = false;
+      refreshAssignmentInlineCompletions();
+      updateDerivedApparatusHint();
+    }
+
+    function resetAssignmentFields() {
+      fillAssignmentFields({
+        assignment_status: "a_identifier",
+        share_status: "a_verifier",
+      });
+    }
+
+    function markAssignmentDirty() {
+      if (assignmentLoading) return;
+      assignmentDirty = true;
+      setAssignmentStatus("Modifications non enregistrées", "warning");
+    }
+
+    function updateAssignmentValidationCounts(result) {
+      if (!assignmentValidation) return;
+      assignmentValidation.hidden = false;
+      const errors = Array.isArray(result?.blocking_errors) ? result.blocking_errors.length : 0;
+      const warnings = Array.isArray(result?.warnings) ? result.warnings.length : 0;
+      if (assignmentCounts.errors) assignmentCounts.errors.textContent = String(errors);
+      if (assignmentCounts.warnings) assignmentCounts.warnings.textContent = String(warnings);
+      if (assignmentCounts.packageable) assignmentCounts.packageable.textContent = String(result?.packageable_count ?? 0);
+      if (assignmentCounts.aIdentifier) assignmentCounts.aIdentifier.textContent = String(result?.a_identifier_count ?? 0);
+      if (assignmentCounts.aVerifier) assignmentCounts.aVerifier.textContent = String(result?.a_verifier_count ?? 0);
+      if (errors > 0) {
+        setAssignmentStatus("Bloqué par erreurs", "error");
+      } else if (warnings > 0) {
+        setAssignmentStatus("Affectations valides avec avertissements", "warning");
+      } else {
+        setAssignmentStatus("À vérifier avant export", "ok");
+      }
+    }
+
+    function renderAssignmentRecentValues(values = {}) {
+      assignmentRecentValues = values || {};
+      assignmentRecentLists.forEach((list) => {
+        const name = list.getAttribute("data-assignment-recent-list");
+        const items = Array.isArray(values?.[name]) ? values[name] : [];
+        list.innerHTML = "";
+        items.forEach((value) => {
+          const option = document.createElement("option");
+          option.value = String(value);
+          list.appendChild(option);
+        });
+      });
+    }
+
+    async function refreshAssignmentRecentValues() {
+      if (!assignmentPanel || !assignmentDraft?.draftDir) return;
+      try {
+        const response = await fetch("/api/assignment-draft", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "list-recent-values",
+            draftDir: assignmentDraft.draftDir,
+          }),
+        });
+        const data = await response.json();
+        if (response.ok && data?.values) {
+          renderAssignmentRecentValues(data.values);
+        }
+      } catch {
+        renderAssignmentRecentValues({});
+      }
+    }
+
+    async function syncAssignmentPanelForCurrent() {
+      if (!assignmentPanel) return;
+      updateAssignmentDraftLine();
+      if (!assignmentDraft?.draftDir) {
+        resetAssignmentFields();
+        setAssignmentControlsDisabled(true);
+        setAssignmentStatus(assignmentDraft?.discoveryStatus === "ambiguous" ? "Brouillon à choisir" : "Brouillon non chargé", "neutral");
+        return;
+      }
+      const rowKey = currentAssignmentRowKey();
+      if (assignmentRowKeyLabel) {
+        assignmentRowKeyLabel.textContent = rowKey;
+        assignmentRowKeyLabel.hidden = !rowKey;
+      }
+      if (!rowKey) {
+        resetAssignmentFields();
+        setAssignmentControlsDisabled(true);
+        setAssignmentStatus("Brouillon chargé · clip non lié", "warning");
+        return;
+      }
+      assignmentLoading = true;
+      setAssignmentControlsDisabled(true);
+      setAssignmentStatus("Brouillon chargé", "neutral");
+      try {
+        const params = new URLSearchParams({
+          draftDir: String(assignmentDraft.draftDir),
+          rowKey,
+        });
+        const response = await fetch(`/api/assignment-draft?${params.toString()}`);
+        const data = await response.json();
+        if (!response.ok || !data?.row) {
+          throw new Error(data?.error ?? "assignment_row_load_failed");
+        }
+        fillAssignmentFields(data.row);
+        void refreshAssignmentRecentValues();
+        setAssignmentControlsDisabled(false);
+        setAssignmentStatus("Brouillon chargé", "ok");
+      } catch (error) {
+        resetAssignmentFields();
+        setAssignmentControlsDisabled(true);
+        setAssignmentStatus("Brouillon non chargé", "error");
+      } finally {
+        assignmentLoading = false;
+      }
+    }
+
+    async function saveAssignmentDraftRow() {
+      if (!assignmentPanel || !assignmentDraft?.draftDir) return false;
+      const rowKey = currentAssignmentRowKey();
+      if (!rowKey) {
+        setAssignmentStatus("Brouillon chargé · clip non lié", "warning");
+        return false;
+      }
+      setAssignmentControlsDisabled(true);
+      setAssignmentStatus("Brouillon en cours", "neutral");
+      const updates = assignmentUpdatesFromFields();
+      try {
+        const response = await fetch("/api/assignment-draft", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "update-row",
+            draftDir: assignmentDraft.draftDir,
+            rowKey,
+            updates,
+            explicitOverwriteFields: Object.keys(updates),
+            lastModifiedBy: "desktop_assignment_panel_scaffold",
+            assignmentSource: "desktop_assignment_panel_scaffold",
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok || !data?.row) {
+          throw new Error(data?.error ?? "assignment_row_save_failed");
+        }
+        fillAssignmentFields(data.row);
+        void refreshAssignmentRecentValues();
+        setAssignmentStatus("Brouillon enregistré", "ok");
+        return true;
+      } catch (error) {
+        setAssignmentStatus("Bloqué par erreurs", "error");
+        return false;
+      } finally {
+        setAssignmentControlsDisabled(false);
+      }
+    }
+
+    function nextAssignmentDetectionFrom(fromId) {
+      if (!detections.length) return null;
+      const startIndex = Math.max(0, detections.findIndex((item) => item.id === fromId));
+      for (let step = 1; step < detections.length; step += 1) {
+        const candidate = detections[(startIndex + step) % detections.length];
+        if (candidate) return candidate;
+      }
+      return null;
+    }
+
+    async function saveAssignmentDraftRowAndAdvance() {
+      const savedId = current?.id;
+      const didSave = await saveAssignmentDraftRow();
+      if (!didSave || !savedId) return;
+      const next = nextAssignmentDetectionFrom(savedId);
+      if (!next) return;
+      selectDetection(next.id, { autoplay: false, scrollQueue: true });
+    }
+
+    function isAssignmentTypingTarget(target) {
+      const element = target instanceof HTMLElement ? target : null;
+      if (!element) return false;
+      const tag = element.tagName.toLowerCase();
+      return tag === "input" || tag === "textarea" || tag === "select" || element.isContentEditable;
+    }
+
+    function formatAssignmentConflict(conflict) {
+      const labels = {
+        diver_query: "Plongeur",
+        training_group: "Groupe",
+        apparatus_type: "Appareil",
+        apparatus_height_m: "Hauteur",
+        apparatus_id: "Appareil",
+        dive_code: "Code",
+        assignment_status: "Statut",
+        share_status: "Partage",
+      };
+      const label = labels[conflict?.field] ?? conflict?.field ?? "Champ";
+      return `${label}: ${conflict?.before ?? ""} -> ${conflict?.after ?? ""}`;
+    }
+
+    async function applyPreviousAssignmentContext(confirmOverwrite = false) {
+      if (!assignmentPanel || !assignmentDraft?.draftDir) return;
+      const rowKey = currentAssignmentRowKey();
+      if (!rowKey) {
+        setAssignmentStatus("Brouillon chargé · clip non lié", "warning");
+        return;
+      }
+      setAssignmentControlsDisabled(true);
+      setAssignmentStatus("Application du précédent", "neutral");
+      try {
+        const response = await fetch("/api/assignment-draft", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "apply-previous",
+            draftDir: assignmentDraft.draftDir,
+            rowKey,
+            confirmOverwrite,
+            lastModifiedBy: "desktop_assignment_panel_apply_previous",
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data?.error ?? "assignment_apply_previous_failed");
+        }
+        if (data?.requires_confirmation) {
+          setAssignmentControlsDisabled(false);
+          const changes = Array.isArray(data.conflicts) ? data.conflicts.map(formatAssignmentConflict).join("\n") : "";
+          const confirmed = window.confirm(`Appliquer le contexte précédent et remplacer les champs remplis ?\n\n${changes}`);
+          if (confirmed) {
+            await applyPreviousAssignmentContext(true);
+          } else {
+            setAssignmentStatus("Application annulée", "warning");
+          }
+          return;
+        }
+        if (!data?.row) {
+          throw new Error("assignment_apply_previous_missing_row");
+        }
+        fillAssignmentFields(data.row);
+        void refreshAssignmentRecentValues();
+        setAssignmentStatus("Précédent appliqué", "ok");
+      } catch (error) {
+        setAssignmentStatus("Aucun précédent applicable", "warning");
+      } finally {
+        setAssignmentControlsDisabled(false);
+      }
+    }
+
+    async function validateAssignmentDraft() {
+      if (!assignmentPanel || !assignmentDraft?.draftDir || !assignmentDraft?.mobilePackage) return;
+      if (assignmentDirty) {
+        setAssignmentStatus("Modifications non enregistrées", "warning");
+        return;
+      }
+      if (assignmentValidateButton) assignmentValidateButton.disabled = true;
+      setAssignmentStatus("À vérifier avant export", "neutral");
+      try {
+        const response = await fetch("/api/assignment-draft", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "validate-preview",
+            draftDir: assignmentDraft.draftDir,
+            mobilePackage: assignmentDraft.mobilePackage,
+            runId: "s025-panel-preview",
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data?.error ?? "assignment_validation_failed");
+        }
+        updateAssignmentValidationCounts(data);
+      } catch (error) {
+        updateAssignmentValidationCounts({ blocking_errors: [{}], warnings: [] });
+      } finally {
+        if (assignmentValidateButton) assignmentValidateButton.disabled = false;
+      }
+    }
+
+    async function emitTelemetry(event) {
+      const sandboxIdentity = currentSandboxTelemetryIdentity();
+      const payload = Object.assign({
+        schema_version: "r153_opt_in_sort_telemetry_v1",
+        source: "desktop_review_ui",
+        timestamp_ms: telemetryNow(),
+        session_id: parsed.session?.id ?? "",
+        evaluation_root: telemetryRoot,
+        eligible: telemetryEligible,
+        sort_enabled: sortEnabled,
+        ...(sandboxIdentity ? {
+          sandbox_test: true,
+          sandbox_session_id: sandboxIdentity.sandbox_session_id,
+          original_session_id: sandboxIdentity.original_session_id,
+        } : {}),
+      }, event);
+      try {
+        await fetch("/api/telemetry", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+          keepalive: false,
+          body: JSON.stringify({ event: payload }),
+        });
+      } catch (_e) {
+        // Telemetry failure must not break review UI
+      }
+    }
+
+    function emitRowTelemetry(eventType, candidateId, extra) {
+      if (!candidateId) return;
+      const supp = supportFor(candidateId);
+      const cqs = supp?.candidate_quality_shadow;
+      const ts = supp?.timing_semantics_shadow;
+      let tgroup = null;
+      if (ts && typeof ts === "object") {
+        if (ts.immediate_pair_is_confirmed_on_dive) tgroup = "confirmed_on_dive_pair";
+        else if (ts.immediate_pair_is_dive_labeled_event) tgroup = "dive_labeled_pair";
+        else if (ts.chain_reaches_dive_labeled_event) tgroup = "rebound_chain_to_dive_labeled";
+        else if (ts.immediate_pair_candidate_id && ts.immediate_pair_delta_seconds != null && Number(ts.immediate_pair_delta_seconds) <= 3.0) tgroup = "rebound_chain_to_dive_labeled";
+        else if (ts.bucket === "er_isolated_representative") tgroup = "isolated_early_rebound_representative";
+        else if (ts.bucket === "er_ambiguous") tgroup = "ambiguous_early_rebound";
+      }
+      const evt = {
+        event_type: eventType,
+        candidate_id: candidateId,
+        current_rank: (typeof cqs?.current_rank_within_session === "number") ? cqs.current_rank_within_session : null,
+        shadow_rank: (typeof cqs?.shadow_rank_within_session === "number") ? cqs.shadow_rank_within_session : null,
+        timing_group: tgroup,
+      };
+      emitTelemetry(Object.assign(evt, extra ?? {}));
+    }
+
+    function buildUnloadSummary() {
+      const durationMs = telemetrySortEnabledAt > 0 ? telemetryNow() - telemetrySortEnabledAt : 0;
+      return {
+        event_type: "review_sort_page_unload_summary",
+        sort_ever_enabled: telemetryToggleOnCount > 0,
+        toggle_on_count: telemetryToggleOnCount,
+        toggle_off_count: telemetryToggleOffCount,
+        decisions_while_sorted: telemetryDecisionsWhileSorted,
+        filter_changes_while_sorted: telemetryFilterChangesWhileSorted,
+        next_nav_while_sorted: telemetryNextWhileSorted,
+        prev_nav_while_sorted: telemetryPrevWhileSorted,
+        rapid_toggle_back_count: telemetryRapidToggleBacks,
+        total_time_sorted_ms: durationMs,
+      };
+    }
+
+    window.addEventListener("beforeunload", () => {
+      const summary = buildUnloadSummary();
+      freezeTelemetry(summary);
+    });
+
+    function freezeTelemetry(event) {
+      const sandboxIdentity = currentSandboxTelemetryIdentity();
+      const payload = Object.assign({
+        schema_version: "r153_opt_in_sort_telemetry_v1",
+        source: "desktop_review_ui",
+        timestamp_ms: telemetryNow(),
+        session_id: parsed.session?.id ?? "",
+        evaluation_root: telemetryRoot,
+        eligible: telemetryEligible,
+        sort_enabled: sortEnabled,
+        ...(sandboxIdentity ? {
+          sandbox_test: true,
+          sandbox_session_id: sandboxIdentity.sandbox_session_id,
+          original_session_id: sandboxIdentity.original_session_id,
+        } : {}),
+      }, event);
+      try {
+        navigator.sendBeacon(
+          "/api/telemetry",
+          new Blob([JSON.stringify({ event: payload })], { type: "application/json" }),
+        );
+      } catch (_e) {
+        // Best-effort
+      }
+    }
+
+    // ── Shadow v2 telemetry (default-off, local-only) ──
+    const shadowV2Active = String(parsed.shadowV2Telemetry ?? "") === "1";
+    if (shadowV2Active) {
+      emitTelemetry({
+        event_type: "shadow_v2_session_loaded",
+        schema_version: "r182_shadow_v2_telemetry_v1",
+        v2_shadow_active: true,
+      });
+    }
+
     if (sortToggle) {
       sortToggle.addEventListener("click", () => {
         sortEnabled = !sortEnabled;
         sortToggle.setAttribute("aria-pressed", String(sortEnabled));
         sortToggle.classList.toggle("is-active", sortEnabled);
         sortToggle.textContent = sortEnabled ? "Current order" : "Experimental sort";
+        if (sortEnabled) {
+          telemetryToggleOnCount += 1;
+          telemetrySortEnabledAt = telemetryNow();
+          emitTelemetry({ event_type: "review_sort_toggle_enabled" });
+        } else {
+          telemetryToggleOffCount += 1;
+          const durationMs = telemetrySortEnabledAt > 0 ? telemetryNow() - telemetrySortEnabledAt : 0;
+          if (durationMs < 5000) telemetryRapidToggleBacks += 1;
+          emitTelemetry({ event_type: "review_sort_toggle_disabled", duration_sorted_ms: durationMs });
+        }
         if (!tableBody) return;
         rows = Array.from(tableBody.querySelectorAll("tr"));
         const rowData = rows.map((row) => ({
@@ -1198,6 +2327,14 @@ const isSortEligible: boolean = (() => {
           if (firstId) selectDetection(firstId, { autoplay: false, scrollQueue: false });
         }
       });
+    }
+    // Page-load telemetry: toggle visible or session ineligible
+    if (isEvaluationSession()) {
+      if (telemetryEligible) {
+        emitTelemetry({ event_type: "review_sort_toggle_visible" });
+      } else {
+        emitTelemetry({ event_type: "review_sort_session_ineligible" });
+      }
     }
     let previousSidebarMode = reviewSidebar?.getAttribute("data-sidebar-mode") ?? "review";
     let timelineLayoutFrame = null;
@@ -1237,17 +2374,6 @@ const isSortEligible: boolean = (() => {
         const isActive = panel.getAttribute("data-sidebar-panel") === nextMode;
         panel.hidden = !isActive;
       });
-      if (anchorQualityInfoButton) {
-        anchorQualityInfoButton.setAttribute("aria-expanded", nextMode === "guide" ? "true" : "false");
-      }
-      const detailModeHint = document.querySelector("[data-detail-mode-hint]");
-      if (detailModeHint) {
-        detailModeHint.textContent =
-          nextMode === "focus" ? "priority queue"
-          : nextMode === "policy" ? "policy context"
-          : nextMode === "guide" ? "guide"
-          : "review queue";
-      }
     }
 
     function isEvaluationSession() {
@@ -1434,16 +2560,48 @@ const isSortEligible: boolean = (() => {
     }
 
     function persistRefinementReviewedKeys() {
+      if (cleanupQueueActive) return;
       try {
         window.localStorage.setItem(refinementReviewStorageKey, JSON.stringify(Array.from(refinementReviewedKeys)));
       } catch {}
     }
 
+    function cleanupValueFromDecision(decision, field) {
+      if (!decision) return "";
+      if (field === "review") return String(decision.label ?? "");
+      if (field === "event") return String(decision.eventLabel ?? "");
+      if (field === "anchor") return anchorQualityValue(decision.anchorQuality);
+      if (field === "usefulness") return String(decision.candidateUsefulness ?? "");
+      if (field === "clip") return String(decision.clipQuality?.clip_quality ?? "");
+      return "";
+    }
+
+    function cleanupNodeState(node) {
+      const queueSession = String(node?.getAttribute("data-queue-session") ?? "");
+      const queueCandidate = String(node?.getAttribute("data-queue-candidate") ?? "");
+      const sameSession = queueSession === String(parsed.requestedSession ?? "");
+      const liveDecision = sameSession && queueCandidate ? decisionFor(queueCandidate) : null;
+      return {
+        review: cleanupValueFromDecision(liveDecision, "review") || String(node?.getAttribute("data-queue-cleanup-review-label") ?? ""),
+        event: cleanupValueFromDecision(liveDecision, "event") || String(node?.getAttribute("data-queue-cleanup-event-label") ?? ""),
+        anchor: cleanupValueFromDecision(liveDecision, "anchor") || String(node?.getAttribute("data-queue-cleanup-anchor-quality") ?? ""),
+        usefulness: cleanupValueFromDecision(liveDecision, "usefulness") || String(node?.getAttribute("data-queue-cleanup-usefulness") ?? ""),
+        clip: cleanupValueFromDecision(liveDecision, "clip") || String(node?.getAttribute("data-queue-cleanup-clip-quality") ?? ""),
+      };
+    }
+
+    function cleanupNodeComplete(node) {
+      const state = cleanupNodeState(node);
+      return [state.review, state.event, state.anchor, state.usefulness, state.clip].every((value) => String(value ?? "").trim().length > 0);
+    }
+
     function isQueueNodeReviewed(node) {
+      if (cleanupQueueActive) return cleanupNodeComplete(node);
       return refinementReviewedKeys.has(queueKeyForNode(node));
     }
 
     function setQueueNodeReviewed(node, reviewed = true) {
+      if (cleanupQueueActive) return;
       const key = queueKeyForNode(node);
       if (!key) return;
       if (reviewed) {
@@ -1488,6 +2646,16 @@ const isSortEligible: boolean = (() => {
       const queueSession = String(node.getAttribute("data-queue-session") ?? "");
       const queueCandidate = String(node.getAttribute("data-queue-candidate") ?? "");
       const queueFinalLabel = String(node.getAttribute("data-queue-label") ?? "");
+      if (cleanupQueueActive) {
+        const cleanupState = cleanupNodeState(node);
+        if (finalLabelNode) {
+          finalLabelNode.textContent = `Review ${formatQueueLabel(cleanupState.review, "unlabeled")}`;
+        }
+        if (statusNode) {
+          statusNode.textContent = cleanupNodeComplete(node) ? "Complete" : "Needs labels";
+        }
+        return;
+      }
       let liveFinalLabel = queueFinalLabel;
       if (queueSession === String(parsed.requestedSession ?? "") && queueCandidate && queueCandidate !== "None") {
         liveFinalLabel = String(decisionFor(queueCandidate)?.eventLabel ?? queueFinalLabel ?? "");
@@ -1527,22 +2695,8 @@ const isSortEligible: boolean = (() => {
     }
 
     function setAnchorQualityDetail(item, decision = null) {
-      if (!anchorQualityDetailLabel) return;
-      const humanValue = anchorQualityValue(decision?.anchorQuality);
-      if (humanValue) {
-        anchorQualityDetailLabel.textContent = `${humanValue.replaceAll("_", " ")} · confirmed`;
-        return;
-      }
-      const suggestion = anchorQualityFromSuggestion(item);
-      const suggestionValue = anchorQualityValue(suggestion);
-      if (suggestionValue) {
-        const confidence = suggestion?.anchor_quality_confidence != null
-          ? ` · ${Number(suggestion.anchor_quality_confidence).toFixed(2)}`
-          : "";
-        anchorQualityDetailLabel.textContent = `suggested ${suggestionValue.replaceAll("_", " ")}${confidence}`;
-        return;
-      }
-      anchorQualityDetailLabel.textContent = "not confirmed";
+      void item;
+      void decision;
     }
 
     function syncEventSupportUi(currentId) {
@@ -1668,14 +2822,7 @@ const isSortEligible: boolean = (() => {
     }
 
     function setTimingSemanticsDetail(item) {
-      if (!timingSemanticsDetailLabel) return;
-      const label = formatTimingSemantics(item);
-      if (label) {
-        timingSemanticsDetailLabel.textContent = label;
-        timingSemanticsDetailLabel.style.display = "";
-      } else {
-        timingSemanticsDetailLabel.style.display = "none";
-      }
+      void item;
     }
 
     function isUnresolvedDecision(label) {
@@ -1816,6 +2963,25 @@ const isSortEligible: boolean = (() => {
         node.classList.toggle("is-reviewed", isQueueNodeReviewed(node));
         updateQueueNodeSnapshot(node);
       });
+      updateCleanupQueueProgress();
+    }
+
+    function updateCleanupQueueProgress() {
+      if (!cleanupQueueActive) return;
+      const totalNode = document.querySelector("[data-cleanup-total]");
+      const completedNode = document.querySelector("[data-cleanup-completed]");
+      const remainingNode = document.querySelector("[data-cleanup-remaining]");
+      const positionNode = document.querySelector("[data-cleanup-current-position]");
+      const total = queueNodes.length;
+      const completed = queueNodes.filter((node) => cleanupNodeComplete(node)).length;
+      const remaining = total - completed;
+      if (totalNode) totalNode.textContent = String(total);
+      if (completedNode) completedNode.textContent = String(completed);
+      if (remainingNode) remainingNode.textContent = String(remaining);
+      if (positionNode) {
+        const currentIndex = Math.max(0, queueNodes.findIndex((node) => node.classList.contains("is-current")));
+        positionNode.textContent = String(total > 0 ? currentIndex + 1 : 0);
+      }
     }
 
     function moveRefinementQueueForwardAfterSave(savedDetectionId, label) {
@@ -1923,14 +3089,12 @@ const isSortEligible: boolean = (() => {
       const activeQueueRows = Array.from(document.querySelectorAll("[data-focus-detection]"))
         .filter((node) => node.getAttribute("data-focus-detection") === String(current.id));
       activeQueueRows.forEach((node) => node.classList.add("is-splash-cue"));
-      if (detailBar) detailBar.classList.add("is-splash-cue");
       if (splashCueIndicator) splashCueIndicator.classList.add("is-active");
       if (splashCueResetTimer != null) {
         window.clearTimeout(splashCueResetTimer);
       }
       splashCueResetTimer = window.setTimeout(() => {
         activeQueueRows.forEach((node) => node.classList.remove("is-splash-cue"));
-        if (detailBar) detailBar.classList.remove("is-splash-cue");
         if (splashCueIndicator) splashCueIndicator.classList.remove("is-active");
         splashCueResetTimer = null;
       }, 240);
@@ -2267,6 +3431,40 @@ const isSortEligible: boolean = (() => {
       }
     }
 
+    function configureCleanupModeUi() {
+      if (!cleanupQueueActive) return;
+      if (eventSaveButton) {
+        eventSaveButton.hidden = true;
+        eventSaveButton.disabled = true;
+      }
+      const legacyUncertainOption = eventLabelSelect?.querySelector('option[value="uncertain"]');
+      if (legacyUncertainOption) {
+        legacyUncertainOption.disabled = true;
+        legacyUncertainOption.hidden = true;
+      }
+    }
+
+    function validateCleanupDecision(label, eventLabel, candidateUsefulness, clipQuality, anchorQuality) {
+      if (!cleanupQueueActive) return null;
+      const issues = [];
+      if (!cleanupAllowed.reviewLabel.includes(String(label ?? ""))) {
+        issues.push("Pick Dive, Non-dive, or Unsure.");
+      }
+      if (!cleanupAllowed.eventLabel.includes(String(eventLabel ?? ""))) {
+        issues.push("Choose an event label from the cleanup contract.");
+      }
+      if (!cleanupAllowed.anchorQuality.includes(String(anchorQuality ?? ""))) {
+        issues.push("Choose an anchor quality from the cleanup contract.");
+      }
+      if (!cleanupAllowed.candidateUsefulness.includes(String(candidateUsefulness ?? ""))) {
+        issues.push("Choose a usefulness value from the cleanup contract.");
+      }
+      if (!cleanupAllowed.clipQuality.includes(String(clipQuality ?? ""))) {
+        issues.push("Choose a clip quality value from the cleanup contract.");
+      }
+      return issues.length > 0 ? issues.join(" ") : null;
+    }
+
     function playCurrentSegment() {
       if (!reviewVideo || !current) return;
       manualTimelineSeekMode = false;
@@ -2309,8 +3507,48 @@ const isSortEligible: boolean = (() => {
     }
 
     function selectAdjacentDetection(direction) {
+      // When priority queue (focus sidebar) is active, navigate through priority queue rows
+      const currentMode = reviewSidebar?.getAttribute("data-sidebar-mode");
+      if (currentMode === "focus") {
+        const allQueueNodes = Array.from(document.querySelectorAll("[data-queue-focus]"));
+        // Filter out false-negative placeholder rows (no candidate_id)
+        const queueNodes = allQueueNodes.filter((node) => {
+          const cid = node.getAttribute("data-queue-candidate");
+          return cid && cid !== "None";
+        });
+        if (queueNodes.length === 0) return;
+        const currentCandidate = current?.id ?? null;
+        const currentIndex = queueNodes.findIndex((node) =>
+          node.getAttribute("data-queue-candidate") === currentCandidate
+          || (String(currentCandidate ?? "").startsWith("fn-") && String(node.getAttribute("data-queue-fn-order") ?? "") !== "")
+        );
+        if (currentIndex < 0) {
+          const firstNode = direction > 0 ? queueNodes[0] : queueNodes[queueNodes.length - 1];
+          focusDetectionByQueue(firstNode);
+          return;
+        }
+        const nextIndex = (currentIndex + direction + queueNodes.length) % queueNodes.length;
+        focusDetectionByQueue(queueNodes[nextIndex]);
+        return;
+      }
+      // Standard review queue navigation
       const candidate = nextDetection(direction, false);
       if (candidate) {
+        if (sortEnabled) {
+          if (direction > 0) {
+            telemetryNextWhileSorted += 1;
+            emitRowTelemetry("review_sort_navigation_next", candidate.id, {
+              direction: "next",
+              from_candidate_id: current?.id ?? null,
+            });
+          } else {
+            telemetryPrevWhileSorted += 1;
+            emitRowTelemetry("review_sort_navigation_prev", candidate.id, {
+              direction: "prev",
+              from_candidate_id: current?.id ?? null,
+            });
+          }
+        }
         selectDetection(candidate.id, { autoplay: autoPlayEnabled, scrollQueue: true });
       }
     }
@@ -2419,6 +3657,7 @@ const isSortEligible: boolean = (() => {
       syncCurrentDecisionUi();
       updateRefinementQueueState();
       updateQueueNavigationState();
+      void syncAssignmentPanelForCurrent();
       scrollQueueRowIntoView(detectionId);
     }
 
@@ -2610,11 +3849,26 @@ const isSortEligible: boolean = (() => {
       syncCurrentDecisionUi();
       updateRefinementQueueState();
       updateQueueNavigationState();
+      void syncAssignmentPanelForCurrent();
       if (options.scrollQueue) {
         scrollQueueRowIntoView(id);
       }
       if (options.autoplay && autoPlayEnabled) {
         window.setTimeout(() => { void playCurrentSegment(); }, 40);
+      }
+      if (shadowV2Active) {
+        emitTelemetry({
+          event_type: "shadow_v2_row_viewed",
+          schema_version: "r182_shadow_v2_telemetry_v1",
+          v2_shadow_active: true,
+          candidate_id: String(current?.id ?? ""),
+        });
+        emitTelemetry({
+          event_type: "shadow_v2_rank_context",
+          schema_version: "r182_shadow_v2_telemetry_v1",
+          v2_shadow_active: true,
+          candidate_id: String(current?.id ?? ""),
+        });
       }
     }
 
@@ -2642,11 +3896,83 @@ const isSortEligible: boolean = (() => {
       button.addEventListener("click", () => setTab(Number(button.getAttribute("data-open-tab"))));
     });
     bindDetectionNodes();
+    assignmentInputs.forEach((input) => {
+      input.addEventListener("input", () => {
+        markAssignmentDirty();
+        if (input.getAttribute("data-assignment-input") === "apparatus_height_m") {
+          syncApparatusFromHeight();
+        }
+        refreshAssignmentSuggestionsForInput(input);
+      });
+      input.addEventListener("focus", () => {
+        refreshAssignmentSuggestionsForInput(input);
+      });
+      input.addEventListener("keyup", () => refreshAssignmentSuggestionsForInput(input));
+      input.addEventListener("keydown", (event) => {
+        const name = input.getAttribute("data-assignment-input");
+        if (!(name === "diver_query" || name === "training_group" || name === "dive_code" || name === "apparatus_height_m")) return;
+        if (event.key === "ArrowDown") {
+          event.preventDefault();
+          moveAssignmentSuggestion(name, 1);
+        } else if (event.key === "ArrowUp") {
+          event.preventDefault();
+          moveAssignmentSuggestion(name, -1);
+      } else if (event.key === "Enter") {
+          if (acceptAssignmentSuggestion(name)) event.preventDefault();
+        } else if (event.key === "Tab") {
+          if (assignmentInlineFields.has(name) && acceptAssignmentSuggestion(name)) event.preventDefault();
+        } else if (event.key === "Escape") {
+          hideAssignmentSuggestions();
+          renderAssignmentInlineCompletion(name);
+        }
+      });
+      input.addEventListener("change", () => {
+        if (input.getAttribute("data-assignment-input") === "apparatus_height_m") {
+          syncApparatusFromHeight();
+        }
+        markAssignmentDirty();
+      });
+    });
+    document.addEventListener("input", (event) => {
+      const input = event.target;
+      if (!(input instanceof HTMLElement) || !input.matches("[data-assignment-input]")) return;
+      refreshAssignmentSuggestionsForInput(input);
+    });
+    document.addEventListener("focusin", (event) => {
+      const input = event.target;
+      if (!(input instanceof HTMLElement) || !input.matches("[data-assignment-input]")) return;
+      refreshAssignmentSuggestionsForInput(input);
+    });
+    assignmentSaveButton?.addEventListener("click", () => {
+      void saveAssignmentDraftRowAndAdvance();
+    });
+    assignmentApplyPreviousButton?.addEventListener("click", () => {
+      void applyPreviousAssignmentContext(false);
+    });
+    assignmentValidateButton?.addEventListener("click", () => {
+      void validateAssignmentDraft();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (!event.altKey || event.metaKey || event.ctrlKey || event.shiftKey) return;
+      if (isAssignmentTypingTarget(event.target)) return;
+      if (event.key.toLowerCase() !== "p") return;
+      event.preventDefault();
+      void applyPreviousAssignmentContext(false);
+    });
     scheduleTimelineLayout();
     window.addEventListener("resize", scheduleTimelineLayout);
 
     reviewFilterSelect?.addEventListener("change", (event) => {
+      const prevFilter = reviewFilter;
       reviewFilter = String(event.target?.value ?? "all");
+      if (sortEnabled) {
+        telemetryFilterChangesWhileSorted += 1;
+        emitTelemetry({
+          event_type: "review_sort_filter_changed_while_sorted",
+          filter_before: prevFilter,
+          filter_after: reviewFilter,
+        });
+      }
       applyQueueFilter();
       followTimelinePlayheadSelection();
     });
@@ -3152,13 +4478,20 @@ const isSortEligible: boolean = (() => {
       const subtype = isEvaluationSession() ? (decisionSubtype?.value?.trim() || null) : null;
       const eventLabel = isEvaluationSession() ? (eventLabelSelect?.value?.trim() || null) : null;
       const candidateUsefulness = isEvaluationSession() ? (candidateUsefulnessSelect?.value?.trim() || null) : null;
-      const clipQuality = isEvaluationSession() && clipQualitySelect?.value?.trim()
-        ? { clip_quality: clipQualitySelect.value.trim() }
+      const clipQualityValue = isEvaluationSession() ? (clipQualitySelect?.value?.trim() || "") : "";
+      const clipQuality = isEvaluationSession() && clipQualityValue
+        ? { clip_quality: clipQualityValue }
         : null;
-      const anchorQuality = isEvaluationSession() && anchorQualitySelect?.value?.trim()
-        ? anchorQualitySelect.value.trim()
+      const anchorQualityValueSelected = isEvaluationSession() ? (anchorQualitySelect?.value?.trim() || "") : "";
+      const anchorQuality = isEvaluationSession() && anchorQualityValueSelected
+        ? anchorQualityValueSelected
         : null;
-      const response = await fetch("/api/review", {
+      const cleanupError = validateCleanupDecision(label, eventLabel, candidateUsefulness, clipQualityValue, anchorQualityValueSelected);
+      if (cleanupError) {
+        decisionStatus && (decisionStatus.textContent = cleanupError);
+        return;
+      }
+      const response = await fetch(cleanupQueueActive ? "/api/cleanup-review" : "/api/review", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
@@ -3180,9 +4513,40 @@ const isSortEligible: boolean = (() => {
         return;
       }
       upsertDecisionSnapshot(payload.decision);
+      const activeQueueNode = queueNodeForDetection(savedDetectionId);
+      if (cleanupQueueActive && activeQueueNode) {
+        activeQueueNode.setAttribute("data-queue-cleanup-review-label", String(payload.decision.label ?? ""));
+        activeQueueNode.setAttribute("data-queue-cleanup-event-label", String(payload.decision.eventLabel ?? ""));
+        activeQueueNode.setAttribute("data-queue-cleanup-anchor-quality", anchorQualityValue(payload.decision.anchorQuality));
+        activeQueueNode.setAttribute("data-queue-cleanup-usefulness", String(payload.decision.candidateUsefulness ?? ""));
+        activeQueueNode.setAttribute("data-queue-cleanup-clip-quality", String(payload.decision.clipQuality?.clip_quality ?? ""));
+      }
       syncCurrentDecisionUi();
       updateRefinementQueueState();
-      decisionStatus && (decisionStatus.textContent = `Saved ${payload.decision.label} for ${payload.decision.detectionId}.`);
+      // Auto-advance: move to next unreviewed priority queue row after save
+      const moved = moveRefinementQueueForwardAfterSave(savedDetectionId, label);
+      if (!moved) {
+        decisionStatus && (decisionStatus.textContent = `Saved ${payload.decision.label} for ${payload.decision.detectionId}.`);
+      }
+      if (sortEnabled) {
+        telemetryDecisionsWhileSorted += 1;
+        emitRowTelemetry("review_sort_decision_made_while_sorted", savedDetectionId, {
+          decision_label: label,
+        });
+      }
+      if (shadowV2Active) {
+        emitTelemetry({
+          event_type: "shadow_v2_decision_recorded",
+          schema_version: "r182_shadow_v2_telemetry_v1",
+          v2_shadow_active: true,
+          candidate_id: String(savedDetectionId),
+          review_label: String(label ?? ""),
+          event_label: eventLabelSelect?.value?.trim() || null,
+          anchor_quality: anchorQualitySelect?.value?.trim() || null,
+          candidate_usefulness: candidateUsefulnessSelect?.value?.trim() || null,
+          clip_quality: clipQualitySelect?.value?.trim() || null,
+        });
+      }
       await refreshDecisions();
       if (moveRefinementQueueForwardAfterSave(savedDetectionId, payload.decision.label)) {
         return;
@@ -3371,9 +4735,6 @@ const isSortEligible: boolean = (() => {
       button.addEventListener("click", () => {
         setSidebarMode(button.getAttribute("data-sidebar-mode-target") ?? "review");
       });
-    });
-    anchorQualityInfoButton?.addEventListener("click", () => {
-      setSidebarMode("guide", { fromGuide: true });
     });
     candidateUsefulnessSelect?.addEventListener("change", () => {
       applyUsefulnessAutofill();
@@ -3581,6 +4942,7 @@ const isSortEligible: boolean = (() => {
     });
 
     updateReviewModeCopy();
+    configureCleanupModeUi();
     updateToggleButtons();
     updateSplashPauseButton();
     renderExportList(exportedPaths);
