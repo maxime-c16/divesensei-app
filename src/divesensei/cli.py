@@ -17,6 +17,12 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("detect", help="Detect dives in a session video and export clips")
     subparsers.add_parser("evaluate-session", help="Prepare an audio-first evaluation session with cached audio and a review proxy")
     subparsers.add_parser("export-evaluation-review", help="Export reviewed evaluation sessions into hard-negative and diagnostics artifacts")
+    subparsers.add_parser("export-rough-clips", help="Plan or export rough unreviewed clips from an evaluation session")
+    subparsers.add_parser("export-session-index", help="Export a metadata-only full-session marker index")
+    subparsers.add_parser("export-mobile-share", help="Create a phone-friendly French share package from rough clips")
+    subparsers.add_parser("validate-clip-assignments", help="Validate manual clip assignments and build recipient package plans")
+    subparsers.add_parser("export-recipient-packages", help="Export per-recipient mobile packages from validated assignments")
+    subparsers.add_parser("manage-assignment-draft", help="Initialize or preview safe assignment draft files")
     subparsers.add_parser("export-event-window-manifest", help="Export a preview event-window manifest from reviewed evaluation sessions")
     subparsers.add_parser("export-event-review-support", help="Precompute event-review suggestions for the review workflow")
     subparsers.add_parser("export-event-reviewed-manifest", help="Export human-reviewed event labels for dataset construction")
@@ -132,6 +138,72 @@ def main(argv: Sequence[str] | None = None) -> int:
         from divesensei.workflows.export_evaluation_review import main as export_evaluation_review_main
 
         return export_evaluation_review_main(argv[1:])
+
+    if argv[0] == "export-rough-clips":
+        if any(flag in argv[1:] for flag in ("-h", "--help")):
+            from divesensei.workflows.export_rough_clips import build_parser as export_rough_clips_build_parser
+
+            export_rough_clips_build_parser().print_help()
+            return 0
+
+        from divesensei.workflows.export_rough_clips import main as export_rough_clips_main
+
+        return export_rough_clips_main(argv[1:])
+
+    if argv[0] == "export-session-index":
+        if any(flag in argv[1:] for flag in ("-h", "--help")):
+            from divesensei.workflows.export_session_index import build_parser as export_session_index_build_parser
+
+            export_session_index_build_parser().print_help()
+            return 0
+
+        from divesensei.workflows.export_session_index import main as export_session_index_main
+
+        return export_session_index_main(argv[1:])
+
+    if argv[0] == "export-mobile-share":
+        if any(flag in argv[1:] for flag in ("-h", "--help")):
+            from divesensei.workflows.export_mobile_share import build_parser as export_mobile_share_build_parser
+
+            export_mobile_share_build_parser().print_help()
+            return 0
+
+        from divesensei.workflows.export_mobile_share import main as export_mobile_share_main
+
+        return export_mobile_share_main(argv[1:])
+
+    if argv[0] == "validate-clip-assignments":
+        if any(flag in argv[1:] for flag in ("-h", "--help")):
+            from divesensei.workflows.validate_clip_assignments import build_parser as validate_clip_assignments_build_parser
+
+            validate_clip_assignments_build_parser().print_help()
+            return 0
+
+        from divesensei.workflows.validate_clip_assignments import main as validate_clip_assignments_main
+
+        return validate_clip_assignments_main(argv[1:])
+
+    if argv[0] == "export-recipient-packages":
+        if any(flag in argv[1:] for flag in ("-h", "--help")):
+            from divesensei.workflows.export_recipient_packages import build_parser as export_recipient_packages_build_parser
+
+            export_recipient_packages_build_parser().print_help()
+            return 0
+
+        from divesensei.workflows.export_recipient_packages import main as export_recipient_packages_main
+
+        return export_recipient_packages_main(argv[1:])
+
+    if argv[0] == "manage-assignment-draft":
+        if any(flag in argv[1:] for flag in ("-h", "--help")):
+            from divesensei.workflows.manage_assignment_draft import build_parser as manage_assignment_draft_build_parser
+
+            manage_assignment_draft_build_parser().print_help()
+            return 0
+
+        from divesensei.workflows.manage_assignment_draft import main as manage_assignment_draft_main
+
+        return manage_assignment_draft_main(argv[1:])
 
     if argv[0] == "export-event-window-manifest":
         if any(flag in argv[1:] for flag in ("-h", "--help")):
